@@ -229,4 +229,12 @@ temp/
 dimensional-debris/
 opendiscourse-*/
 
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+.terraform.lock.hcl
+.terraform.tfstate.lock.info
+
 .cpqdevkit/**.next/
