@@ -97,14 +97,32 @@ class Crawl4AIOpenRouterPipeline:
             input=content,
         )
 
+        summary_text = getattr(summary, "output_text", getattr(summary, "text", summary))
+        emb_value: Any = None
+        # handle object-like responses with .data and list payloads
+        if hasattr(embedding, "data") and getattr(embedding, "data"):
+            first = embedding.data[0]
+            emb_value = getattr(first, "embedding", None)
+        # handle dict-like responses commonly returned by some clients
+        elif isinstance(embedding, dict):
+            data = embedding.get("data")
+            if isinstance(data, list) and data:
+                first = data[0]
+                if isinstance(first, dict):
+                    emb_value = first.get("embedding")
+            else:
+                emb_value = embedding.get("embedding")
+        else:
+            # fallback to the raw embedding object
+            emb_value = embedding
         enriched: dict[str, Any] = {
             "target": target.name,
             "url": target.url,
             "frequency": target.frequency,
             "retrieved_at": datetime.utcnow().isoformat(),
             "raw_content": content,
-            "summary": summary.output_text if hasattr(summary, "output_text") else summary,
-            "embedding": embedding.data[0].embedding if hasattr(embedding, "data") else embedding,
+            "summary": summary_text,
+            "embedding": emb_value,
             "metadata": target.metadata,
         }
 
