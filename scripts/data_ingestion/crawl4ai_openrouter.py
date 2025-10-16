@@ -89,7 +89,7 @@ class Crawl4AIOpenRouterPipeline:
         )
         summary = await self._router.responses.create(
             model=self._settings.summary_model,
-            input=[{"role": "system", "content": summary_prompt}, {"role": "user", "content": content}],
+            messages=[{"role": "system", "content": summary_prompt}, {"role": "user", "content": content}],
         )
 
         embedding = await self._router.embeddings.create(
