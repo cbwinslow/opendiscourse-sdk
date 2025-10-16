@@ -1,0 +1,293 @@
+name: Auto Issue Creator
+
+on:
+  # Run on workflow failures
+  workflow_run:
+    workflows: ["*"]
+    types: [completed]
+  
+  # Run on PR comments
+  issue_comment:
+    types: [created]
+  
+  # Run on pull request events
+  pull_request:
+    types: [opened, synchronize]
+  
+  # Allow manual trigger
+  workflow_dispatch:
+  
+  # Run daily to scan for outstanding issues
+  schedule:
+    - cron: '0 2 * * *'  # Daily at 2 AM UTC
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  # Job 1: Handle workflow failures
+  workflow_failure_issues:
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'failure'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install PyGithub requests
+
+      - name: Create issue for workflow failure
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 << 'EOF'
+          import os
+          from github import Github
+
+          g = Github(os.environ['GITHUB_TOKEN'])
+          repo = g.get_repo('${{ github.repository }}')
+          
+          workflow_name = '${{ github.event.workflow_run.name }}'
+          workflow_url = '${{ github.event.workflow_run.html_url }}'
+          run_id = '${{ github.event.workflow_run.id }}'
+          
+          title = f"🚨 Workflow Failure: {workflow_name}"
+          body = f"""## Workflow Failure Detected
+
+          **Workflow:** {workflow_name}
+          **Run ID:** {run_id}
+          **Run URL:** {workflow_url}
+          **Branch:** ${{ github.event.workflow_run.head_branch }}
+          **Commit:** ${{ github.event.workflow_run.head_sha }}
+
+          This issue was automatically created because the workflow failed.
+
+          ### Next Steps
+          1. Review the workflow logs at the link above
+          2. Fix the identified issues
+          3. Close this issue once resolved
+          """
+          
+          # Check if similar issue already exists
+          existing_issues = repo.get_issues(state='open', labels=['workflow-failure'])
+          duplicate = False
+          for issue in existing_issues:
+            if workflow_name in issue.title and run_id not in issue.body:
+              # Update existing issue with new failure
+              issue.create_comment(f"Another failure occurred: {workflow_url}")
+              duplicate = True
+              break
+          
+          if not duplicate:
+            repo.create_issue(title=title, body=body, labels=['workflow-failure', 'automated'])
+          EOF
+
+  # Job 2: Handle PR comments with "gh create issue"
+  pr_comment_issues:
+    if: github.event_name == 'issue_comment' && github.event.issue.pull_request && contains(github.event.comment.body, 'gh create issue')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install PyGithub
+
+      - name: Create issue from PR comment
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 << 'EOF'
+          import os
+          import re
+          from github import Github
+
+          g = Github(os.environ['GITHUB_TOKEN'])
+          repo = g.get_repo('${{ github.repository }}')
+          
+          comment_body = '''${{ github.event.comment.body }}'''
+          pr_number = ${{ github.event.issue.number }}
+          comment_url = '${{ github.event.comment.html_url }}'
+          commenter = '${{ github.event.comment.user.login }}'
+          
+          # Extract issue content (everything after "gh create issue")
+          match = re.search(r'gh create issue\s*(.*)', comment_body, re.DOTALL | re.IGNORECASE)
+          if match:
+            issue_content = match.group(1).strip()
+            
+            # Try to extract title and body
+            lines = issue_content.split('\n')
+            if lines:
+              title = lines[0].strip() if lines[0].strip() else f"Issue from PR #{pr_number}"
+              body_lines = lines[1:] if len(lines) > 1 else []
+              body = '\n'.join(body_lines).strip()
+            else:
+              title = f"Issue from PR #{pr_number}"
+              body = issue_content
+            
+            # Create the full issue body
+            full_body = f"""**Created from PR Comment**
+
+          PR: #{pr_number}
+          Requested by: @{commenter}
+          Comment: {comment_url}
+
+          ---
+
+          {body if body else 'No additional details provided.'}
+          """
+            
+            issue = repo.create_issue(
+              title=title,
+              body=full_body,
+              labels=['from-pr-comment', 'automated']
+            )
+            
+            # Comment back on the PR
+            pr = repo.get_pull(pr_number)
+            pr.create_issue_comment(f"✅ Issue created: #{issue.number}")
+          EOF
+
+  # Job 3: Scan repository for outstanding errors
+  scan_repository_errors:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Get full history
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install PyGithub requests
+
+      - name: Scan repository for errors
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 .github/scripts/scan_repository_errors.py
+
+  # Job 4: Scan for code quality issues
+  code_quality_issues:
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install linting tools
+        run: |
+          pip install black flake8 PyGithub
+
+      - name: Run Black check
+        id: black
+        continue-on-error: true
+        run: |
+          black --check . > black_report.txt 2>&1 || echo "black_failed=true" >> $GITHUB_OUTPUT
+
+      - name: Run Flake8 check
+        id: flake8
+        continue-on-error: true
+        run: |
+          flake8 --max-line-length=100 --exclude=venv,node_modules,__pycache__,.git . > flake8_report.txt 2>&1 || echo "flake8_failed=true" >> $GITHUB_OUTPUT
+
+      - name: Create issues for code quality problems
+        if: steps.black.outputs.black_failed == 'true' || steps.flake8.outputs.flake8_failed == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 << 'EOF'
+          import os
+          from github import Github
+          from datetime import datetime
+
+          g = Github(os.environ['GITHUB_TOKEN'])
+          repo = g.get_repo('${{ github.repository }}')
+          
+          # Read reports
+          black_issues = []
+          flake8_issues = []
+          
+          try:
+            with open('black_report.txt', 'r') as f:
+              black_content = f.read()
+              if black_content.strip():
+                black_issues.append(black_content[:1000])  # Limit size
+          except:
+            pass
+          
+          try:
+            with open('flake8_report.txt', 'r') as f:
+              flake8_content = f.read()
+              if flake8_content.strip():
+                flake8_issues.append(flake8_content[:1000])  # Limit size
+          except:
+            pass
+          
+          # Create issue for Black formatting if needed
+          if black_issues and '${{ steps.black.outputs.black_failed }}' == 'true':
+            title = f"🎨 Code Formatting Issues Detected - {datetime.now().strftime('%Y-%m-%d')}"
+            body = f"""## Black Formatting Issues
+
+          The following files need to be formatted with Black:
+
+          ```
+          {black_issues[0]}
+          ```
+
+          **To fix:** Run `black .` in the repository root.
+
+          This issue was automatically created by the code quality scanner.
+          """
+            
+            # Check if recent similar issue exists
+            existing = list(repo.get_issues(state='open', labels=['code-quality', 'formatting']))
+            if not any('Code Formatting Issues' in i.title for i in existing[:3]):
+              repo.create_issue(title=title, body=body, labels=['code-quality', 'formatting', 'automated'])
+          
+          # Create issue for Flake8 if needed
+          if flake8_issues and '${{ steps.flake8.outputs.flake8_failed }}' == 'true':
+            title = f"🔍 Linting Issues Detected - {datetime.now().strftime('%Y-%m-%d')}"
+            body = f"""## Flake8 Linting Issues
+
+          The following linting issues were detected:
+
+          ```
+          {flake8_issues[0]}
+          ```
+
+          **To fix:** Review and address the issues reported by Flake8.
+
+          This issue was automatically created by the code quality scanner.
+          """
+            
+            # Check if recent similar issue exists
+            existing = list(repo.get_issues(state='open', labels=['code-quality', 'linting']))
+            if not any('Linting Issues' in i.title for i in existing[:3]):
+              repo.create_issue(title=title, body=body, labels=['code-quality', 'linting', 'automated'])
+          EOF
