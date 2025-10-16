@@ -23,14 +23,13 @@ async def build_storage_clients() -> StorageClients:
     postgres_pool = await AsyncConnectionPool.connect(
         "postgresql+psycopg://opendiscourse:password@localhost:5432/opendiscourse"
     )
-    postgres_conn: AsyncConnection[Any] = await postgres_pool.getconn()
 
     mongo_client = MongoClient("mongodb://localhost:27017")
     cassandra_cluster = Cluster(["localhost"])
     neo4j_driver = GraphDatabase.async_driver("bolt://localhost:7687", auth=("neo4j", "password"))
 
     return StorageClients(
-        postgres=postgres_conn,
+        postgres=postgres_pool,
         mongo=mongo_client,
         cassandra=cassandra_cluster,
         neo4j=neo4j_driver,
