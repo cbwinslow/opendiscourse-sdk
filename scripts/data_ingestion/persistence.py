@@ -66,17 +66,19 @@ def _upsert_mongo(record: dict[str, Any], client: MongoClient) -> None:
 
 def _upsert_cassandra(record: dict[str, Any], cluster: Cluster) -> None:
     session = cluster.connect()
-    session.execute(
-        """
-        INSERT INTO opendiscourse.raw_ingest (url, retrieved_at, payload)
-        VALUES (%s, %s, %s)
-        """,
-        (
-            record.get("url"),
-            record.get("retrieved_at"),
-            record,
-        ),
-    )
+    try:
+        session.execute(
+            """
+            INSERT INTO opendiscourse.raw_ingest (url, retrieved_at, payload)
+            VALUES (%s, %s, %s)
+            """,
+            (
+                record.get("url"),
+                record.get("retrieved_at"),
+                record,
+            ),
+        )
+    finally:
 
 
 async def _upsert_neo4j(record: dict[str, Any], driver: GraphDatabase) -> None:
