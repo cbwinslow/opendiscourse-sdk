@@ -33,7 +33,7 @@ async def parse_govinfo_metadata(response: CrawlResponse) -> dict[str, Any]:
         records.append(
             {
                 "title": title_node.text.strip() if title_node else "",
-                "download_url": link_node["href"] if link_node and link_node.has_attr("href") else "",
+                "download_url": link_node["href"] if link_node and "href" in link_node.attrs else "",
             }
         )
 
