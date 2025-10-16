@@ -28,8 +28,12 @@ async def upsert_record(record: dict[str, Any], clients: StorageClients) -> None
     """Fan out data into relational, document, and graph stores."""
 
     await _upsert_postgres(record, clients.postgres)
-    _upsert_mongo(record, clients.mongo)
-    _upsert_cassandra(record, clients.cassandra)
+    # run blocking sync I/O in threads so the async event loop isn't blocked
+    import asyncio
+    await asyncio.gather(
+        asyncio.to_thread(_upsert_mongo, record, clients.mongo),
+        asyncio.to_thread(_upsert_cassandra, record, clients.cassandra),
+    )
     await _upsert_neo4j(record, clients.neo4j)
 
 
