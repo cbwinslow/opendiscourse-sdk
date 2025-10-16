@@ -1,11 +1,11 @@
 # Project Settings & Credentials
 
 ## Server & Infrastructure
-- Main server IP: see `.env` (`HETZNER_SERVER_IP`)
-- Hostname: see `.env` (`HETZNER_SERVER_HOSTNAME`)
+- Primary database: Oracle Cloud Free Tier PostgreSQL (provisioned via Terraform)
+- Cloudflare tunnel hostname: see `.env` (`CLOUDFLARE_TUNNEL_HOSTNAME`)
 - All environment variables: `.env` (not for secrets)
 - Sensitive secrets: Use Ansible Vault or Bitwarden, not in git
-- Terraform variables: `terraform.tfvars` (never commit secrets)
+- Terraform variables: `terraform/oci-cloudflare/terraform.tfvars` (never commit secrets)
 - Ansible inventory: `ansible/hosts.ini`
 
 ## Workflow

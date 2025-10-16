@@ -1,0 +1,234 @@
+{
+  "name": "Politician Research Pipeline",
+  "nodes": [
+    {
+      "id": "Schedule",
+      "type": "n8n-nodes-base.cron",
+      "parameters": {
+        "triggerTimes": [
+          {
+            "mode": "everyHour"
+          }
+        ]
+      }
+    },
+    {
+      "id": "Congress.gov Fetch",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "url": "https://www.congress.gov/search",
+        "queryParametersUi": {
+          "parameter": [
+            {
+              "name": "q",
+              "value": "{\"source\":\"legislation\",\"member\":\"{{$json.politicianId}}\"}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "GovInfo Fetch",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "url": "https://api.govinfo.gov/collections/CHRG",
+        "queryParametersUi": {
+          "parameter": [
+            {
+              "name": "api_key",
+              "value": "={{$env.GOVINFO_API_KEY}}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "OpenStates Fetch",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "url": "https://v3.openstates.org/bills",
+        "queryParametersUi": {
+          "parameter": [
+            {
+              "name": "jurisdiction",
+              "value": "={{$json.state}}"
+            },
+            {
+              "name": "sponsor",
+              "value": "={{$json.politicianName}}"
+            },
+            {
+              "name": "apikey",
+              "value": "={{$env.OPENSTATES_API_KEY}}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "OpenLegislation Fetch",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "url": "https://legislation.nysenate.gov/api/3/bills/advanced_search",
+        "queryParametersUi": {
+          "parameter": [
+            {
+              "name": "term",
+              "value": "*"
+            },
+            {
+              "name": "fullText",
+              "value": "={{$json.politicianName}}"
+            },
+            {
+              "name": "sort",
+              "value": "lastUpdate"
+            },
+            {
+              "name": "key",
+              "value": "={{$env.OPENLEGISLATION_API_KEY}}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "Deduplicate",
+      "type": "n8n-nodes-base.set",
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "documentHash",
+              "value": "={{$json[\"url\"] ? $json[\"url\"].hash() : $json[\"id\"]}}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "LangChain Agent",
+      "type": "n8n-nodes-base.webhook",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "langchain/politician-analysis",
+        "responseMode": "onReceived",
+        "responseData": "={{$json}}"
+      }
+    },
+    {
+      "id": "Langfuse Trace",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "url": "https://cloud.langfuse.com/api/public/ingest",
+        "method": "POST",
+        "jsonParameters": true,
+        "options": {
+          "bodyContentType": "json"
+        },
+        "bodyParametersJson": "={\"projectId\": \"opendiscourse\", \"payload\": $json}"
+      }
+    },
+    {
+      "id": "Notify",
+      "type": "n8n-nodes-base.emailSend",
+      "parameters": {
+        "fromEmail": "alerts@opendiscourse.ai",
+        "toEmail": "research@opendiscourse.ai",
+        "subject": "New Politician Update",
+        "text": "={{$json.summary}}"
+      }
+    }
+  ],
+  "connections": {
+    "Schedule": {
+      "main": [
+        [
+          {
+            "node": "Congress.gov Fetch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Congress.gov Fetch": {
+      "main": [
+        [
+          {
+            "node": "GovInfo Fetch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GovInfo Fetch": {
+      "main": [
+        [
+          {
+            "node": "OpenStates Fetch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenStates Fetch": {
+      "main": [
+        [
+          {
+            "node": "OpenLegislation Fetch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenLegislation Fetch": {
+      "main": [
+        [
+          {
+            "node": "Deduplicate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deduplicate": {
+      "main": [
+        [
+          {
+            "node": "LangChain Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LangChain Agent": {
+      "main": [
+        [
+          {
+            "node": "Langfuse Trace",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Langfuse Trace": {
+      "main": [
+        [
+          {
+            "node": "Notify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
