@@ -1,0 +1,169 @@
+name: Deploy Auto Issue Creator to Top Repos
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run mode (do not create actual issues)'
+        required: false
+        default: 'true'
+        type: boolean
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  get-top-repos:
+    runs-on: ubuntu-latest
+    outputs:
+      repos: ${{ steps.fetch-repos.outputs.repos }}
+    steps:
+      - name: Fetch top repositories
+        id: fetch-repos
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 << 'EOF'
+          import json
+          import os
+          from github import Github
+
+          g = Github(os.environ['GITHUB_TOKEN'])
+          user = g.get_user()
+          
+          # Get user's repositories sorted by stars
+          repos = []
+          for repo in user.get_repos(sort='stars', direction='desc'):
+            if not repo.fork and not repo.archived and len(repos) < 50:
+              repos.append(repo.full_name)
+          
+          # Also add organization repos if available
+          try:
+            for org in user.get_orgs():
+              for repo in org.get_repos(sort='stars', direction='desc'):
+                if not repo.fork and not repo.archived and len(repos) < 50:
+                  repos.append(repo.full_name)
+          except:
+            pass
+          
+          # Output as JSON
+          print(f"repos={json.dumps(repos[:50])}")
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+            f.write(f"repos={json.dumps(repos[:50])}\n")
+          
+          print(f"Found {len(repos)} repositories")
+          for repo in repos:
+            print(f"  - {repo}")
+          EOF
+
+  scan-repositories:
+    needs: get-top-repos
+    if: ${{ needs.get-top-repos.outputs.repos != '[]' }}
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 5  # Limit parallel runs to avoid rate limiting
+      fail-fast: false
+      matrix:
+        repo: ${{ fromJson(needs.get-top-repos.outputs.repos) }}
+    
+    steps:
+      - name: Checkout target repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ matrix.repo }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Install dependencies
+        run: |
+          pip install PyGithub requests
+      
+      - name: Check if scanner script exists
+        id: check-script
+        run: |
+          if [ -f ".github/scripts/scan_repository_errors.py" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "⚠️  Repository ${{ matrix.repo }} does not have the scanner script"
+          fi
+      
+      - name: Run repository scanner
+        if: steps.check-script.outputs.exists == 'true' && inputs.dry_run == 'false'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ matrix.repo }}
+        run: |
+          echo "🔍 Scanning repository: ${{ matrix.repo }}"
+          python3 .github/scripts/scan_repository_errors.py
+      
+      - name: Run scanner in dry-run mode
+        if: steps.check-script.outputs.exists == 'true' && inputs.dry_run == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ matrix.repo }}
+        run: |
+          echo "🔍 DRY RUN - Scanning repository: ${{ matrix.repo }}"
+          echo "ℹ️  In dry-run mode, no issues will be created"
+          python3 << 'EOF'
+          import os
+          import sys
+          
+          # Mock the GitHub issue creation
+          original_create = None
+          
+          def mock_create_issue(*args, **kwargs):
+            print(f"  [DRY RUN] Would create issue: {kwargs.get('title', 'No title')}")
+            class MockIssue:
+              number = 0
+            return MockIssue()
+          
+          # Import and patch
+          from github import Github
+          repo_name = os.environ.get('GITHUB_REPOSITORY')
+          g = Github(os.environ['GITHUB_TOKEN'])
+          repo = g.get_repo(repo_name)
+          
+          # Patch create_issue method
+          original_create = repo.create_issue
+          repo.create_issue = mock_create_issue
+          
+          # Now run the scanner
+          sys.path.insert(0, '.github/scripts')
+          try:
+            from scan_repository_errors import RepositoryErrorScanner
+            scanner = RepositoryErrorScanner(repo_name, os.environ['GITHUB_TOKEN'])
+            scanner.repo.create_issue = mock_create_issue
+            scanner.create_summary_issues()
+          except Exception as e:
+            print(f"Error: {e}")
+          EOF
+
+  summary:
+    needs: [get-top-repos, scan-repositories]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate summary
+        run: |
+          echo "## Multi-Repository Scan Complete 🎉" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Scanned repositories from the top 50 list" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ inputs.dry_run }}" == "true" ]; then
+            echo "⚠️  **DRY RUN MODE** - No actual issues were created" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ Issues were created in repositories with detected problems" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "1. Review the created issues in each repository" >> $GITHUB_STEP_SUMMARY
+          echo "2. Address high-priority issues first" >> $GITHUB_STEP_SUMMARY
+          echo "3. Consider installing the auto-issue-creator workflow in repositories that don't have it" >> $GITHUB_STEP_SUMMARY
