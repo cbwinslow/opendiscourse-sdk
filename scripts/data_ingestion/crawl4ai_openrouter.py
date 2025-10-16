@@ -49,6 +49,15 @@ class Crawl4AIOpenRouterPipeline:
         settings: PipelineSettings,
         upsert_callback: Callable[[dict[str, Any]], Awaitable[None]],
     ) -> None:
+        """Initialize the pipeline with dependencies.
+
+        Args:
+            crawler: Configured AsyncCrawler instance.
+            router_client: OpenRouter client for LLM/embedding calls.
+            targets: Sequence of crawl targets to process.
+            settings: Runtime configuration.
+            upsert_callback: Async function to persist enriched records.
+        """
         self._crawler = crawler
         self._router = router_client
         self._targets = targets
