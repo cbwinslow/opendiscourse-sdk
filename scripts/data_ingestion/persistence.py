@@ -73,7 +73,6 @@ def _upsert_cassandra(record: dict[str, Any], cluster: Cluster) -> None:
             record,
         ),
     )
-    session.shutdown()
 
 
 async def _upsert_neo4j(record: dict[str, Any], driver: GraphDatabase) -> None:
