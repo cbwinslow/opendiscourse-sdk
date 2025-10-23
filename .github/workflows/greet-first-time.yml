@@ -1,0 +1,76 @@
+name: First-Time Contributor Greeting
+
+on:
+  issues:
+    types: [opened]
+  pull_request_target:
+    types: [opened]
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  greet:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Greet first-time issue creator
+        if: github.event_name == 'issues'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const creator = context.payload.issue.user.login;
+            
+            // Get all issues by this user
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              creator: creator,
+              state: 'all'
+            });
+            
+            // If this is their first issue
+            if (issues.length === 1) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: `👋 Thanks for opening your first issue @${creator}! We appreciate your contribution to OpenDiscourse.\n\nA maintainer will review your issue soon. In the meantime, please make sure you've provided all the necessary information and followed our issue template.`
+              });
+            }
+
+      - name: Greet first-time contributor
+        if: github.event_name == 'pull_request_target'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const creator = context.payload.pull_request.user.login;
+            
+            // Get all PRs by this user
+            const { data: prs } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'all'
+            });
+            
+            const userPRs = prs.filter(pr => pr.user.login === creator);
+            
+            // If this is their first PR
+            if (userPRs.length === 1) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: `🎉 Congratulations on your first Pull Request, @${creator}! Thank you for contributing to OpenDiscourse.\n\n**Next steps:**\n- Ensure all CI checks pass\n- Address any review comments\n- Keep your PR up to date with the base branch\n\nA maintainer will review your PR soon. Feel free to ask questions if you need help!`
+              });
+              
+              // Add first-time contributor label
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                labels: ['first-time-contributor']
+              });
+            }
