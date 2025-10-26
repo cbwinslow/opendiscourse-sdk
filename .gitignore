@@ -229,4 +229,7 @@ temp/
 dimensional-debris/
 opendiscourse-*/
 
+# Empty submodule directories
+flow-framework/
+
 .cpqdevkit/**.next/
