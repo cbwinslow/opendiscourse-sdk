@@ -71,7 +71,7 @@ build/
 *.pem
 
 # Project specific
-*.lock
+package-lock.json
 *.pyc
 *.swp
 .buildlog/
