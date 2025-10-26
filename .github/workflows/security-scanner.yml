@@ -32,8 +32,12 @@ jobs:
         id: safety
         continue-on-error: true
         run: |
-          safety check --json --output safety-report.json || echo "safety_failed=true" >> $GITHUB_OUTPUT
-          
+          safety check --json --output safety-report.json
+          if [ $? -ne 0 ]; then
+            echo "safety_failed=true" >> $GITHUB_OUTPUT
+          else
+            echo "safety_failed=false" >> $GITHUB_OUTPUT
+          fi
       - name: Run pip-audit
         id: pip_audit
         continue-on-error: true
