@@ -72,6 +72,8 @@ build/
 
 # Project specific
 package-lock.json
+yarn.lock
+!pnpm-lock.yaml
 *.pyc
 *.swp
 .buildlog/
