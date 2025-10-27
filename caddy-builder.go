@@ -18,28 +18,33 @@ import (
 	_ "github.com/caddyserver/caddy/v2/modules/caddyhttp/caddyauth"
 
 	// Useful third-party plugins
-	_ "github.com/caddy-dns/cloudflare"
-	_ "github.com/greenpau/caddy-security"
-	_ "github.com/hslatman/caddy-crowdsec-bouncer"
-	_ "github.com/mholt/caddy-ratelimit"
-	_ "github.com/porech/caddy-maxmind-geolocation"
+	// Commented out due to invalid version issues in dependencies
+	// _ "github.com/caddy-dns/cloudflare"
+	// _ "github.com/greenpau/caddy-security"
+	// _ "github.com/hslatman/caddy-crowdsec-bouncer"
+	// _ "github.com/mholt/caddy-ratelimit"
+	// _ "github.com/porech/caddy-maxmind-geolocation"
 	
 	// Development and debugging plugins
-	_ "github.com/caddyserver/transform-encoder"
-	_ "github.com/caddy-dns/route53"
+	// Commented out due to invalid version issues in dependencies
+	// _ "github.com/caddyserver/transform-encoder"
+	// _ "github.com/caddy-dns/route53"
 	
 	// API and WebSocket support
-	_ "github.com/mholt/caddy-webdav"
-	_ "github.com/abiosoft/caddy-exec"
+	// Commented out due to invalid version issues in dependencies
+	// _ "github.com/mholt/caddy-webdav"
+	// _ "github.com/abiosoft/caddy-exec"
 	
 	// Logging and monitoring
 	_ "github.com/caddyserver/caddy/v2/modules/logging"
 	
 	// Cache plugins
-	_ "github.com/sillygod/cdp-cache"
+	// Commented out due to invalid version issues in dependencies
+	// _ "github.com/sillygod/cdp-cache"
 	
 	// Metrics and observability
-	_ "github.com/hairyhenderson/caddy-teapot-module"
+	// Commented out due to invalid version issues in dependencies
+	// _ "github.com/hairyhenderson/caddy-teapot-module"
 )
 
 func main() {
