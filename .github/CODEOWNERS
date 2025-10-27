@@ -1,0 +1,46 @@
+# CODEOWNERS file for automatic code review assignment
+# See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owners for everything in the repo
+* @cbwinslow
+
+# Python backend code
+*.py @cbwinslow
+opendiscourse/ @cbwinslow
+api/ @cbwinslow
+server/ @cbwinslow
+
+# Frontend code
+web/ @cbwinslow
+webui/ @cbwinslow
+*.tsx @cbwinslow
+*.ts @cbwinslow
+*.jsx @cbwinslow
+*.js @cbwinslow
+
+# Infrastructure and DevOps
+.github/ @cbwinslow
+docker-compose*.yml @cbwinslow
+Dockerfile* @cbwinslow
+k8s/ @cbwinslow
+terraform/ @cbwinslow
+ansible/ @cbwinslow
+
+# Database and migrations
+*.sql @cbwinslow
+opendiscourse/db/ @cbwinslow
+
+# Configuration files
+*.toml @cbwinslow
+*.yaml @cbwinslow
+*.yml @cbwinslow
+pyproject.toml @cbwinslow
+
+# Documentation
+*.md @cbwinslow
+docs/ @cbwinslow
+
+# Security-sensitive files
+SECURITY.md @cbwinslow
+.github/workflows/codeql.yml @cbwinslow
+.github/workflows/snyk-*.yml @cbwinslow
