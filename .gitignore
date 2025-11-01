@@ -71,9 +71,9 @@ build/
 *.pem
 
 # Project specific
-*.lock
-*.pyc
-*.swp
+package-lock.json
+yarn.lock
+!pnpm-lock.yaml
 .buildlog/
 .history
 
@@ -228,5 +228,8 @@ temp/
 *-temp/
 dimensional-debris/
 opendiscourse-*/
+
+# Empty submodule directories
+flow-framework/
 
 .cpqdevkit/**.next/

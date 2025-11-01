@@ -1,0 +1,149 @@
+{
+  "name": "Politician Social Media Monitor",
+  "nodes": [
+    {
+      "id": "Schedule",
+      "type": "n8n-nodes-base.cron",
+      "parameters": {
+        "triggerTimes": [
+          {
+            "mode": "every15Minutes"
+          }
+        ]
+      }
+    },
+    {
+      "id": "Fetch Tweets",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "url": "https://api.twitter.com/2/users/{{$json.twitterId}}/tweets",
+        "authentication": "oAuth2",
+        "queryParametersUi": {
+          "parameter": [
+            {
+              "name": "tweet.fields",
+              "value": "created_at,public_metrics,entities"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "Fetch Threads",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "url": "https://graph.threads.net/v1.0/{{$json.threadsId}}/posts",
+        "authentication": "oAuth2"
+      }
+    },
+    {
+      "id": "Merge Streams",
+      "type": "n8n-nodes-base.merge",
+      "parameters": {
+        "mode": "append"
+      }
+    },
+    {
+      "id": "Call Flowise",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "url": "https://flowise.opendiscourse.ai/api/v1/pipelines/social-audit",
+        "method": "POST",
+        "jsonParameters": true,
+        "options": {
+          "bodyContentType": "json"
+        },
+        "bodyParametersJson": "={\"posts\": $json}"
+      }
+    },
+    {
+      "id": "Persist",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "url": "https://api.opendiscourse.ai/ingest/social",
+        "method": "POST",
+        "jsonParameters": true,
+        "options": {
+          "bodyContentType": "json"
+        },
+        "bodyParametersJson": "=$json"
+      }
+    },
+    {
+      "id": "Alert",
+      "type": "n8n-nodes-base.slack",
+      "parameters": {
+        "channel": "#politician-alerts",
+        "text": "={{$json.alert}}"
+      }
+    }
+  ],
+  "connections": {
+    "Schedule": {
+      "main": [
+        [
+          {
+            "node": "Fetch Tweets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Tweets": {
+      "main": [
+        [
+          {
+            "node": "Fetch Threads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Threads": {
+      "main": [
+        [
+          {
+            "node": "Merge Streams",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Streams": {
+      "main": [
+        [
+          {
+            "node": "Call Flowise",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Flowise": {
+      "main": [
+        [
+          {
+            "node": "Persist",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Persist": {
+      "main": [
+        [
+          {
+            "node": "Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

@@ -1,0 +1,148 @@
+name: Security Vulnerability Scanner
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # Daily at 2 AM
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+  security-events: write
+
+jobs:
+  scan-python-vulnerabilities:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install safety pip-audit
+
+      - name: Run safety check
+        id: safety
+        continue-on-error: true
+        run: |
+          safety check --json --output safety-report.json
+          if [ $? -ne 0 ]; then
+            echo "safety_failed=true" >> $GITHUB_OUTPUT
+          else
+            echo "safety_failed=false" >> $GITHUB_OUTPUT
+          fi
+      - name: Run pip-audit
+        id: pip_audit
+        continue-on-error: true
+        run: |
+          pip-audit --format json --output pip-audit-report.json || echo "pip_audit_failed=true" >> $GITHUB_OUTPUT
+
+      - name: Upload security reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-security-reports
+          path: |
+            safety-report.json
+            pip-audit-report.json
+
+      - name: Create issue for vulnerabilities
+        if: steps.safety.outputs.safety_failed == 'true' || steps.pip_audit.outputs.pip_audit_failed == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            let vulnerabilities = [];
+            
+            try {
+              const safetyReport = JSON.parse(fs.readFileSync('safety-report.json', 'utf8'));
+              vulnerabilities = vulnerabilities.concat(safetyReport);
+            } catch (error) {
+              console.log('No safety report found');
+            }
+            
+            if (vulnerabilities.length > 0) {
+              const title = '🚨 Security Vulnerabilities Detected in Python Dependencies';
+              const body = `## Security Scan Results\n\n${vulnerabilities.length} vulnerabilities found.\n\nPlease review the attached reports and update affected dependencies.`;
+              
+              const { data: existingIssues } = await github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open',
+                labels: 'security,vulnerability'
+              });
+              
+              const recentIssue = existingIssues.find(issue => 
+                issue.title.includes('Security Vulnerabilities Detected')
+              );
+              
+              if (!recentIssue) {
+                await github.rest.issues.create({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  title: title,
+                  body: body,
+                  labels: ['security', 'vulnerability', 'automated']
+                });
+              }
+            }
+
+  scan-npm-vulnerabilities:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run npm audit
+        id: npm_audit
+        continue-on-error: true
+        run: |
+          npm audit --json > npm-audit-report.json || echo "npm_audit_failed=true" >> $GITHUB_OUTPUT
+
+      - name: Upload npm audit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-security-reports
+          path: npm-audit-report.json
+
+      - name: Create issue for npm vulnerabilities
+        if: steps.npm_audit.outputs.npm_audit_failed == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const title = '🚨 Security Vulnerabilities Detected in npm Dependencies';
+            const body = 'Security vulnerabilities were found in npm dependencies. Please run `npm audit fix` to resolve them.';
+            
+            const { data: existingIssues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'security,vulnerability,javascript'
+            });
+            
+            const recentIssue = existingIssues.find(issue => 
+              issue.title.includes('npm Dependencies')
+            );
+            
+            if (!recentIssue) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: title,
+                body: body,
+                labels: ['security', 'vulnerability', 'javascript', 'automated']
+              });
+            }

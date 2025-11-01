@@ -1,0 +1,116 @@
+name: Auto-Close Inactive PRs
+
+on:
+  schedule:
+    - cron: '0 0 * * 0'  # Weekly on Sunday
+  workflow_dispatch:
+
+permissions:
+  pull-requests: write
+  issues: write
+
+jobs:
+  close-inactive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Close stale PRs
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const daysInactive = 60;
+            const daysBeforeStale = 30;
+            const today = new Date();
+            
+            // Get all open PRs
+            const { data: prs } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              per_page: 100
+            });
+            
+            for (const pr of prs) {
+              // Skip draft PRs
+              if (pr.draft) continue;
+              
+              const updatedAt = new Date(pr.updated_at);
+              const daysSinceUpdate = Math.floor((today - updatedAt) / (1000 * 60 * 60 * 24));
+              
+              // Get PR labels
+              const labels = pr.labels.map(l => l.name);
+              
+              // Skip PRs with 'keep-open' label
+              if (labels.includes('keep-open')) continue;
+              
+              if (daysSinceUpdate >= daysInactive) {
+                // Close the PR
+                await github.rest.pulls.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: pr.number,
+                  state: 'closed'
+                });
+                
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: pr.number,
+                  body: `This PR has been automatically closed due to inactivity (${daysSinceUpdate} days with no updates).\n\nIf you'd like to continue working on this, please feel free to reopen it or create a new PR.`
+                });
+                
+                console.log(`Closed PR #${pr.number} due to ${daysSinceUpdate} days of inactivity`);
+              } else if (daysSinceUpdate >= daysBeforeStale && !labels.includes('stale')) {
+                // Mark as stale
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: pr.number,
+                  labels: ['stale']
+                });
+                
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: pr.number,
+                  body: `⚠️ This PR has been marked as stale due to ${daysSinceUpdate} days of inactivity.\n\nIt will be automatically closed in ${daysInactive - daysSinceUpdate} days if no further activity occurs.\n\nTo prevent this, please:\n- Push new commits\n- Add a comment\n- Add the 'keep-open' label`
+                });
+                
+                console.log(`Marked PR #${pr.number} as stale`);
+              }
+            }
+
+      - name: Remove stale label from active PRs
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const daysBeforeStale = 30;
+            const today = new Date();
+            
+            // Get PRs with stale label
+            const { data: stalePRs } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              per_page: 100
+            });
+            
+            for (const pr of stalePRs) {
+              const labels = pr.labels.map(l => l.name);
+              if (!labels.includes('stale')) continue;
+              
+              const updatedAt = new Date(pr.updated_at);
+              const daysSinceUpdate = Math.floor((today - updatedAt) / (1000 * 60 * 60 * 24));
+              
+              if (daysSinceUpdate < daysBeforeStale) {
+                await github.rest.issues.removeLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: pr.number,
+                  name: 'stale'
+                });
+                
+                console.log(`Removed stale label from PR #${pr.number}`);
+              }
+            }

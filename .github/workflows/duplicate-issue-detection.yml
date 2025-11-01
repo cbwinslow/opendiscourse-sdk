@@ -1,0 +1,113 @@
+name: Duplicate Issue Detection
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+
+jobs:
+  check-duplicates:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for duplicate issues
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const newIssue = context.payload.issue;
+            const newTitle = newIssue.title.toLowerCase();
+            const newBody = (newIssue.body || '').toLowerCase();
+            
+            // Get all open issues
+            const { data: openIssues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              per_page: 100
+            });
+            
+            // Function to calculate similarity
+            function similarity(str1, str2) {
+              const longer = str1.length > str2.length ? str1 : str2;
+              const shorter = str1.length > str2.length ? str2 : str1;
+              
+              if (longer.length === 0) return 1.0;
+              
+              const editDistance = (s1, s2) => {
+                s1 = s1.toLowerCase();
+                s2 = s2.toLowerCase();
+                const costs = [];
+                for (let i = 0; i <= s1.length; i++) {
+                  let lastValue = i;
+                  for (let j = 0; j <= s2.length; j++) {
+                    if (i === 0) {
+                      costs[j] = j;
+                    } else if (j > 0) {
+                      let newValue = costs[j - 1];
+                      if (s1.charAt(i - 1) !== s2.charAt(j - 1)) {
+                        newValue = Math.min(Math.min(newValue, lastValue), costs[j]) + 1;
+                      }
+                      costs[j - 1] = lastValue;
+                      lastValue = newValue;
+                    }
+                  }
+                  if (i > 0) costs[s2.length] = lastValue;
+                }
+                return costs[s2.length];
+              };
+              
+              return (longer.length - editDistance(longer, shorter)) / longer.length;
+            }
+            
+            const duplicates = [];
+            
+            for (const issue of openIssues) {
+              if (issue.number === newIssue.number) continue;
+              
+              const issueTitle = issue.title.toLowerCase();
+              const issueBody = (issue.body || '').toLowerCase();
+              
+              const titleSimilarity = similarity(newTitle, issueTitle);
+              const bodySimilarity = similarity(newBody, issueBody);
+              
+              // Check if titles are very similar (>70%) or bodies are similar (>80%)
+              if (titleSimilarity > 0.7 || bodySimilarity > 0.8) {
+                duplicates.push({
+                  number: issue.number,
+                  title: issue.title,
+                  titleSimilarity: (titleSimilarity * 100).toFixed(0),
+                  bodySimilarity: (bodySimilarity * 100).toFixed(0)
+                });
+              }
+            }
+            
+            if (duplicates.length > 0) {
+              let comment = `## 🔍 Potential Duplicate Issues Detected\n\n`;
+              comment += `This issue might be a duplicate of:\n\n`;
+              
+              for (const dup of duplicates) {
+                comment += `- #${dup.number}: ${dup.title}\n`;
+                comment += `  - Title similarity: ${dup.titleSimilarity}%\n`;
+                comment += `  - Body similarity: ${dup.bodySimilarity}%\n\n`;
+              }
+              
+              comment += `Please check if any of these issues address your concern before proceeding.\n`;
+              comment += `If this is indeed a duplicate, please close this issue and add your comments to the existing one.`;
+              
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: newIssue.number,
+                body: comment
+              });
+              
+              // Add duplicate label
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: newIssue.number,
+                labels: ['potential-duplicate']
+              });
+            }

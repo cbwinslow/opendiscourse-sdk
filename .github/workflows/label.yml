@@ -1,20 +1,21 @@
 name: Labeler
 
-# Overrides the main branch workflow to prevent failures
-# This workflow runs but skips labeling if config is not available
 on: [pull_request_target]
+
+permissions:
+  contents: read
+  pull-requests: write
 
 jobs:
   label:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
-
     steps:
-    - name: Skip labeling (config not in main branch yet)
-      run: |
-        echo "Labeler workflow skipped"
-        echo "The labeler.yml config file doesn't exist in the main branch yet"
-        echo "This workflow will be functional once this PR is merged"
-        echo "Skipping labeling to prevent CI failures"
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Apply labels based on paths
+      uses: actions/labeler@v5
+      with:
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+        configuration-path: .github/labeler.yml
+        sync-labels: true

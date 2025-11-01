@@ -1,0 +1,144 @@
+name: Auto-Review Bot
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  auto-review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Analyze PR changes
+        id: analyze
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+            
+            let hasTests = false;
+            let hasDocumentation = false;
+            let hasCode = false;
+            let onlyDocs = true;
+            let onlyConfig = true;
+            
+            for (const file of files) {
+              const path = file.filename;
+              
+              if (path.includes('test') || path.includes('spec')) {
+                hasTests = true;
+              }
+              
+              if (path.endsWith('.md') || path.startsWith('docs/')) {
+                hasDocumentation = true;
+              }
+              
+              if (path.endsWith('.py') || path.endsWith('.ts') || path.endsWith('.tsx') || 
+                  path.endsWith('.js') || path.endsWith('.jsx')) {
+                hasCode = true;
+                onlyDocs = false;
+              }
+              
+              if (!path.endsWith('.json') && !path.endsWith('.yml') && 
+                  !path.endsWith('.yaml') && !path.endsWith('.toml')) {
+                onlyConfig = false;
+              }
+            }
+            
+            core.setOutput('has_tests', hasTests);
+            core.setOutput('has_documentation', hasDocumentation);
+            core.setOutput('has_code', hasCode);
+            core.setOutput('only_docs', onlyDocs);
+            core.setOutput('only_config', onlyConfig);
+
+      - name: Comment on test coverage
+        if: steps.analyze.outputs.has_code == 'true' && steps.analyze.outputs.has_tests == 'false'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: '⚠️ **Test Coverage Notice**\n\nThis PR includes code changes but no new tests. Please consider adding tests to ensure code quality and prevent regressions.\n\nIf tests are not applicable, please explain why in the PR description.'
+            });
+            
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: ['needs-tests']
+            });
+
+      - name: Comment on documentation
+        if: steps.analyze.outputs.has_code == 'true' && steps.analyze.outputs.has_documentation == 'false'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: '📚 **Documentation Notice**\n\nThis PR includes code changes. Please consider updating relevant documentation if needed:\n- API documentation\n- README files\n- Code comments\n- User guides'
+            });
+
+      - name: Auto-approve documentation-only PRs
+        if: steps.analyze.outputs.only_docs == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: '✅ **Auto-Review: Documentation Changes**\n\nThis PR only contains documentation changes. Automatically approved for merge once CI passes.'
+            });
+            
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: ['auto-approved', 'documentation']
+            });
+
+      - name: Check for package updates
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+            
+            const hasPackageUpdates = files.some(f => 
+              f.filename === 'package.json' || 
+              f.filename === 'requirements.txt' ||
+              f.filename === 'pyproject.toml'
+            );
+            
+            if (hasPackageUpdates) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: '📦 **Dependency Update Detected**\n\nThis PR includes dependency updates. Please ensure:\n- Security vulnerabilities are addressed\n- Breaking changes are documented\n- Tests pass with new versions'
+              });
+            }
