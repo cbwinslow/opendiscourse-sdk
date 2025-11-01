@@ -81,7 +81,7 @@
     "@types/jest": "^29.5.14",
     "jest-environment-jsdom": "^29.7.0",
     "@playwright/test": "^1.48.2",
-    "msw": "^2.4.11"
+    "msw": "^2.11.6"
   },
   "engines": {
     "node": ">=18.0.0",
