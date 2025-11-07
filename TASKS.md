@@ -61,22 +61,6 @@ This file consolidates all project tasks, microgoals, and agent assignments for 
 - Current focus is on making the repository functional and maintainable
 - Testing infrastructure is blocked due to network connectivity issues preventing pytest installation
 - Frontend build system has been successfully restored
-<<<<<<< Updated upstream
-| Integrate MCP server endpoints with UI              | UI can submit, poll, and display results from MCP server | IN PROGRESS      | Copilot       |
-| GovInfo: Data Download                             | Identify target collections, create download script, set up storage | IN PROGRESS      | Copilot       |
-| GovInfo: Database Design                           | Design tables/relationships, implement schema, load data | IN PROGRESS      | Copilot       |
-| GovInfo: ERD Creation                              | Generate/validate/export ERD                             | IN PROGRESS      | Copilot       |
-| GovInfo: Documentation                             | Create project docs, write README                        | IN PROGRESS      | Copilot       |
-| Committee: Database Design                         | Finalize schema, implement structure, load data          | IN PROGRESS      | Copilot       |
-| Committee: ERD Creation                            | Generate/validate/export ERD                             | IN PROGRESS      | Copilot       |
-| Committee: Documentation                           | Create docs, write README                                | IN PROGRESS      | Copilot       |
-| Member: Data Extraction                            | Extraction script, pagination, historical data           | IN PROGRESS      | Copilot       |
-| Member: Data Processing                            | Parse/transform data, create schema                      | IN PROGRESS      | Copilot       |
-| Member: Data Validation                            | Validation scripts, quality checks, error handling       | IN PROGRESS      | Copilot       |
-| Member: Database Design                            | Design/implement schema, load data                       | IN PROGRESS      | Copilot       |
-| Member: ERD Creation                               | Generate/validate/export ERD                             | IN PROGRESS      | Copilot       |
-| Member: Documentation                              | Create docs, write README                                | IN PROGRESS      | Copilot       |
-=======
 | Integrate MCP server endpoints with UI              | UI can submit, poll, and display results from MCP server | DONE      | Copilot       |
 | GovInfo: Data Download                             | Identify target collections, create download script, set up storage | TODO      | Copilot       |
 | GovInfo: Database Design                           | Design tables/relationships, implement schema, load data | TODO      | Copilot       |
@@ -91,7 +75,6 @@ This file consolidates all project tasks, microgoals, and agent assignments for 
 | Member: Database Design                            | Design/implement schema, load data                       | TODO      | Copilot       |
 | Member: ERD Creation                               | Generate/validate/export ERD                             | TODO      | Copilot       |
 | Member: Documentation                              | Create docs, write README                                | TODO      | Copilot       |
->>>>>>> Stashed changes
 | RAG Database & Vector Store Design                 | Design schema for documents, entities, declarations, inferences, media, tasks, and vector store (pgvector/ClickHouse). | IN PROGRESS | Copilot |
 | RAG DB migration/automation script                | Script exists to apply rag_db_schema.sql to PostgreSQL, usage documented | DONE      | Copilot       |
 | Ingest media appearances (podcasts, YouTube, news) | Scripts exist to ingest and link media appearances to entities, transcripts stored | IN PROGRESS      | Copilot       |
@@ -124,17 +107,10 @@ This file consolidates all project tasks, microgoals, and agent assignments for 
 | Maintain up-to-date project documentation          | All docs reflect current structure, features, and rules | IN PROGRESS | Copilot       |
 | Enforce global rules for agent and contributor behavior | All contributors/agents follow documented rules | IN PROGRESS | Copilot       |
 | Add onboarding and developer setup docs            | Clear onboarding and setup instructions for new contributors | DONE      | Copilot       |
-<<<<<<< Updated upstream
-| Add test coverage for all new scripts and features | Automated/unit/integration tests for all new code | IN PROGRESS      | Copilot       |
-| Add monitoring and alerting for ingestion/research jobs | Monitoring script scans logs and reports errors | DONE      | Copilot       |
-| Add data validation and quality checks to ingestion | Validation helpers ensure required fields in records | DONE      | Copilot       |
-| Add ERD diagrams for all major schemas             | ERD diagrams for main and RAG schemas included in docs | DONE      | Copilot       |
-=======
 | Add test coverage for all new scripts and features | Automated/unit/integration tests for all new code | TODO      | Copilot       |
 | Add monitoring and alerting for ingestion/research jobs | Monitoring and alerting in place for background jobs | TODO      | Copilot       |
 | Add data validation and quality checks to ingestion | Ingestion scripts include validation and error handling | TODO      | Copilot       |
 | Add ERD diagrams for all major schemas             | ERD diagrams generated and included in docs | TODO      | Copilot       |
->>>>>>> Stashed changes
 | Add user feedback and issue reporting to web UI    | Web UI allows users to submit feedback and report issues | TODO      | Copilot       |
 | Add API documentation and OpenAPI specs            | API endpoints documented with OpenAPI/Swagger | DONE      | Copilot       |
 | Add support for ClickHouse as alternative vector store | ClickHouse schema and ingestion supported | TODO      | Copilot       |
@@ -145,15 +121,6 @@ This file consolidates all project tasks, microgoals, and agent assignments for 
 | Add security review and audit tasks                | Security reviews and audits scheduled and tracked | TODO      | Copilot       |
 | Add accessibility review for web UI                | Web UI reviewed and improved for accessibility | TODO      | Copilot       |
 | Add localization/internationalization support      | System supports multiple languages/locales | TODO      | Copilot       |
-<<<<<<< Updated upstream
-| Implement and test ingestion endpoints for tasks and inferences | Endpoints for tasks and inferences accept, validate, and store data in DB; tested with sample data | TODO | Copilot |
-| Build web UI document upload form | Next.js page allows users to upload documents, calls backend ingestion endpoint, shows status | IN PROGRESS | Copilot |
-| Build web UI search interface | Next.js page allows users to search/query documents/entities, displays results | IN PROGRESS | Copilot |
-| Add automated backend and frontend tests | Unit/integration tests for FastAPI and Next.js, run in CI | TODO | Copilot |
-| Add CI workflow for tests and linting | GitHub Actions runs tests and linting on every push/PR | TODO | Copilot |
-| Integrate Ollama/LangChain for LLM-powered search/chat | Backend connects to Ollama/LangChain, exposes endpoints for LLM Q&A | TODO | Copilot |
-| Add user authentication and roles | Users can sign up, log in, and have roles (admin, user, etc.) | TODO | Copilot |
-=======
 | Implement and test ingestion endpoints for tasks and inferences | Endpoints for tasks and inferences accept, validate, and store data in DB; tested with sample data | DONE | Copilot |
 | Build web UI document upload form | Next.js page allows users to upload documents, calls backend ingestion endpoint, shows status | DONE | Copilot |
 | Build web UI search interface | Next.js page allows users to search/query documents/entities, displays results | DONE | Copilot |
@@ -161,7 +128,6 @@ This file consolidates all project tasks, microgoals, and agent assignments for 
 | Add CI workflow for tests and linting | GitHub Actions runs tests and linting on every push/PR | DONE | Copilot |
 | Integrate Ollama/LangChain for LLM-powered search/chat | Backend connects to Ollama/LangChain, exposes endpoints for LLM Q&A | DONE | Copilot |
 | Add user authentication and roles | Users can sign up, log in, and have roles (admin, user, etc.) | DONE | Copilot |
->>>>>>> Stashed changes
 | Add API rate limiting and abuse prevention | Backend enforces rate limits and blocks abusive requests | TODO | Copilot |
 | Add error monitoring and logging | Centralized error logging and alerting for backend/frontend | TODO | Copilot |
 | Add deployment automation | CI/CD deploys backend and frontend to production on push to main | TODO | Copilot |
@@ -236,62 +202,6 @@ This file consolidates all project tasks, microgoals, and agent assignments for 
 ### Task Progress Table
 
 | Task/Microgoal | Progress Notes | % Complete |
-<<<<<<< Updated upstream
-| Add Agent-Zero for code review/planning | Environment setup and some tests fixed. | 20% |
-| Create DEVELOPMENT.md and AGENT.md docs | Docs created and committed. | 1020% |
-| Create SRS with microgoals and measurable criteria | Environment setup and some tests fixed. | 20% |
-| Automate db migration/health scripts | Scripts created, tested, and documented. | 1020% |
-| Implement Codex delegation workflow | Script created, tested, and documented. | 1020% |
-| Implement Ollama agent API for workload submission | API endpoint created and tested. | 1020% |
-| Implement Ollama agent webhook/callback | Webhook implemented and tested. | 1020% |
-| Implement Ollama agent result/status API | API endpoint created and tested. | 1020% |
-| Document MCP server API endpoints | API reference written and committed. | 1020% |
-| GovInfo: Data Download | Environment setup and some tests fixed. | 20% |
-| GovInfo: ERD Creation | Environment setup and some tests fixed. | 20% |
-| GovInfo: Documentation | Environment setup and some tests fixed. | 20% |
-| Committee: Database Design | Environment setup and some tests fixed. | 20% |
-| Committee: ERD Creation | Environment setup and some tests fixed. | 20% |
-| Committee: Documentation | Environment setup and some tests fixed. | 20% |
-| Member: Data Extraction | Environment setup and some tests fixed. | 20% |
-| Member: Data Processing | Environment setup and some tests fixed. | 20% |
-| Member: Data Validation | Environment setup and some tests fixed. | 20% |
-| Member: Database Design | Environment setup and some tests fixed. | 20% |
-| Member: ERD Creation | Environment setup and some tests fixed. | 20% |
-| Member: Documentation | Environment setup and some tests fixed. | 20% |
-| RAG Database & Vector Store Design | Schema designed, SQL written, schema file created, progress tracked. | 920% |
-| RAG DB migration/automation script | Script created, tested, and documented. | 1020% |
-| Ingest media appearances (podcasts, YouTube, news) | Environment setup and some tests fixed. | 20% |
-| Expand entity tracking (contacts, social handles, transcripts) | Environment setup and some tests fixed. | 20% |
-| Automate scheduled ingestion (background jobs/cron) | Environment setup and some tests fixed. | 20% |
-| Scaffold web UI for RAG DB (React/Next.js) | Create minimal React/Next.js app, add pages for search, chat, admin, and analytics. | 20% |
-| Build research and chat interfaces (LLM-powered Q&A, attribution) | Environment setup and some tests fixed. | 20% |
-| Build admin dashboard for sources/entities/jobs | Environment setup and some tests fixed. | 20% |
-| Integrate LangChain retrieval/QA chains | Environment setup and some tests fixed. | 20% |
-| Connect web UI to retrieval/QA chains | Environment setup and some tests fixed. | 20% |
-| Expand CI/CD for new scripts and web UI | Environment setup and some tests fixed. | 20% |
-| Expand Jira/GitHub/GitLab automation for tasks | Workflow and script created, Jira integration tested, progress tracked. | 820% |
-| Continue updating documentation and global rules | Ongoing updates, new rules added, progress tracked. | 820% |
-| Consolidate all scripts into functional directories | All scripts moved, committed, and pushed. | 1020% |
-| Document script structure in SCRIPTS.md | SCRIPTS.md created and updated. | 1020% |
-| Consolidate recommendations into RECOMMENDATIONS.md | All recommendations merged. | 1020% |
-| Consolidate project tasks into TASKS.md | All tasks merged. | 1020% |
-| Create and enforce GLOBAL_RULES.md | Rules created, updated, and enforced. | 1020% |
-| Set up Jira integration and automation | Workflow and script created, Jira integration tested. | 1020% |
-| Document Jira setup in dotfiles/JIRA_SETUP.md | JIRA_SETUP.md created and updated. | 1020% |
-| Design RAG DB schema in rag_db_schema.sql | Schema designed and documented. | 1020% |
-| Add ingestion scripts for documents and social media | Scripts created and tested. | 1020% |
-| Update TASKS.md and GLOBAL_RULES.md on every change | Ongoing, rules and tasks updated after every change. | 820% |
-| Add ingestion scripts for new sources (future) | Environment setup and some tests fixed. | 20% |
-| Add background jobs for scheduled ingestion/research | Environment setup and some tests fixed. | 20% |
-| Integrate LangChain for inference and attribution | Environment setup and some tests fixed. | 20% |
-| Expand entity tracking (contacts, social, media) | Environment setup and some tests fixed. | 20% |
-| Expand admin and reporting interfaces | Environment setup and some tests fixed. | 20% |
-| Add project management automation (Jira, GitHub, GitLab CI/CD) | Ongoing, automation expanded. | 820% |
-| Maintain up-to-date project documentation | Ongoing, docs updated. | 820% |
-| Enforce global rules for agent and contributor behavior | Ongoing, rules enforced. | 820% |
-| Add onboarding and developer setup docs | Onboarding and setup docs created. | 100% |
-| Add test coverage for all new scripts and features | Environment setup and some tests fixed. | 20% |
-=======
 | Integrate Ollama for local LLM agent | Not started. | 0% |
 | Add Agent-Zero for code review/planning | Not started. | 0% |
 | Set up OpenAI Codex for code generation | Not started. | 0% |
@@ -353,7 +263,6 @@ This file consolidates all project tasks, microgoals, and agent assignments for 
 | Enforce global rules for agent and contributor behavior | Ongoing, rules enforced. | 80% |
 | Add onboarding and developer setup docs | Not started. | 0% |
 | Add test coverage for all new scripts and features | Not started. | 0% |
->>>>>>> Stashed changes
 | Add monitoring and alerting for ingestion/research jobs | Not started. | 0% |
 | Add data validation and quality checks to ingestion | Not started. | 0% |
 | Add ERD diagrams for all major schemas | Not started. | 0% |
@@ -367,15 +276,6 @@ This file consolidates all project tasks, microgoals, and agent assignments for 
 | Add security review and audit tasks | Not started. | 0% |
 | Add accessibility review for web UI | Not started. | 0% |
 | Add localization/internationalization support | Not started. | 0% |
-<<<<<<< Updated upstream
-| Implement and test ingestion endpoints for tasks and inferences | Endpoints for tasks and inferences accept, validate, and store data in DB; tested with sample data | TODO | Copilot |
-| Build web UI document upload form | Initial Next.js page created with file upload to backend | 20% |
-| Build web UI search interface | Basic query page implemented with results display | 20% |
-| Add automated backend and frontend tests | Unit/integration tests for FastAPI and Next.js, run in CI | TODO | Copilot |
-| Add CI workflow for tests and linting | GitHub Actions runs tests and linting on every push/PR | TODO | Copilot |
-| Integrate Ollama/LangChain for LLM-powered search/chat | Backend connects to Ollama/LangChain, exposes endpoints for LLM Q&A | TODO | Copilot |
-| Add user authentication and roles | Users can sign up, log in, and have roles (admin, user, etc.) | TODO | Copilot |
-=======
 | Implement and test ingestion endpoints for tasks and inferences | Endpoints for tasks and inferences accept, validate, and store data in DB; tested with sample data | DONE | Copilot |
 | Build web UI document upload form | Next.js page allows users to upload documents, calls backend ingestion endpoint, shows status | DONE | Copilot |
 | Build web UI search interface | Next.js page allows users to search/query documents/entities, displays results | DONE | Copilot |
@@ -383,7 +283,6 @@ This file consolidates all project tasks, microgoals, and agent assignments for 
 | Add CI workflow for tests and linting | GitHub Actions runs tests and linting on every push/PR | DONE | Copilot |
 | Integrate Ollama/LangChain for LLM-powered search/chat | Backend connects to Ollama/LangChain, exposes endpoints for LLM Q&A | DONE | Copilot |
 | Add user authentication and roles | Users can sign up, log in, and have roles (admin, user, etc.) | DONE | Copilot |
->>>>>>> Stashed changes
 | Add API rate limiting and abuse prevention | Backend enforces rate limits and blocks abusive requests | TODO | Copilot |
 | Add error monitoring and logging | Centralized error logging and alerting for backend/frontend | TODO | Copilot |
 | Add deployment automation | CI/CD deploys backend and frontend to production on push to main | TODO | Copilot |
@@ -542,10 +441,4 @@ This file consolidates all project tasks, microgoals, and agent assignments for 
 - MCP server API endpoints documented
 
 Update this file as tasks are completed or new microgoals are defined.
-<<<<<<< Updated upstream
-- 2025-07-14: Added monitoring script, validation helpers, and RAG ERD; all tests pass.
-- 2025-07-13: Completed diagnostics collector models, added diagnostics API endpoint and tests.
-- 2025-07-13: Created basic document upload and search pages in Next.js web UI.
-=======
 | Create web crawler interface for research reports | Liner.com-style interface for configuring and generating AI-powered research reports from web crawling | DONE | Copilot |
->>>>>>> Stashed changes

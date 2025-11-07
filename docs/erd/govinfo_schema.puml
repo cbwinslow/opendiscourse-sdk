@@ -1,0 +1,138 @@
+@startuml govinfo_schema
+
+!define Table(name,desc) class name as "desc" << (T,#FFAAAA) >>
+!define primary_key(x) <u>x</u>
+!define foreign_key(x) <i>x</i>
+
+title GovInfo Data Pipeline - Entity Relationship Diagram
+
+' Documents table
+Table(documents, "documents") {
+  primary_key(document_id): UUID
+  --
+  collection: VARCHAR(50)
+  congress: INTEGER
+  session: INTEGER
+  doc_type: VARCHAR(50)
+  doc_number: VARCHAR(50)
+  title: TEXT
+  date_issued: DATE
+  package_id: VARCHAR(100)
+  granule_id: VARCHAR(100)
+  --
+  content_url: TEXT
+  pdf_url: TEXT
+  xml_url: TEXT
+  html_url: TEXT
+  --
+  raw_metadata: JSONB
+  processed_at: TIMESTAMP
+  created_at: TIMESTAMP
+  updated_at: TIMESTAMP
+}
+
+' Collections table
+Table(collections, "collections") {
+  primary_key(collection_id): UUID
+  --
+  collection_code: VARCHAR(50)
+  collection_name: VARCHAR(200)
+  description: TEXT
+  start_congress: INTEGER
+  end_congress: INTEGER
+  --
+  is_active: BOOLEAN
+  created_at: TIMESTAMP
+  updated_at: TIMESTAMP
+}
+
+' Congress sessions table
+Table(congress_sessions, "congress_sessions") {
+  primary_key(session_id): UUID
+  --
+  congress_number: INTEGER
+  session_number: INTEGER
+  start_date: DATE
+  end_date: DATE
+  chamber: VARCHAR(20)
+  --
+  created_at: TIMESTAMP
+  updated_at: TIMESTAMP
+}
+
+' Document content table (for full text)
+Table(document_content, "document_content") {
+  primary_key(content_id): UUID
+  --
+  foreign_key(document_id): UUID
+  content_type: VARCHAR(50)
+  content_text: TEXT
+  content_html: TEXT
+  word_count: INTEGER
+  --
+  extracted_at: TIMESTAMP
+  created_at: TIMESTAMP
+}
+
+' Document metadata table
+Table(document_metadata, "document_metadata") {
+  primary_key(metadata_id): UUID
+  --
+  foreign_key(document_id): UUID
+  metadata_key: VARCHAR(100)
+  metadata_value: TEXT
+  --
+  created_at: TIMESTAMP
+}
+
+' Download log table
+Table(download_log, "download_log") {
+  primary_key(log_id): UUID
+  --
+  foreign_key(document_id): UUID
+  download_date: TIMESTAMP
+  download_status: VARCHAR(50)
+  file_size: BIGINT
+  file_path: TEXT
+  error_message: TEXT
+  --
+  created_at: TIMESTAMP
+}
+
+' Processing log table
+Table(processing_log, "processing_log") {
+  primary_key(log_id): UUID
+  --
+  foreign_key(document_id): UUID
+  processing_date: TIMESTAMP
+  processing_status: VARCHAR(50)
+  processing_steps: JSONB
+  error_message: TEXT
+  --
+  created_at: TIMESTAMP
+}
+
+' Relationships
+documents "1" -- "0..*" document_content
+documents "1" -- "0..*" document_metadata
+documents "1" -- "0..*" download_log
+documents "1" -- "0..*" processing_log
+documents "N" -- "1" collections
+documents "N" -- "1" congress_sessions
+
+note right of documents
+  Main table storing GovInfo documents
+  with links to collection and congress
+end note
+
+note right of document_content
+  Stores full text content
+  extracted from documents
+end note
+
+note right of download_log
+  Tracks download history
+  and status for each document
+end note
+
+@enduml
