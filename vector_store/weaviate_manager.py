@@ -12,7 +12,7 @@ def get_weaviate_client(url=WEAVIATE_URL, api_key=WEAVIATE_API_KEY):
     try:
         if api_key:
             auth_config = weaviate.auth.AuthApiKey(api_key=api_key)
- client = weaviate.Client(url=WEAVIATE_URL, auth_client_secret=auth_config)
+            client = weaviate.Client(url=WEAVIATE_URL, auth_client_secret=auth_config)
         else:
             client = weaviate.Client(url=WEAVIATE_URL)
         client.check_connection()
