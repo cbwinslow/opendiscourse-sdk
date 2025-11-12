@@ -1,0 +1,11 @@
+# Global Rules
+
+- Always use the file called `TASKS.md` in project repos to understand what has been done and what is left to be completed for the project. These files are used to communicate to AI agents and the users the progress for the project.
+- Please consider using other files called `TASKS.*` that may have other extensions or are of different file types.
+- Every time you respond to user input, check the task list (`TASKS.md`) to ensure it is up to date. Mark off any tasks that have been completed. If not, use that document to take notes and update progress underneath each task on what has been done to work towards completing the tasks.
+- After every response to user input or every code file generated or edited, the agent must check/verify/update the TASKS.md file for every task that is relevant to the latest response and any response that was missed or any task that was missed. The TASKS.md file must be updated often and be accurate as it is special and pertains to the progress of the project and the driving force of the operations and serves as a major source of communication between user and agent.
+- The agent must also update the tasks with progress underneath each task bullet/number. The agent must append all the progress/work done on each task to show progress on each task.
+- The agent must also calculate a percentage number 1-100% on the progress completion for each task and a total for each section and a total for the total project progress. These numbers must be updated often and after each interaction with the user.
+- If there is no TASKS.md file for each project then make one and update it.
+- These are append only, no deleting. If you scratch a task or if something becomes irrelevant to the project just mark it as such (just mark it N/A or something and ignore it going forward or change the file name to TASKS_deprecated.md) or something like that.
+- For every task in TASKS.md, the agent must break down complex tasks into subtasks and, where possible, add clear acceptance criteria for each task and subtask. These should be updated or appended after every user input or code change, to maximize clarity and actionability for all agents and contributors (including Codex or other AIs).
