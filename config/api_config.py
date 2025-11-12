@@ -7,6 +7,11 @@ GOVINFO_API_KEY = os.getenv("GOVINFO_API_KEY", "YOUR_API_KEY_HERE")
 GOVINFO_BASE_URL = "https://api.govinfo.gov"
 GOVINFO_HEADERS = {"X-Api-Key": GOVINFO_API_KEY, "Accept": "application/json"}
 
+# Legacy aliases for backward compatibility
+BASE_URL = GOVINFO_BASE_URL
+HEADERS = GOVINFO_HEADERS
+COLLECTIONS_URL = f"{GOVINFO_BASE_URL}/collections"
+
 # Congress.gov API Configuration
 CONGRESS_API_KEY = os.getenv("CONGRESS_API_KEY", "")
 CONGRESS_BASE_URL = "https://api.congress.gov/v3"
