@@ -3,57 +3,47 @@
 	"message": null,
 	"nextPage": "https://api.govinfo.gov/collections/USCOURTS/2018-04-03T00:00:00Z?offset=25&pageSize=25",
 	"previousPage": null,
-	"packages": [
-		{
-			"packageId": "USCOURTS-cand-3_17-cv-06884",
-			"lastModified": "2018-04-17T19:53:27Z",
-			"packageLink": "https://api.govinfo.gov/packages/USCOURTS-cand-3_17-cv-06884/summary"
-		},
-		{
-			"packageId": "USCOURTS-ilnd-1_17-cv-08343",
-			"lastModified": "2018-04-17T19:55:07Z",
-			"packageLink": "https://api.govinfo.gov/packages/USCOURTS-ilnd-1_17-cv-08343/summary"
-		},
-		{
-			"packageId": "USCOURTS-cand-4_17-cv-06036",
-			"lastModified": "2018-04-17T19:55:54Z",
-			"packageLink": "https://api.govinfo.gov/packages/USCOURTS-cand-4_17-cv-06036/summary"
-		},
-		{
-			"packageId": "USCOURTS-ca4-17-07510",
-			"lastModified": "2018-04-17T19:34:30Z",
-			"packageLink": "https://api.govinfo.gov/packages/USCOURTS-ca4-17-07510/summary"
-		},
-		{
-			"packageId": "USCOURTS-ca5-17-30484",
-			"lastModified": "2018-04-17T19:34:31Z",
-			"packageLink": "https://api.govinfo.gov/packages/USCOURTS-ca5-17-30484/summary"
-		},
-		{
-			"packageId": "USCOURTS-ca5-17-40107",
-			"lastModified": "2018-04-17T19:35:36Z",
-			"packageLink": "https://api.govinfo.gov/packages/USCOURTS-ca5-17-40107/summary"
-		},
-		{
-			"packageId": "USCOURTS-cand-5_17-cv-05021",
-			"lastModified": "2018-04-17T19:54:16Z",
-			"packageLink": "https://api.govinfo.gov/packages/USCOURTS-cand-5_17-cv-05021/summary"
-		},
-		{
-			"packageId": "USCOURTS-ca5-16-51361",
-			"lastModified": "2018-04-17T19:34:46Z",
-			"packageLink": "https://api.govinfo.gov/packages/USCOURTS-ca5-16-51361/summary"
-		},
-		{
-			"packageId": "USCOURTS-cand-5_17-cv-03805",
-			"lastModified": "2018-04-17T19:58:08Z",
-			"packageLink": "https://api.govinfo.gov/packages/USCOURTS-cand-5_17-cv-03805/summary"
-		},
-		{
-			"packageId": "USCOURTS-ctd-3_15-cv-01215",
-			"lastModified": "2018-04-16T13:45:56Z",
-			"packageLink": "https://api.govinfo.gov/packages/USCOURTS-ctd-3_15-cv-01215/summary"
-		},
+	"packages": [{
+		"packageId": "USCOURTS-cand-3_17-cv-06884",
+		"lastModified": "2018-04-17T19:53:27Z",
+		"packageLink": "https://api.govinfo.gov/packages/USCOURTS-cand-3_17-cv-06884/summary"
+	}, {
+		"packageId": "USCOURTS-ilnd-1_17-cv-08343",
+		"lastModified": "2018-04-17T19:55:07Z",
+		"packageLink": "https://api.govinfo.gov/packages/USCOURTS-ilnd-1_17-cv-08343/summary"
+	}, {
+		"packageId": "USCOURTS-cand-4_17-cv-06036",
+		"lastModified": "2018-04-17T19:55:54Z",
+		"packageLink": "https://api.govinfo.gov/packages/USCOURTS-cand-4_17-cv-06036/summary"
+	}, {
+		"packageId": "USCOURTS-ca4-17-07510",
+		"lastModified": "2018-04-17T19:34:30Z",
+		"packageLink": "https://api.govinfo.gov/packages/USCOURTS-ca4-17-07510/summary"
+	}, {
+		"packageId": "USCOURTS-ca5-17-30484",
+		"lastModified": "2018-04-17T19:34:31Z",
+		"packageLink": "https://api.govinfo.gov/packages/USCOURTS-ca5-17-30484/summary"
+	}, {
+		"packageId": "USCOURTS-ca5-17-40107",
+		"lastModified": "2018-04-17T19:35:36Z",
+		"packageLink": "https://api.govinfo.gov/packages/USCOURTS-ca5-17-40107/summary"
+	}, {
+		"packageId": "USCOURTS-cand-5_17-cv-05021",
+		"lastModified": "2018-04-17T19:54:16Z",
+		"packageLink": "https://api.govinfo.gov/packages/USCOURTS-cand-5_17-cv-05021/summary"
+	}, {
+		"packageId": "USCOURTS-ca5-16-51361",
+		"lastModified": "2018-04-17T19:34:46Z",
+		"packageLink": "https://api.govinfo.gov/packages/USCOURTS-ca5-16-51361/summary"
+	}, {
+		"packageId": "USCOURTS-cand-5_17-cv-03805",
+		"lastModified": "2018-04-17T19:58:08Z",
+		"packageLink": "https://api.govinfo.gov/packages/USCOURTS-cand-5_17-cv-03805/summary"
+	}, {
+		"packageId": "USCOURTS-ctd-3_15-cv-01215",
+		"lastModified": "2018-04-16T13:45:56Z",
+		"packageLink": "https://api.govinfo.gov/packages/USCOURTS-ctd-3_15-cv-01215/summary"
+	},
 		{
 			"packageId": "USCOURTS-ca5-16-31067",
 			"lastModified": "2018-04-16T13:12:01Z",
