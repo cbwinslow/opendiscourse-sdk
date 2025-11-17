@@ -7,6 +7,8 @@
 
 OpenDiscourse is a comprehensive platform for analyzing and processing both media intelligence and government documents. The platform combines advanced data processing capabilities with modern web technologies to deliver intelligent document analysis and retrieval-augmented generation (RAG) capabilities.
 
+> **Note**: The repository structure was recently reorganized for better maintainability. See [REORGANIZATION_SUMMARY.md](documentation/REORGANIZATION_SUMMARY.md) for details about the new structure and migration guide.
+
 ## Key Features
 
 - 🔍 **Semantic Search**: Vector-based similarity search with natural language query processing

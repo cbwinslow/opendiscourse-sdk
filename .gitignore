@@ -71,9 +71,9 @@ build/
 *.pem
 
 # Project specific
-*.lock
-*.pyc
-*.swp
+package-lock.json
+yarn.lock
+!pnpm-lock.yaml
 .buildlog/
 .history
 
@@ -229,12 +229,6 @@ temp/
 dimensional-debris/
 opendiscourse-*/
 
-# Terraform
-.terraform/
-*.tfstate
-*.tfstate.*
-*.tfplan
-.terraform.lock.hcl
-.terraform.tfstate.lock.info
+
 
 .cpqdevkit/**.next/

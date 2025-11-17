@@ -1,0 +1,88 @@
+name: Commit Message Linter
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  lint-commits:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Lint commit messages
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { data: commits } = await github.rest.pulls.listCommits({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+            
+            const conventionalCommitRegex = /^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?!?:\s.+/;
+            const invalidCommits = [];
+            
+            for (const commit of commits) {
+              const message = commit.commit.message.split('\n')[0];
+              if (!conventionalCommitRegex.test(message)) {
+                invalidCommits.push({
+                  sha: commit.sha.substring(0, 7),
+                  message: message
+                });
+              }
+            }
+            
+            if (invalidCommits.length > 0) {
+              let comment = `## ⚠️ Commit Message Lint Warning\n\n`;
+              comment += `The following commits do not follow the [Conventional Commits](https://www.conventionalcommits.org/) specification:\n\n`;
+              
+              for (const commit of invalidCommits) {
+                comment += `- \`${commit.sha}\`: ${commit.message}\n`;
+              }
+              
+              comment += `\n### Expected format:\n\n`;
+              comment += '```\n';
+              comment += 'type(scope): description\n\n';
+              comment += 'Examples:\n';
+              comment += '  feat: add new search feature\n';
+              comment += '  fix(api): resolve pagination bug\n';
+              comment += '  docs: update README\n';
+              comment += '```\n\n';
+              comment += `**Valid types:** feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert\n\n`;
+              comment += `While not required, following this convention helps with automated changelog generation and semantic versioning.`;
+              
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: comment
+              });
+              
+              // Add label
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                labels: ['needs-better-commits']
+              });
+            } else {
+              // Remove the label if all commits are valid
+              try {
+                await github.rest.issues.removeLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  name: 'needs-better-commits'
+                });
+              } catch (error) {
+                // Label might not exist, ignore
+              }
+            }

@@ -1,0 +1,93 @@
+name: Auto-Update Dependencies
+
+on:
+  schedule:
+    - cron: '0 0 * * 1'  # Weekly on Monday
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-python-deps:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Update pip dependencies
+        run: |
+          pip install pip-tools
+          # Update requirements
+          pip-compile --upgrade requirements.in -o requirements.txt || echo "No requirements.in found"
+          pip-compile --upgrade requirements-dev.in -o requirements-dev.txt || echo "No requirements-dev.in found"
+
+      - name: Create Pull Request for Python updates
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'chore(deps): update Python dependencies'
+          title: 'chore(deps): Update Python dependencies'
+          body: |
+            This PR updates Python dependencies to their latest compatible versions.
+            
+            **Changes:**
+            - Updated requirements.txt
+            - Updated requirements-dev.txt
+            
+            Please review the changes and ensure all tests pass before merging.
+          branch: deps/python-auto-update
+          labels: |
+            dependencies
+            python
+            automated
+
+  update-npm-deps:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Update npm dependencies
+        run: |
+          if [ -f "package.json" ]; then
+            npx npm-check-updates -u
+            npm install
+          fi
+          
+          if [ -d "web" ]; then
+            cd web
+            npx npm-check-updates -u
+            npm install
+          fi
+
+      - name: Create Pull Request for npm updates
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'chore(deps): update npm dependencies'
+          title: 'chore(deps): Update npm dependencies'
+          body: |
+            This PR updates npm dependencies to their latest versions.
+            
+            **Changes:**
+            - Updated package.json
+            - Updated package-lock.json
+            
+            Please review the changes and ensure all tests pass before merging.
+          branch: deps/npm-auto-update
+          labels: |
+            dependencies
+            javascript
+            automated

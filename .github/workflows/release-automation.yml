@@ -1,0 +1,144 @@
+name: Release Automation
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: read
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate changelog
+        id: changelog
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const tag = context.ref.replace('refs/tags/', '');
+            
+            // Get the previous tag
+            const { data: tags } = await github.rest.repos.listTags({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 100
+            });
+            
+            const currentTagIndex = tags.findIndex(t => t.name === tag);
+            const previousTag = currentTagIndex < tags.length - 1 ? tags[currentTagIndex + 1].name : null;
+            
+            // Get commits between tags
+            let commits = [];
+            if (previousTag) {
+              const comparison = await github.rest.repos.compareCommits({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                base: previousTag,
+                head: tag
+              });
+              commits = comparison.data.commits;
+            } else {
+              const { data: allCommits } = await github.rest.repos.listCommits({
+                owner: context.repo.owner,
+                repo: context.repo.repo
+              });
+              commits = allCommits;
+            }
+            
+            // Categorize commits
+            const features = [];
+            const fixes = [];
+            const chores = [];
+            const breaking = [];
+            
+            for (const commit of commits) {
+              const message = commit.commit.message;
+              const firstLine = message.split('\n')[0];
+              
+              if (firstLine.includes('BREAKING CHANGE') || firstLine.includes('!:')) {
+                breaking.push(firstLine);
+              } else if (firstLine.startsWith('feat:') || firstLine.startsWith('feature:')) {
+                features.push(firstLine.replace(/^(feat|feature):\s*/, ''));
+              } else if (firstLine.startsWith('fix:')) {
+                fixes.push(firstLine.replace(/^fix:\s*/, ''));
+              } else if (firstLine.startsWith('chore:') || firstLine.startsWith('build:') || firstLine.startsWith('ci:')) {
+                chores.push(firstLine);
+              } else {
+                chores.push(firstLine);
+              }
+            }
+            
+            // Build changelog
+            let changelog = `## What's Changed\n\n`;
+            
+            if (breaking.length > 0) {
+              changelog += `### ⚠️ Breaking Changes\n\n`;
+              breaking.forEach(item => changelog += `- ${item}\n`);
+              changelog += `\n`;
+            }
+            
+            if (features.length > 0) {
+              changelog += `### ✨ Features\n\n`;
+              features.forEach(item => changelog += `- ${item}\n`);
+              changelog += `\n`;
+            }
+            
+            if (fixes.length > 0) {
+              changelog += `### 🐛 Bug Fixes\n\n`;
+              fixes.forEach(item => changelog += `- ${item}\n`);
+              changelog += `\n`;
+            }
+            
+            if (chores.length > 0) {
+              changelog += `### 🔧 Maintenance\n\n`;
+              chores.slice(0, 10).forEach(item => changelog += `- ${item}\n`);
+              if (chores.length > 10) {
+                changelog += `- ... and ${chores.length - 10} more commits\n`;
+              }
+              changelog += `\n`;
+            }
+            
+            const range = previousTag ? `${previousTag}...${tag}` : tag;
+            changelog += `**Full Changelog**: https://github.com/${context.repo.owner}/${context.repo.repo}/compare/${range}`;
+            
+            core.setOutput('changelog', changelog);
+            return changelog;
+
+      - name: Create GitHub Release
+        uses: actions/github-script@v7
+        env:
+          CHANGELOG: ${{ steps.changelog.outputs.changelog }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const tag = context.ref.replace('refs/tags/', '');
+            const changelog = process.env.CHANGELOG;
+            
+            await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: tag,
+              name: `Release ${tag}`,
+              body: changelog,
+              draft: false,
+              prerelease: tag.includes('alpha') || tag.includes('beta') || tag.includes('rc')
+            });
+
+      - name: Notify on success
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const tag = context.ref.replace('refs/tags/', '');
+            console.log(`✅ Successfully created release ${tag}`);
