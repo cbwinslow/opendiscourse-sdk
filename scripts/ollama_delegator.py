@@ -10,7 +10,7 @@ class OllamaDelegationError(Exception):
 
 class OllamaDelegator:
     def __init__(self, base_url: str = None):
-        from api_config import OLLAMA_CONFIG
+        from config.api_config import OLLAMA_CONFIG
         config = OLLAMA_CONFIG
         self.client = OllamaClient(base_url or config["base_url"])
         self.logger = logging.getLogger(__name__)

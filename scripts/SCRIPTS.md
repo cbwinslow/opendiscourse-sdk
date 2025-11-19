@@ -32,6 +32,7 @@ This document describes the structure and purpose of each script directory after
 
 ## 6. Runner (`scripts/`)
 - `run.py`: Main entry point for running scripts.
+- `deploy_infrastructure.sh`: Deploy OpenDiscourse infrastructure using Terraform with safety checks.
 
 ## Legacy Scripts
 - All original scripts are preserved in `scripts/legacy/` for reference.

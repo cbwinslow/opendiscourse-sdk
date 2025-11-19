@@ -36,13 +36,15 @@ Closes #
 - [ ] No documentation needed
 
 ## Checklist
-- [ ] My code follows the style guidelines of this project
-- [ ] I have performed a self-review of my own code
+- [ ] My code follows the [Coding Standards](../CODING_STANDARDS.md)
+- [ ] I have performed a self-review using the [PR Review Checklist](PR_REVIEW_CHECKLIST.md)
 - [ ] I have commented my code, particularly in hard-to-understand areas
 - [ ] I have made corresponding changes to the documentation
 - [ ] My changes generate no new warnings
 - [ ] I have added tests that prove my fix is effective or that my feature works
 - [ ] New and existing unit tests pass locally with my changes
+- [ ] Test coverage is maintained or improved (minimum 80%)
+- [ ] Security considerations have been addressed
 - [ ] Any dependent changes have been merged and published
 
 ## Screenshots (if applicable)

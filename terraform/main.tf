@@ -11,8 +11,6 @@ provider "hcloud" {
   token = var.hcloud_token
 }
 
-variable "hcloud_token" {}
-
 resource "hcloud_server" "main" {
   name        = "cloudcurio"
   image       = "ubuntu-22.04"
@@ -20,5 +18,3 @@ resource "hcloud_server" "main" {
   location    = "hel1"
   ssh_keys    = [var.ssh_key]
 }
-
-variable "ssh_key" {}
