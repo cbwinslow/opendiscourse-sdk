@@ -1,0 +1,42 @@
+while true:
+  for each source in SOURCE_CONFIGS:
+    if time_to_schedule(source):
+      mg = SourcePlanner.create_ingest_microgoal(source)
+      enqueue(mg)
+
+  while has_pending_microgoals():
+    mg = next_ready_microgoal()
+
+    if mg.state == "planned":
+      RawBatch = Fetcher.fetch(mg)
+      store_artifact(RawBatch)
+      mg.state = "fetched"
+
+    if mg.state == "fetched":
+      NormBatch = Parser.normalize(RawBatch)
+      store_artifact(NormBatch)
+      mg.state = "normalized"
+
+    if mg.state == "normalized":
+      ResolvedBatch = EntityResolver.resolve(NormBatch)
+      store_artifact(ResolvedBatch)
+      mg.state = "resolved"
+
+    if mg.state == "resolved":
+      ValidationReport = Validator.check(ResolvedBatch)
+      store_artifact(ValidationReport)
+      if ValidationReport.errors > THRESHOLD:
+        mg.state = "failed"
+      else:
+        mg.state = "ready_for_db"
+
+    if mg.state == "ready_for_db":
+      DBResult = DBWriter.upsert(ResolvedBatch)
+      store_artifact(DBResult)
+      if DBResult.success:
+        mg.state = "done"
+        update_ingestion_cursor(mg.source, mg.range)
+      else:
+        mg.state = "failed"
+
+  sleep(SCHEDULER_INTERVAL)

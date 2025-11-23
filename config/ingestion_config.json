@@ -1,0 +1,31 @@
+{
+  "ingestion": {
+    "congress_start": 101,
+    "congress_end": 118,
+    "batch_size": 50,
+    "request_delay": 0.5,
+    "max_retries": 3
+  },
+  "schedule": {
+    "enabled": false,
+    "frequency": "weekly",
+    "day_of_week": "sunday",
+    "time": "02:00",
+    "timezone": "UTC"
+  },
+  "verification": {
+    "enabled": true,
+    "run_after_ingestion": true,
+    "data_quality_threshold": 0.95
+  },
+  "notifications": {
+    "enabled": false,
+    "email": null,
+    "webhook_url": null
+  },
+  "backup": {
+    "enabled": true,
+    "backup_before_ingestion": true,
+    "backup_retention_days": 30
+  }
+}

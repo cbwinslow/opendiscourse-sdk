@@ -29,6 +29,14 @@ dist/
 *.sql
 *.dump
 
+# Exceptions: Allow migration SQL files
+!congress.gov/migrations/*.sql
+!govinfo/sql/*.sql
+!opendiscourse-mcp/mcp_server/sql/*.sql
+!opendiscourse-mcp/congress_ingest_bundle/*.sql
+!opendiscourse-mcp/*.sql
+!migrations/*.sql
+
 # IDE
 .idea/
 .vscode/

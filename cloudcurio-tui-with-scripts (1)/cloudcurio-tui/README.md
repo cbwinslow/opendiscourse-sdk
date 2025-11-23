@@ -1,0 +1,1 @@
+# cloudcurio-tui\n\nRunner scripts + doc-pack generator. Replace main.go with full TUI from code canvas when ready.\n
