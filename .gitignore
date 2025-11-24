@@ -240,3 +240,15 @@ opendiscourse-*/
 
 
 .cpqdevkit/**.next/
+
+# Additional patterns for project-specific files
+ingestion_results_*.json
+*_results_*.json
+*.html
+*_report.html
+*.txt
+test_*.txt
+nc_*.txt
+ingestion_config.py
+rules.md
+*.config.py
