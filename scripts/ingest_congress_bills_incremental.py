@@ -31,8 +31,9 @@ class IncrementalCongressBillsIngestor:
         self.base_url = "https://api.congress.gov/v3"
         self.batch_size = 50
         self.db_conn = psycopg2.connect(
-            database='cbwinslow',
-            user='cbwinslow'
+            database='opendiscourse',
+            user='cbwinslow',
+            host='/var/run/postgresql'
         )
 
     def start_ingestion_session(self, congress: int) -> str:
@@ -288,10 +289,10 @@ class IncrementalCongressBillsIngestor:
         cursor = self.db_conn.cursor()
         try:
             cursor.execute("""
-                SELECT incremental.update_checkpoint_progress(
-                    'congress.gov', 'bills', %s, %s, %s, %s
+                CALL incremental.update_checkpoint_progress(
+                    'congress.gov', 'bills', %s, %s, NULL, NULL, NULL, NULL, %s, %s
                 )
-            """, (str(congress), offset, batch_size, True))
+            """, (str(congress), offset, batch_size, False))
 
             self.db_conn.commit()
         except Exception as e:
