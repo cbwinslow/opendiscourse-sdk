@@ -895,16 +895,16 @@ const result = await db.prepare(sql).bind(...params).all();
 
 ## Part 9: Benchmarking & Performance
 
-### 9.1 Benchmarking Metrics
+### 9.1 Benchmarking Metrics (Revised for Free Tier)
 
-| Component | Metric | Target |
-|-----------|--------|--------|
-| **Fetcher** | API response time | <500ms |
-| **Fetcher** | Requests per second | 100+ |
-| **Transformer** | Records per second | 1000+ |
-| **Persistence** | Inserts per second | 500+ |
-| **Overall** | End-to-end latency | <2 seconds |
-| **Overall** | Throughput | 1000+ records/sec |
+| Component | Metric | Target (Free Tier) | Notes |
+|-----------|--------|--------------------|-------|
+| **Fetcher** | API response time | <1000ms | Increased due to tunnel overhead |
+| **Fetcher** | Requests per minute | 50-100 | Stays within CF Workers free tier |
+| **Transformer** | Records per minute | 50-100 | Scaled to fetcher capacity |
+| **Persistence** | Inserts per minute | 50-100 | Limited by tunnel and free tier |
+| **Overall** | End-to-end latency | <5 seconds | Increased due to tunnel and reduced parallelism |
+| **Overall** | Throughput | 50-100 records/minute | Significant reduction from original target |
 
 ### 9.2 Performance Optimization
 
@@ -1137,14 +1137,13 @@ GRANT INSERT, UPDATE ON ALL TABLES IN SCHEMA openstates TO ingestion_user;
 | **KV Store** | 1GB storage, 1M ops/day | $0.50/day |
 | **Total Workers** | | ~$15/month |
 
-### 13.2 PostgreSQL Costs (Hyperdrive)
+### 13.2 PostgreSQL Costs (User-Managed, via Cloudflare Tunnel)
 
 | Component | Usage | Cost |
 |-----------|-------|------|
-| **Hyperdrive** | 1 database | $50/month |
-| **Database Storage** | 100GB | $0.25/GB = $25/month |
-| **Backup Storage** | 100GB | $0.10/GB = $10/month |
-| **Total Database** | | ~$85/month |
+| **PostgreSQL Database** | User-managed | $0/month |
+| **Cloudflare Tunnel** | Unlimited | $0/month |
+| **Total Database** | | $0/month |
 
 ### 13.3 OpenRouter AI Costs
 
@@ -1156,10 +1155,10 @@ GRANT INSERT, UPDATE ON ALL TABLES IN SCHEMA openstates TO ingestion_user;
 
 ### 13.4 Total Monthly Cost
 
-- Cloudflare Workers: ~$15
-- PostgreSQL + Hyperdrive: ~$85
+- Cloudflare Workers: $0 (within free tier limits)
+- PostgreSQL (via Cloudflare Tunnel): $0
 - OpenRouter AI: $0 (free models)
-- **Total: ~$100/month**
+- **Total: $0/month**
 
 ---
 
@@ -1286,7 +1285,7 @@ Before proceeding with implementation, please review and confirm:
 | **Compute** | Cloudflare Workers | Serverless compute |
 | **State** | Durable Objects | Persistent state |
 | **Cache** | Cloudflare KV | Fast caching |
-| **Database** | PostgreSQL + Hyperdrive | Data persistence |
+| **Database** | PostgreSQL (via Cloudflare Tunnel) | Data persistence |
 | **Frontend** | Next.js + React | Web dashboard |
 | **AI** | OpenRouter + Free Models | Multi-agentic AI |
 | **APIs** | Congress.gov, GovInfo, OpenStates | Data sources |
