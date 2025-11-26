@@ -15,9 +15,10 @@ This document outlines a comprehensive plan to build a **Cloudflare Workers-base
 2. **Implement enterprise-grade features**: metrics, progress tracking, anti-duplication, resume/pause capabilities
 3. **Leverage multi-agentic AI** using OpenRouter free models for intelligent decision-making
 4. **Provide real-time monitoring** via a Next.js web dashboard
-5. **Ensure data integrity** with PostgreSQL + Hyperdrive for optimal performance
-6. **Maintain 3NF normalization** across all data models
-7. **Document everything** for future AI agent automation
+5. Ensure data integrity with PostgreSQL via Cloudflare Tunnel for cost-effective performance within free-tier limits.
+6. Maintain 3NF normalization across all data models.
+7. Document everything for future AI agent automation.
+8. Operate strictly within free-tier limits of Cloudflare services and PostgreSQL access, implying revised performance expectations.
 
 ---
 
@@ -54,7 +55,7 @@ This document outlines a comprehensive plan to build a **Cloudflare Workers-base
                             │
                             ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│              POSTGRESQL + HYPERDRIVE LAYER                       │
+│          POSTGRESQL LAYER (Accessed via Cloudflare Tunnel)     │
 ├─────────────────────────────────────────────────────────────────┤
 │  ┌──────────────────────────────────────────────────────────┐   │
 │  │  Congress.gov Schema (3NF Normalized)                    │   │
@@ -155,11 +156,12 @@ This document outlines a comprehensive plan to build a **Cloudflare Workers-base
 - Prepare batch inserts for database
 
 **D. Persistence Worker** (Database Operations)
-- Batch insert/upsert operations to PostgreSQL via Hyperdrive
-- Implement idempotent operations (ON CONFLICT)
-- Handle transaction management
-- Log all database operations
-- Track insertion metrics
+- Connects to user's PostgreSQL database via Cloudflare Tunnel.
+- Batch insert/upsert operations to PostgreSQL.
+- Implement idempotent operations (ON CONFLICT).
+- Handle transaction management.
+- Log all database operations.
+- Track insertion metrics.
 
 #### 2.1.2 Durable Objects (State Management)
 
@@ -225,7 +227,7 @@ interface MetricsState {
 | `metrics:{source}:{timestamp}` | Periodic metrics snapshots | 90 days |
 | `config:{source}` | Source-specific configuration | No expiry |
 
-### 2.2 PostgreSQL Schema (3NF Normalized)
+### 2.2 User's PostgreSQL Schema (3NF Normalized)
 
 #### 2.2.1 Congress.gov Tables
 
