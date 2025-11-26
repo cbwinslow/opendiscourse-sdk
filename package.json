@@ -19,7 +19,8 @@
     "dev:web": "pnpm --filter opendiscourse-web dev",
     "build:web": "pnpm --filter opendiscourse-web build",
     "deploy": "./deploy-local.sh",
-    "test:all": "./run-tests.sh all"
+    "test:all": "./run-tests.sh all",
+    "test:e2e": "pytest tests/e2e"
   },
   "keywords": [
     "political-analysis",

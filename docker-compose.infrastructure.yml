@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: opendiscourse_postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME:-opendiscourse}
+      POSTGRES_USER: ${DB_USER:-user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    restart: unless-stopped
+    networks:
+      - opendiscourse_net
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  opendiscourse_net:
+    driver: bridge

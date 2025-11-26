@@ -252,3 +252,6 @@ nc_*.txt
 ingestion_config.py
 rules.md
 *.config.py
+
+.gemini/
+gha-creds-*.json

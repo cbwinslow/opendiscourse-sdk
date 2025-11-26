@@ -19,8 +19,10 @@ import requests
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 # Import monitoring components
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from monitoring.progress_monitor import UniversalProgressMonitor
 from monitoring.delegates import setup_all_delegates
+from ingestion_config import validate_and_start_ingestion, get_api_key_from_env, get_ingestion_mode_from_env, IngestionMode, validate_all_api_keys
 
 # Load environment variables
 from dotenv import load_dotenv
@@ -84,13 +86,21 @@ class MonitoredMembersIngestor:
 
         try:
             # Use same database connection for monitoring
-            self.db_conn_monitor = psycopg2.connect(
-                dbname=self.config.db_name,
-                user=self.config.db_user,
-                password=self.config.db_password or '',
-                host=self.config.db_host,
-                port=self.config.db_port
-            )
+            if not self.config.db_host and not self.config.db_port:
+                # Unix socket connection
+                self.db_conn_monitor = psycopg2.connect(
+                    dbname=self.config.db_name,
+                    user=self.config.db_user
+                )
+            else:
+                # TCP connection
+                self.db_conn_monitor = psycopg2.connect(
+                    dbname=self.config.db_name,
+                    user=self.config.db_user,
+                    password=self.config.db_password or '',
+                    host=self.config.db_host,
+                    port=self.config.db_port
+                )
 
             self.monitor = UniversalProgressMonitor(
                 self.db_conn_monitor,
@@ -108,12 +118,19 @@ class MonitoredMembersIngestor:
     def connect_database(self):
         """Connect to PostgreSQL database"""
         try:
-            conn_params = {
-                'host': self.config.db_host,
-                'port': self.config.db_port,
-                'database': self.config.db_name,
-                'user': self.config.db_user
-            }
+            # Use Unix socket if host/port are empty (like working scripts)
+            if not self.config.db_host and not self.config.db_port:
+                conn_params = {
+                    'database': self.config.db_name,
+                    'user': self.config.db_user
+                }
+            else:
+                conn_params = {
+                    'host': self.config.db_host,
+                    'port': self.config.db_port,
+                    'database': self.config.db_name,
+                    'user': self.config.db_user
+                }
 
             if self.config.db_password:
                 conn_params['password'] = self.config.db_password
@@ -273,11 +290,8 @@ class MonitoredMembersIngestor:
             return None
 
         try:
-            if '-' in date_str:
-                return datetime.strptime(date_str[:10], '%Y-%m-%d').date()
-            else:
-                return datetime.strptime(date_str[:10], '%Y-%m-%d').date()
-        except:
+            return datetime.strptime(date_str[:10], '%Y-%m-%d').date()
+        except Exception:
             logger.warning(f"Failed to parse date: {date_str}")
             return None
 
@@ -364,6 +378,16 @@ class MonitoredMembersIngestor:
 
                 execute_values(cursor, term_query, term_values)
                 term_count = len(all_terms)
+
+                # Update progress for terms
+                if self.monitor and term_count > 0:
+                    self.monitor.update_progress(
+                        job_id=self.current_job_id,
+                        success=True,
+                        record_id=f"{bioguide_id}_terms",
+                        record_type="term",
+                        records_processed=term_count
+                    )
             else:
                 term_count = 0
 
@@ -506,8 +530,8 @@ def main():
     # Load configuration
     config = MemberIngestionConfig(
         api_key=os.getenv('CONGRESS_API_KEY'),
-        db_host=os.getenv('DB_HOST', 'localhost'),
-        db_port=os.getenv('DB_PORT', '5432'),
+        db_host=os.getenv('DB_HOST', ''),  # Empty for Unix socket
+        db_port=os.getenv('DB_PORT', ''),  # Empty for Unix socket
         db_name=os.getenv('DB_NAME', 'cbwinslow'),
         db_user=os.getenv('DB_USER', 'cbwinslow'),
         db_password=os.getenv('DB_PASSWORD', ''),
@@ -519,9 +543,36 @@ def main():
     )
 
     # Validate configuration
+    logger.info("🔍 Validating all required API keys...")
+    key_validation = validate_all_api_keys()
+
+    if not key_validation['valid']:
+        logger.error("❌ API key validation failed:")
+        for error in key_validation['errors']:
+            logger.error(f"   🚫 {error}")
+        logger.error("Please set the required environment variables in your .env file:")
+        logger.error("   CONGRESS_API_KEY=your_real_congress_api_key")
+        logger.error("   GOVINFO_API_KEY=your_real_govinfo_api_key")
+        logger.error("   OPENSTATES_API_KEY=your_real_openstates_api_key")
+        sys.exit(1)
+
+    logger.info("✅ All API keys validated successfully")
+    if key_validation['warnings']:
+        for warning in key_validation['warnings']:
+            logger.warning(f"   ⚠️ {warning}")
+
     if not config.api_key:
         logger.error("CONGRESS_API_KEY not found in environment variables")
         sys.exit(1)
+
+    # Get ingestion mode and validate API key
+    mode = get_ingestion_mode_from_env()
+    logger.info(f"🔍 Validating API configuration for {mode.value} mode...")
+    if not validate_and_start_ingestion(config.api_key, "https://api.congress.gov/v3", mode):
+        logger.error("❌ API validation failed - cannot proceed with ingestion")
+        sys.exit(1)
+
+    logger.info("✅ API validation passed - starting ingestion...")
 
     # Create ingestor
     ingestor = MonitoredMembersIngestor(config)
