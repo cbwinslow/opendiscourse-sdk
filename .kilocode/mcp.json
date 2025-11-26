@@ -15,7 +15,7 @@
         "ghcr.io/github/github-mcp-server"
       ],
       "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "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",
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}",
         "GITHUB_TOOLSETS": "",
         "GITHUB_READ_ONLY": ""
       }
@@ -26,7 +26,7 @@
         "mcp-server-gitlab"
       ],
       "env": {
-        "GITLAB_PERSONAL_ACCESS_TOKEN": "glpat-134HKGb54i6TFYXiNA-z",
+        "GITLAB_PERSONAL_ACCESS_TOKEN": "${GITLAB_API_KEY}",
         "GITLAB_API_URL": "https://gitlab/api/v4/"
       }
     }
