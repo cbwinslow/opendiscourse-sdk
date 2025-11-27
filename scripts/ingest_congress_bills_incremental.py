@@ -64,7 +64,7 @@ class IncrementalCongressBillsIngestor:
                 UPDATE incremental.ingestion_sessions SET
                     status = %s,
                     completed_at = %s,
-                    error_message = %s
+                    error_summary = %s
                 WHERE session_id = %s
             """, (status, datetime.now(), error_message, session_id))
 
@@ -105,13 +105,9 @@ class IncrementalCongressBillsIngestor:
         """Check if bill was already processed using fingerprint"""
         cursor = self.db_conn.cursor()
         try:
-            # Generate content hash
-            content_str = json.dumps(bill_data, sort_keys=True, separators=(',', ':'))
-            content_hash = hashlib.sha256(content_str.encode()).hexdigest()
-
             cursor.execute("""
-                SELECT * FROM incremental.is_record_processed('congress.gov', 'bills', %s, %s, %s)
-            """, (bill_id, content_hash, datetime.now()))
+                SELECT * FROM incremental.is_record_processed('congress.gov', 'bills', %s, %s)
+            """, (bill_id, json.dumps(bill_data, sort_keys=True)))
 
             result = cursor.fetchone()
             return result[0] if result else False
@@ -161,7 +157,7 @@ class IncrementalCongressBillsIngestor:
                 print(f"❌ API request failed: {e}")
                 raise
 
-    def normalize_bill_data(self, bill_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def normalize_bill_data(self, bill_data: Dict[str, Any], congress: int) -> Optional[Dict[str, Any]]:
         """Normalize bill data for database insertion"""
         try:
             bill = bill_data.get('bill', bill_data)
@@ -289,10 +285,10 @@ class IncrementalCongressBillsIngestor:
         cursor = self.db_conn.cursor()
         try:
             cursor.execute("""
-                CALL incremental.update_checkpoint_progress(
-                    'congress.gov', 'bills', %s, %s, NULL, NULL, NULL, NULL, %s, %s
+                SELECT incremental.update_checkpoint_progress(
+                    'congress.gov', 'bills', %s, %s, NULL, NULL, NULL, NULL, %s
                 )
-            """, (str(congress), offset, batch_size, False))
+            """, (str(congress), offset, batch_size))
 
             self.db_conn.commit()
         except Exception as e:
@@ -353,7 +349,7 @@ class IncrementalCongressBillsIngestor:
                         continue
 
                     # Normalize data
-                    normalized = self.normalize_bill_data(bill_data)
+                    normalized = self.normalize_bill_data(bill_data, congress)
                     if normalized and normalized['bill_id']:
                         new_bills.append(normalized)
 

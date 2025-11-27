@@ -22,6 +22,7 @@
 - ✅ Always create backups before structural changes
 - ✅ Use migration files for schema changes
 - ✅ Include proper error handling and rollback procedures
+- ✅ Always check if databases/tables exist before creating or dropping them to prevent accidental data loss or errors.
 
 ## Core Principles
 

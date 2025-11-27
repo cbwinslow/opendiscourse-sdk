@@ -1,23 +1,411 @@
-# Python
+# ============================================================================
+# PYTHON
+# ============================================================================
+
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
+
+# C extensions
 *.so
+
+# Distribution / packaging
 .Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
 # Virtual environments
 venv/
 .venv/
+env/
 ENV/
-build/
-dist/
-*.egg-info/
-*.egg
-*.venv
-.pytest_cache/
-.mypy_cache/
-.ruff
+env.bak/
+venv.bak/
+.venv.bak/
 
-# Environment variables
+# ============================================================================
+# ENVIRONMENT AND SECRETS (CRITICAL SECURITY)
+# ============================================================================
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.envrc
+
+# API keys and secrets
+*api_key*
+*apikey*
+*API_KEY*
+*secret*
+*SECRET*
+*.key
+*.pem
+*.p12
+
+# ============================================================================
+# DATABASE
+# ============================================================================
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+*.sql.gz
+
+# Database backups
+backups/
+*.backup
+*.dump
+
+# PostgreSQL
+postgresql_data/
+pg_data/
+
+# ============================================================================
+# DATA AND LOGS
+# ============================================================================
+
+# Data directories
+data/
+raw_data/
+processed_data/
+downloads/
+cache/
+
+# Log files
+*.log
+logs/
+*.out
+*.err
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# ============================================================================
+# IDE AND EDITOR FILES
+# ============================================================================
+
+# VS Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+
+# PyCharm
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# ============================================================================
+# OPERATING SYSTEM
+# ============================================================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# ============================================================================
+# PROJECT SPECIFIC
+# ============================================================================
+
+# OpenDiscourse specific
+# Vector embeddings and models
+embeddings/
+models/
+*.pkl
+*.model
+*.bin
+
+# API responses and cache
+api_cache/
+responses/
+*.json.cache
+
+# Ingestion logs and checkpoints
+ingestion_logs/
+checkpoints/
+*.checkpoint
+
+# Performance metrics
+metrics/
+performance/
+*.prof
+
+# Documentation build
+docs/_build/
+docs/build/
+site/
+
+# ============================================================================
+# DEVELOPMENT TOOLS
+# ============================================================================
+
+# Black
+.black_cache/
+
+# isort
+.isort.cfg
+
+# flake8
+.flake8
+
+# mypy
+.mypy_cache/
+
+# bandit
+.bandit
+
+# ============================================================================
+# BACKUP AND ARCHIVE
+# ============================================================================
+
+# Archives
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# Backup directories
+backup/
+backups/
+old/
+archive/
+
+# ============================================================================
+# LOCAL CONFIGURATION
+# ============================================================================
+
+# Local configuration files
+config.local.*
+settings.local.*
+local_settings.*
+
+# User-specific files
+user_config/
+.local/
+
+# ============================================================================
+# NODE.JS (if using frontend tools)
+# ============================================================================
+
+# Node modules
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# nyc test coverage
+.nyc_output
+
+# Grunt intermediate storage
+.grunt
+
+# Bower dependency directory
+bower_components
+
+# node-waf configuration
+.lock-wscript
+
+# Compiled binary addons
+build/Release
+
+# Dependency directories
+jspm_packages/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# parcel-bundler cache
+.cache
+.parcel-cache
+
+# Next.js build output
+.next
+
+# Nuxt.js build / generate output
+.nuxt
+dist
+
+# Gatsby files
+.cache/
+public
+
+# Storybook build outputs
+.out
+.storybook-out
+
+# Temporary folders
+tmp/
+temp/
+
+# ============================================================================
+# SECURITY AND COMPLIANCE
+# ============================================================================
+
+# Security scan results
+security_reports/
+*.security
+*.vulnerability
+
+# Compliance reports
+compliance/
+audit/
+
+# ============================================================================
+# MISC
+# ============================================================================
+
+# Files that might appear in external repos
+.git
+.gitattributes
+.gitignore
+.gitmodules
+
+# Mercurial
+.hg
+.hgignore
+.hgtags
+
+# Subversion
+.svn
+
+# Bazaar
+.bzr
+.bzrignore
+
+# Coverity
+.coverity/
+
+# Cloud9
+.c9/
+
+# Code Climate
+.codeclimate.yml
+
+# EditorConfig
+.editorconfig
+
+# End of File
 .env
 .env.local
 .env.*.local

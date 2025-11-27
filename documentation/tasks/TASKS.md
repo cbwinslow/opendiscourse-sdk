@@ -9,6 +9,7 @@ This file consolidates all project tasks, microgoals, and agent assignments for 
 | Integrate Ollama for local LLM agent                | Ollama installed, model running, API accessible         | DONE      | Ollama        |
 | Add Agent-Zero for code review/planning             | Agent-Zero app added to repo, PRs reviewed              | DONE      | Agent-Zero    |
 | Set up OpenAI Codex for code generation             | API key configured, script runs, code generated         | DONE      | OpenAI Codex  |
+| Scrape Gemini CLI extensions website               | CSV file with all 118 extensions created, names and install commands included | DONE      | Roo           |
 | Create DEVELOPMENT.md and AGENT.md docs             | Docs exist, describe workflow and agent setup           | DONE      | Copilot       |
 | Create SRS with microgoals and measurable criteria  | SRS exists, microgoals listed, criteria defined         | DONE      | Copilot       |
 | Fix frontend build system                          | Dependencies restored, build successful                   | DONE      | Copilot       |
@@ -151,6 +152,12 @@ This file consolidates all project tasks, microgoals, and agent assignments for 
 | Add integration with Slack/Discord for notifications | Build/deploy/alert notifications sent to team chat | TODO | Copilot |
 | Add project health dashboard | Dashboard shows build status, test coverage, open issues, etc. | TODO | Copilot |
 | Add project metrics to README | Badges for build, coverage, dependencies, etc. in README | TODO | Copilot |
+
+## Recent Task Completions (2025-11-26)
+
+| Completed Task | Description | Date | Agent |
+|----------------|-------------|------|-------|
+| Scrape Gemini CLI extensions website | Created CSV file with all 118 extensions, including names and install commands | 2025-11-26 | Roo |
 | Implement Linux system diagnostics collector module | Python module collects CPU, memory, disk, SMART, and network info on Linux, returns structured report, handles errors | DONE | Copilot |
 | Add and test FastAPI endpoints for diagnostics collection | FastAPI endpoints accept diagnostics requests, run collector, return results, with tests | DONE | Copilot |
 | Integrate diagnostics collector with RAG ingestion pipeline | Diagnostics data can be ingested and queried in RAG DB, with schema and scripts updated | TODO | Copilot |

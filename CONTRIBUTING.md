@@ -1,19 +1,107 @@
 # Contributing to OpenDiscourse
 
-Thank you for your interest in contributing to OpenDiscourse! This document provides guidelines and best practices for contributing to the project.
+## 🎯 **CONTRIBUTION GUIDELINES**
 
-## Table of Contents
+Welcome to OpenDiscourse! This guide helps you contribute effectively to our legislative data ingestion platform.
 
-- [Code of Conduct](#code-of-conduct)
-- [Getting Started](#getting-started)
-- [Development Setup](#development-setup)
-- [Coding Standards](#coding-standards)
-- [Contribution Workflow](#contribution-workflow)
-- [Pull Request Process](#pull-request-process)
-- [Issue Guidelines](#issue-guidelines)
-- [Testing Guidelines](#testing-guidelines)
-- [Documentation](#documentation)
-- [Community](#community)
+---
+
+## 🚀 **QUICK START FOR CONTRIBUTORS**
+
+### **FOR AI AGENTS (Mandatory First Steps)**
+1. **📖 Read Agent Handoff** - Session context and current status
+   ```bash
+   cat docs/AGENT_HANDOFF.md
+   ```
+
+2. **📋 Review Tasks** - Current execution plan and priorities
+   ```bash
+   cat docs/TASKS.md
+   ```
+
+3. **🧪 Run Tests** - Verify system state before making changes
+   ```bash
+   python test_minimal.py
+   ```
+
+### **FOR HUMAN CONTRIBUTORS**
+1. **📖 Read Project Overview** - Understand what we're building
+   ```bash
+   cat README.md
+   ```
+
+2. **🔧 Set Up Development Environment** - Get your local environment ready
+   ```bash
+   # Follow setup instructions in README.md
+   ```
+
+3. **📋 Check Current Tasks** - See what needs to be done
+   ```bash
+   cat docs/TASKS.md
+   ```
+
+---
+
+## 📁 **PROJECT STRUCTURE**
+
+### **Critical Files for Contributors**
+```
+opendiscourse/
+├── 📚 DOCUMENTATION_INDEX.md       # Master documentation index
+├── 📖 docs/
+│   ├── 🤖 AGENT_HANDOFF.md          # ⭐ AI AGENTS: Read first
+│   ├── 📋 TASKS.md                  # ⭐ Current execution plan
+│   ├── 📔 journal/                   # Session history
+│   ├── 🔄 workflows/                 # Process documentation
+│   └── 🤖 rag/                       # Vector database setup
+├── 🧪 test_minimal.py               # ⭐ Run before any changes
+├── 🔧 scripts/                       # Ingestion scripts
+├── 📜 agents.md                      # AI agent mandates
+└── 📋 .windsurfrules                 # Database protection rules
+```
+
+### **Key Directories**
+- **`scripts/`** - Data ingestion scripts and utilities
+- **`docs/`** - Project documentation and guides
+- **`tests/`** - Test suites (when expanded)
+- **`data/`** - Data files and outputs (not version controlled)
+
+---
+
+## 🤖 **AI AGENT CONTRIBUTIONS**
+
+### **Mandatory Onboarding Sequence**
+AI agents MUST follow this exact sequence when starting work:
+
+1. **Context Gathering** (2 minutes)
+   ```bash
+   cat docs/AGENT_HANDOFF.md      # Session context
+   cat DOCUMENTATION_INDEX.md     # Project overview
+   cat docs/TASKS.md              # Current priorities
+   ```
+
+2. **System Validation** (2 minutes)
+   ```bash
+   python test_minimal.py         # Verify system state
+   # Check database status
+   psql -d opendiscourse -c "SELECT 'Congress Members' as type, count(*) as count FROM congress.members UNION ALL SELECT 'Congress Bills', count(*) FROM congress.bills UNION ALL SELECT 'OpenStates People', count(*) FROM openstates.people UNION ALL SELECT 'Jurisdictions', count(*) FROM openstates.jurisdictions;"
+   ```
+
+3. **Begin Work** (Start with highest priority task from TASKS.md)
+
+### **AI Agent Contribution Standards**
+- **ALWAYS** read handoff documentation first
+- **NEVER** skip test validation
+- **ALWAYS** update session journal with progress
+- **NEVER** modify database connection parameters
+- **ALWAYS** follow database protection rules in `.windsurfrules`
+
+### **AI Agent Workflow**
+1. **Before Starting**: Read handoff, validate system, understand priorities
+2. **During Work**: Update progress, document decisions, test incrementally
+3. **Before Finishing**: Verify success metrics, update documentation, create handoff notes
+
+---
 
 ## Code of Conduct
 
@@ -188,7 +276,7 @@ def process_document(
 - **Formatter**: Use `prettier`
 - **Linter**: Use `eslint` with TypeScript support
 - **React**: Use functional components with hooks
-- **Naming**: 
+- **Naming**:
   - Components: PascalCase
   - Functions/variables: camelCase
   - Constants: UPPER_SNAKE_CASE
@@ -202,10 +290,10 @@ interface DocumentProps {
   onUpdate?: (id: string) => void;
 }
 
-export const DocumentCard: React.FC<DocumentProps> = ({ 
-  id, 
-  title, 
-  onUpdate 
+export const DocumentCard: React.FC<DocumentProps> = ({
+  id,
+  title,
+  onUpdate
 }) => {
   const [isLoading, setIsLoading] = useState(false);
 
@@ -503,7 +591,7 @@ describe('DocumentCard', () => {
     render(
       <DocumentCard id="1" title="Test" onUpdate={onUpdate} />
     );
-    
+
     fireEvent.click(screen.getByText('Update'));
     await waitFor(() => expect(onUpdate).toHaveBeenCalledWith('1'));
   });

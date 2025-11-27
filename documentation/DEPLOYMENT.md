@@ -259,7 +259,13 @@ COOKIE_SECRET=<cookie-secret>
    - Optimize database performance
    - Monitor resource utilization
 
-3. **Performance Optimization**:
+3. Performance Optimization**:
    - Implement caching
    - Optimize queries
    - Batch processing for heavy operations
+
+## 5. Cloudflare Workers Ingestion System Deployment Guide
+
+For detailed deployment instructions regarding the Cloudflare Workers-based multi-source data ingestion system, including Cloudflare Tunnel setup and individual Worker deployments, please refer to the dedicated guide:
+
+[Cloudflare Workers Ingestion System Deployment Guide](./guides/CLOUDFLARE_WORKERS_DEPLOYMENT.md)

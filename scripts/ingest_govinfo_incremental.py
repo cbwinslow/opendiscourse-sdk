@@ -107,7 +107,7 @@ class IncrementalGovInfoIngestor:
             category = str(congress) if congress else 'all'
 
             cursor.execute("""
-                CALL incremental.update_checkpoint_progress(
+                SELECT incremental.update_checkpoint_progress(
                     %s, %s, %s,
                     %s, NULL, NULL, NULL,
                     %s, %s
@@ -195,23 +195,27 @@ class IncrementalGovInfoIngestor:
 
     def fetch_directory_content(self, package_id: str) -> str:
         """Fetch the text content of a Congressional Directory"""
-        url = f"{self.base_url}/packages/{package_id}/htm"
+        summary_url = f"{self.base_url}/packages/{package_id}/summary"
         params = {'api_key': self.api_key}
 
         for attempt in range(self.max_retries):
             try:
-                response = requests.get(url, params=params, timeout=30)
+                # Fetch package summary to discover available download links
+                response = requests.get(summary_url, params=params, timeout=30)
                 response.raise_for_status()
 
-                # Parse JSON response to get download URL
                 data = response.json()
-                download_url = data.get('download', {}).get('txt')
+                download_links = data.get('download', {})
 
-                if download_url:
-                    # Fetch the actual text content
-                    txt_response = requests.get(download_url + '?api_key=' + self.api_key, timeout=30)
+                txt_link = download_links.get('txtLink')
+                if txt_link:
+                    txt_response = requests.get(f"{txt_link}?api_key={self.api_key}", timeout=60)
                     txt_response.raise_for_status()
                     return txt_response.text
+
+                pdf_link = download_links.get('pdfLink')
+                if pdf_link:
+                    self.logger.warning(f"No TXT link for {package_id}; PDF link available at {pdf_link}")
 
                 return ""
 
@@ -275,6 +279,9 @@ class IncrementalGovInfoIngestor:
     def normalize_member_data(self, member_data: Dict[str, Any]) -> Dict[str, Any]:
         """Normalize member data for database insertion"""
         name_info = member_data.get('name', {})
+        party_code = member_data.get('party', None)
+        if party_code in ('Unknown', '', None):
+            party_code = None
 
         return {
             'member_id': member_data.get('memberId'),
@@ -287,7 +294,7 @@ class IncrementalGovInfoIngestor:
             'preferred_name': None,
             'birthday': None,
             'gender': None,
-            'party_code': member_data.get('party', ''),
+            'party_code': party_code,
             'state': member_data.get('state', ''),
             'district': None,
             'url': None,
@@ -315,26 +322,7 @@ class IncrementalGovInfoIngestor:
                     district, url, twitter_handle, youtube_handle, facebook_handle,
                     biography_text, photo_url, created_at, updated_at
                 ) VALUES %s
-                ON CONFLICT (bioguide_id) DO UPDATE SET
-                    member_id = EXCLUDED.member_id,
-                    first_name = EXCLUDED.first_name,
-                    middle_name = EXCLUDED.middle_name,
-                    last_name = EXCLUDED.last_name,
-                    suffix = EXCLUDED.suffix,
-                    full_name = EXCLUDED.full_name,
-                    preferred_name = EXCLUDED.preferred_name,
-                    birthday = EXCLUDED.birthday,
-                    gender = EXCLUDED.gender,
-                    party_code = EXCLUDED.party_code,
-                    state = EXCLUDED.state,
-                    district = EXCLUDED.district,
-                    url = EXCLUDED.url,
-                    twitter_handle = EXCLUDED.twitter_handle,
-                    youtube_handle = EXCLUDED.youtube_handle,
-                    facebook_handle = EXCLUDED.facebook_handle,
-                    biography_text = EXCLUDED.biography_text,
-                    photo_url = EXCLUDED.photo_url,
-                    updated_at = EXCLUDED.updated_at
+                ON CONFLICT (member_id) DO NOTHING
             """
 
             values = [
@@ -351,7 +339,7 @@ class IncrementalGovInfoIngestor:
 
             execute_values(cursor, query, values)
             self.db_conn.commit()
-            return len(members)
+            return cursor.rowcount if cursor.rowcount != -1 else len(members)
 
         except Exception as e:
             self.db_conn.rollback()
@@ -461,6 +449,7 @@ class IncrementalGovInfoIngestor:
             # Process members with deduplication
             new_members = []
             skipped_count = 0
+            seen_member_ids = set()
 
             for member_data in all_members:
                 member_id = member_data.get('memberId')
@@ -468,6 +457,11 @@ class IncrementalGovInfoIngestor:
                 if not member_id:
                     skipped_count += 1
                     continue
+
+                if member_id in seen_member_ids:
+                    skipped_count += 1
+                    continue
+                seen_member_ids.add(member_id)
 
                 # Check if already processed
                 if self.is_record_processed(member_id, member_data):
@@ -485,28 +479,29 @@ class IncrementalGovInfoIngestor:
                     continue
 
             # Insert new members
-            total_processed = 0
+            total_inserted = 0
             if new_members:
                 # Process in batches
                 for i in range(0, len(new_members), self.batch_size):
                     batch = new_members[i:i + self.batch_size]
                     inserted = self.insert_members_batch(batch)
-                    total_processed += inserted
+                    total_inserted += inserted
                     print(f"   ✅ Inserted batch {i//self.batch_size + 1}: {inserted} members")
 
             # Update checkpoint
-            self.update_checkpoint(congress, 'members', len(all_members), total_processed, True)
+            processed_count = total_inserted + skipped_count
+            self.update_checkpoint(congress, 'members', len(all_members), processed_count, True)
 
             # Complete session
             self.complete_ingestion_session(session_id, 'completed')
 
             print(f"🎉 GovInfo Congress {congress} ingestion completed!")
-            print(f"📊 Processed: {total_processed}, Skipped: {skipped_count}")
+            print(f"📊 Processed: {processed_count}, Skipped: {skipped_count}, Inserted: {total_inserted}")
 
             return {
                 'congress': congress,
                 'status': 'completed',
-                'records_processed': total_processed,
+                'records_processed': processed_count,
                 'records_skipped': skipped_count,
                 'total_found': len(all_members)
             }
@@ -559,7 +554,9 @@ class IncrementalGovInfoIngestor:
             print("\n📋 GovInfo.gov Checkpoint Status:")
             print("-" * 80)
             for cp in checkpoints:
-                print(f"{cp[0]} | {cp[1]} | {cp[2]} | {cp[11]} | {cp[8]:.1f}% | {cp[9]}")
+                progress = f"{cp[8]:.1f}%" if cp[8] is not None else "N/A"
+                last_run = cp[9] if cp[9] is not None else "Never"
+                print(f"{cp[0]} | {cp[1]} | {cp[2]} | {cp[11]} | {progress} | {last_run}")
 
             return checkpoints
         finally:

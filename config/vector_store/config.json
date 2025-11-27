@@ -3,6 +3,41 @@
     "metric": "cosine",
     "index_type": "IVF_FLAT",
     "stores": {
+        "pgvector": {
+            "host": "localhost",
+            "port": 5432,
+            "database": "opendiscourse",
+            "credentials_path": "config/vector_store/credentials/postgres.json",
+            "settings": {
+                "table_name": "document_vectors",
+                "embedding_column": "embedding",
+                "similarity_function": "cosine",
+                "index_type": "ivfflat",
+                "lists": 100,
+                "proximity": 0.8
+            }
+        },
+        "qdrant": {
+            "host": "localhost",
+            "port": 6333,
+            "database": "vector_store",
+            "credentials_path": "config/vector_store/credentials/qdrant.json",
+            "settings": {
+                "collection_name": "documents",
+                "distance_metric": "cosine",
+                "vector_size": 768,
+                "replication_factor": 1,
+                "write_consistency_factor": 1,
+                "optimizers_config": {
+                    "default_segment_number": 0,
+                    "max_segment_size_kb": null,
+                    "memmap_threshold_kb": null,
+                    "indexing_threshold": 20000,
+                    "flush_interval_sec": 5,
+                    "max_optimization_threads": null
+                }
+            }
+        },
         "chromadb": {
             "host": "localhost",
             "port": 8000,

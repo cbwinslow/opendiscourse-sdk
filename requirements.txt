@@ -1,5 +1,179 @@
-# Core dependencies for Open Discourse
+# OpenDiscourse Requirements
+# Legislative data ingestion and analysis platform
 
-redis
-weaviate-client
-chromadb
+# ============================================================================
+# CORE DEPENDENCIES
+# ============================================================================
+
+# Python version requirement: python>=3.13
+
+# Database connectivity (CRITICAL - use exact versions)
+psycopg2-binary==2.9.9
+pgvector==0.2.4
+
+# HTTP requests and API interactions
+requests==2.31.0
+aiohttp==3.9.1
+
+# Data processing
+pandas==2.1.4
+numpy==1.25.2
+
+# Environment configuration
+python-dotenv==1.0.0
+
+# JSON handling and validation
+jsonschema==4.20.0
+
+# ============================================================================
+# DATA INGESTION SPECIFIC
+# ============================================================================
+
+# Rate limiting and retry logic
+ratelimit==2.2.1
+tenacity==8.2.3
+
+# Date/time handling
+python-dateutil==2.8.2
+pytz==2023.3
+
+# Text processing
+beautifulsoup4==4.12.2
+lxml==4.9.3
+
+# ============================================================================
+# VECTOR DATABASE AND EMBEDDINGS (PGVector chosen)
+# ============================================================================
+
+# OpenAI integration for embeddings and RAG
+openai==1.3.7
+
+# Vector operations and similarity search
+scikit-learn==1.3.2
+sentence-transformers==2.2.2
+
+# ============================================================================
+# CLI AND DEVELOPMENT TOOLS
+# ============================================================================
+
+# Command line interface
+click==8.1.7
+rich==13.7.0
+
+# Progress bars
+tqdm==4.66.1
+
+# Configuration management
+pyyaml==6.0.1
+toml==0.10.2
+
+# ============================================================================
+# TESTING FRAMEWORK
+# ============================================================================
+
+# Testing framework
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-cov==4.1.0
+
+# Test utilities
+pytest-mock==3.12.0
+factory-boy==3.3.0
+
+# ============================================================================
+# CODE QUALITY AND FORMATTING
+# ============================================================================
+
+# Code formatting
+black==23.11.0
+isort==5.12.0
+
+# Type checking
+mypy==1.7.1
+
+# Linting
+flake8==6.1.0
+pylint==3.0.3
+
+# Import sorting
+autoflake==2.2.1
+
+# ============================================================================
+# LOGGING AND MONITORING
+# ============================================================================
+
+# Structured logging
+structlog==23.2.0
+
+# Performance monitoring
+psutil==5.9.6
+
+# ============================================================================
+# SECURITY
+# ============================================================================
+
+# Cryptographic functions
+cryptography==41.0.8
+
+# Input validation
+cerberus==1.3.5
+
+# ============================================================================
+# DEVELOPMENT UTILITIES
+# ============================================================================
+
+# Interactive debugging
+ipdb==0.13.13
+
+# Memory profiling
+memory-profiler==0.61.0
+
+# Jupyter notebook support
+jupyter==1.0.0
+notebook==7.0.6
+
+# ============================================================================
+# ALTERNATIVE VECTOR DATABASES (NOT USED - FOR REFERENCE)
+# ============================================================================
+
+# We chose PGVector instead of these, but keeping for reference:
+# redis==5.0.1
+# weaviate-client==3.25.3
+# chromadb==0.4.18
+
+# ============================================================================
+# PLATFORM-SPECIFIC NOTES
+# ============================================================================
+
+# For Ubuntu/Debian systems, you may need:
+# sudo apt-get update
+# sudo apt-get install python3-dev postgresql postgresql-contrib libpq-dev
+
+# For macOS systems, you may need:
+# brew install postgresql pgvector
+
+# For Windows systems, consider using WSL2 for PostgreSQL compatibility
+
+# ============================================================================
+# INSTALLATION COMMANDS
+# ============================================================================
+
+# Standard installation:
+# pip install -r requirements.txt
+
+# Development installation:
+# pip install -r requirements.txt
+# pip install pytest pytest-cov black mypy flake8
+
+# ============================================================================
+# VERSION NOTES
+# ============================================================================
+
+# These versions are tested and compatible with Python 3.13+
+# Update versions carefully and test thoroughly
+# Some packages may have system dependencies (see notes above)
+
+# Last updated: 2025-11-26
+# Python version: 3.13+
+# PostgreSQL version: 14+ with pgvector extension
+# Vector database: PGVector (native PostgreSQL extension)
