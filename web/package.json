@@ -43,7 +43,7 @@
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
-    "framer-motion": "^11.11.7",
+    "framer-motion": "^12.23.25",
     "jose": "^5.9.6",
     "lucide-react": "^0.451.0",
     "next-themes": "^0.3.0",
