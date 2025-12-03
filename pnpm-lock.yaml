@@ -128,8 +128,8 @@ importers:
         specifier: ^4.0.0
         version: 4.0.1
       tailwind-merge:
-        specifier: ^2.5.4
-        version: 2.6.0
+        specifier: ^3.4.0
+        version: 3.4.0
       tailwindcss:
         specifier: ^3.4.14
         version: 3.4.17
@@ -536,8 +536,8 @@ packages:
     engines: {node: '>=10.0.0'}
     dev: true
 
-  /@emnapi/core@1.6.0:
-    resolution: {integrity: sha512-zq/ay+9fNIJJtJiZxdTnXS20PllcYMX3OE23ESc4HK/bdYu3cOWYVhsOhVnXALfU/uqJIxn5NBPd9z4v+SfoSg==}
+  /@emnapi/core@1.7.1:
+    resolution: {integrity: sha512-o1uhUASyo921r2XtHYOHy7gdkGLge8ghBEQHMWmyJFoXlpU58kIrhhN3w26lpQb6dspetweapMn2CSNwQ8I4wg==}
     requiresBuild: true
     dependencies:
       '@emnapi/wasi-threads': 1.1.0
@@ -545,8 +545,8 @@ packages:
     dev: true
     optional: true
 
-  /@emnapi/runtime@1.6.0:
-    resolution: {integrity: sha512-obtUmAHTMjll499P+D9A3axeJFlhdjOWdKUNs/U6QIGT7V5RjcUW1xToAzjvmgTSQhDbYn/NwfTRoJcQ2rNBxA==}
+  /@emnapi/runtime@1.7.1:
+    resolution: {integrity: sha512-PVtJr5CmLwYAU9PZDMITZoR5iAOShYREoR45EyyLrbntV50mdePTgUn4AmOw90Ifcj+x2kRjdzr1HP3RrNiHGA==}
     requiresBuild: true
     dependencies:
       tslib: 2.8.1
@@ -988,8 +988,8 @@ packages:
     resolution: {integrity: sha512-ZVWUcfwY4E/yPitQJl481FjFo3K22D6qF0DuFH6Y/nbnE11GY5uguDxZMGXPQ8WQ0128MXQD7TnfHyK4oWoIJQ==}
     requiresBuild: true
     dependencies:
-      '@emnapi/core': 1.6.0
-      '@emnapi/runtime': 1.6.0
+      '@emnapi/core': 1.7.1
+      '@emnapi/runtime': 1.7.1
       '@tybys/wasm-util': 0.10.1
     dev: true
     optional: true
@@ -7894,8 +7894,8 @@ packages:
     resolution: {integrity: sha512-9QNk5KwDF+Bvz+PyObkmSYjI5ksVUYtjW7AU22r2NKcfLJcXp96hkDWU3+XndOsUb+AQ9QhfzfCT2O+CNWT5Tw==}
     dev: true
 
-  /tailwind-merge@2.6.0:
-    resolution: {integrity: sha512-P+Vu1qXfzediirmHOC3xKGAYeZtPcV9g76X+xg2FD4tYgR71ewMA35Y3sCz3zhiN/dwefRpJX0yBcgwi1fXNQA==}
+  /tailwind-merge@3.4.0:
+    resolution: {integrity: sha512-uSaO4gnW+b3Y2aWoWfFpX62vn2sR3skfhbjsEnaBI81WD1wBLlHZe5sWf0AqjksNdYTbGBEd0UasQMT3SNV15g==}
     dev: false
 
   /tailwindcss@3.4.17:
