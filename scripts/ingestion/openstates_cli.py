@@ -106,6 +106,20 @@ class OpenStatesCLI:
             datetime.now()
         )
 
+    def transform_vote_event(self, vote_data: Dict) -> tuple:
+        """Transform OpenStates vote event data"""
+        return (
+            vote_data.get('id'),
+            vote_data.get('identifier'),
+            vote_data.get('motion_text'),
+            vote_data.get('result'),
+            vote_data.get('start_date'),
+            vote_data.get('bill_id'),
+            vote_data.get('jurisdiction', {}).get('id'),
+            json.dumps(vote_data.get('votes', [])),
+            datetime.now()
+        )
+
     def ingest_people(self, jurisdiction: str):
         """Ingest OpenStates people"""
         print(f"🚀 Starting OpenStates people ingestion for {jurisdiction}")
@@ -467,6 +481,146 @@ class OpenStatesCLI:
         self.close_db()
         print(f"🎉 Completed: {total_processed} OpenStates events")
 
+    def ingest_vote_events(self, jurisdiction: str):
+        """Ingest OpenStates vote events"""
+        print(f"🚀 Starting OpenStates vote events ingestion for {jurisdiction}")
+
+        if not self.connect_db():
+            return
+
+        # Ensure table exists
+        create_table_query = """
+        CREATE TABLE IF NOT EXISTS openstates.vote_events (
+            id TEXT PRIMARY KEY,
+            identifier TEXT,
+            motion_text TEXT,
+            result TEXT,
+            start_date TIMESTAMP,
+            bill_id TEXT,
+            jurisdiction_id TEXT,
+            votes JSONB,
+            created_at TIMESTAMP,
+            updated_at TIMESTAMP
+        );
+        """
+        if not self.dry_run:
+            cursor = self.conn.cursor()
+            cursor.execute(create_table_query)
+            self.conn.commit()
+            cursor.close()
+
+        total_processed = 0
+        page = 1
+
+        while True:
+            params = {'jurisdiction': jurisdiction, 'page': page, 'per_page': self.batch_size}
+            data = self.get("/votes", params)
+
+            if not data or not data.get('results'):
+                break
+
+            vote_events = []
+            for vote in data['results']:
+                transformed = self.transform_vote_event(vote)
+                if transformed[0]:
+                    vote_events.append(transformed)
+
+            if vote_events:
+                query = """
+                INSERT INTO openstates.vote_events
+                (id, identifier, motion_text, result, start_date, bill_id, jurisdiction_id, votes, created_at)
+                VALUES %s
+                ON CONFLICT (id) DO UPDATE SET
+                    identifier = EXCLUDED.identifier,
+                    motion_text = EXCLUDED.motion_text,
+                    result = EXCLUDED.result,
+                    start_date = EXCLUDED.start_date,
+                    bill_id = EXCLUDED.bill_id,
+                    jurisdiction_id = EXCLUDED.jurisdiction_id,
+                    votes = EXCLUDED.votes,
+                    updated_at = now()
+                """
+
+                if self.dry_run:
+                    print(f"🔍 DRY RUN: Would insert {len(vote_events)} vote events")
+                    total_processed += len(vote_events)
+                else:
+                    cursor = self.conn.cursor()
+                    try:
+                        from psycopg2.extras import execute_values
+                        execute_values(cursor, query, vote_events)
+                        self.conn.commit()
+                        total_processed += len(vote_events)
+                        print(f"✅ Processed {total_processed} vote events (page {page})")
+                    except Exception as e:
+                        print(f"❌ Batch insert failed: {e}")
+                        self.conn.rollback()
+                        break
+                    finally:
+                        cursor.close()
+
+            page += 1
+            time.sleep(0.6)
+
+        self.close_db()
+        print(f"🎉 Completed: {total_processed} OpenStates vote events")
+
+    def ingest_all_states(self):
+        """Ingest data for all state jurisdictions"""
+        print("🚀 Starting comprehensive OpenStates ingestion for ALL states")
+
+        # First get all jurisdictions
+        if not self.connect_db():
+            return
+
+        cursor = self.conn.cursor()
+        try:
+            cursor.execute("SELECT id, name FROM openstates.jurisdictions WHERE classification = 'state'")
+            jurisdictions = cursor.fetchall()
+        except Exception as e:
+            print(f"❌ Failed to fetch jurisdictions: {e}")
+            print("💡 Tip: Run 'ingest-jurisdictions' first")
+            self.close_db()
+            return
+        finally:
+            cursor.close()
+            self.close_db()
+
+        if not jurisdictions:
+            print("❌ No jurisdictions found. Run 'ingest-jurisdictions' first.")
+            return
+
+        total_states = len(jurisdictions)
+        print(f"📍 Found {total_states} states to process")
+
+        for idx, (jid, name) in enumerate(jurisdictions, 1):
+            print(f"\n{'='*60}")
+            print(f"[{idx}/{total_states}] Processing: {name}")
+            print(f"{'='*60}")
+
+            # Extract state code from OCD-ID
+            state_code = jid.split('state:')[-1].split('/')[0] if 'state:' in jid else jid
+
+            try:
+                # Run all ingestion functions for this state
+                self.ingest_people(state_code)
+                self.ingest_bills(state_code)
+                self.ingest_committees(state_code)
+                self.ingest_events(state_code)
+                self.ingest_vote_events(state_code)
+                self.ingest_organizations(state_code)
+                self.ingest_sessions(state_code)
+                # Skip documents by default as it's very slow (N+1)
+                # self.ingest_documents(state_code)
+
+                print(f"✅ Completed {name}")
+            except Exception as e:
+                print(f"❌ Error processing {name}: {e}")
+                print("⏭️  Continuing to next state...")
+                continue
+
+        print(f"\n🎉 Completed ingestion for all {total_states} states")
+
     def status(self):
         """Show OpenStates data status"""
         if not self.connect_db():
@@ -479,7 +633,8 @@ class OpenStatesCLI:
                 ("openstates.jurisdictions", "Jurisdictions"),
                 ("openstates.bills", "Bills"),
                 ("openstates.committees", "Committees"),
-                ("openstates.events", "Events")
+                ("openstates.events", "Events"),
+                ("openstates.vote_events", "Vote Events")
             ]
 
             print("📊 OpenStates Data Status:")
@@ -524,6 +679,13 @@ def main():
     events_parser = subparsers.add_parser('ingest-events', help='Ingest events')
     events_parser.add_argument('jurisdiction', help='Jurisdiction code (e.g., ca, tx)')
 
+    # Ingest Vote Events
+    votes_parser = subparsers.add_parser('ingest-vote-events', help='Ingest vote events')
+    votes_parser.add_argument('jurisdiction', help='Jurisdiction code (e.g., ca, tx)')
+
+    # Ingest All States
+    subparsers.add_parser('ingest-all-states', help='Ingest all state data (people, bills, committees, etc.)')
+
     # Status
     subparsers.add_parser('status', help='Show status')
 
@@ -552,6 +714,10 @@ def main():
         cli.ingest_committees(args.jurisdiction)
     elif args.command == 'ingest-events':
         cli.ingest_events(args.jurisdiction)
+    elif args.command == 'ingest-vote-events':
+        cli.ingest_vote_events(args.jurisdiction)
+    elif args.command == 'ingest-all-states':
+        cli.ingest_all_states()
     elif args.command == 'status':
         cli.status()
 

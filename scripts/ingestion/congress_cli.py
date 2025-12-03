@@ -12,6 +12,7 @@ import psycopg2
 from datetime import datetime
 from typing import Dict, List, Optional
 import requests
+import json
 from pathlib import Path
 
 # Add project root to path
@@ -166,6 +167,114 @@ class CongressCLI:
             doc_data.get('description'),
             doc_data.get('contentType'),
             doc_data.get('retrievedAt'),
+            datetime.now()
+        )
+
+    def transform_bill_action(self, action_data: Dict, congress: int, bill_type: str, bill_number: int) -> tuple:
+        """Transform bill action data"""
+        return (
+            congress,
+            bill_type,
+            bill_number,
+            action_data.get('actionDate'),
+            action_data.get('text', ''),
+            action_data.get('type'),
+            action_data.get('actionCode'),
+            datetime.now()
+        )
+
+    def transform_bill_cosponsor(self, cosponsor_data: Dict, congress: int, bill_type: str, bill_number: int) -> tuple:
+        """Transform bill cosponsor data"""
+        return (
+            congress,
+            bill_type,
+            bill_number,
+            cosponsor_data.get('bioguideId'),
+            cosponsor_data.get('sponsorshipDate'),
+            cosponsor_data.get('isOriginalCosponsor'),
+            datetime.now()
+        )
+
+    def transform_bill_subject(self, subject_data: Dict, congress: int, bill_type: str, bill_number: int) -> tuple:
+        """Transform bill subject data"""
+        # subject_data might be string or dict
+        if isinstance(subject_data, dict):
+            subject_name = subject_data.get('name', str(subject_data))
+        else:
+            subject_name = str(subject_data)
+
+        return (
+            congress,
+            bill_type,
+            bill_number,
+            subject_name,
+            datetime.now()
+        )
+
+    def transform_bill_title(self, title_data: Dict, congress: int, bill_type: str, bill_number: int) -> tuple:
+        """Transform bill title data"""
+        return (
+            congress,
+            bill_type,
+            bill_number,
+            title_data.get('title', ''),
+            title_data.get('titleType'),
+            title_data.get('titleTypeCode'),
+            datetime.now()
+        )
+
+    def transform_related_bill(self, related_data: Dict, congress: int, bill_type: str, bill_number: int) -> tuple:
+        """Transform related bill data"""
+        rel_bill = related_data.get('relationshipDetails', [{}])[0] if related_data.get('relationshipDetails') else {}
+
+        return (
+            congress,
+            bill_type,
+            bill_number,
+            related_data.get('congress'),
+            related_data.get('type'),
+            related_data.get('number'),
+            rel_bill.get('type'),
+            rel_bill.get('identifiedBy'),
+            datetime.now()
+        )
+
+    def transform_committee_member(self, member_data: Dict, committee_id: str, congress: int, chamber_code: str) -> tuple:
+        """Transform committee member data"""
+        return (
+            committee_id,
+            member_data.get('bioguideId'),
+            chamber_code,
+            congress,
+            member_data.get('rank', 0),
+            member_data.get('title'),
+            datetime.now()
+        )
+
+    def transform_amendment_action(self, action_data: Dict, congress: int, amendment_type: str, amendment_number: int) -> tuple:
+        """Transform amendment action data"""
+        return (
+            congress,
+            amendment_type,
+            amendment_number,
+            action_data.get('actionDate'),
+            action_data.get('text', ''),
+            action_data.get('type'),
+            action_data.get('actionCode'),
+            datetime.now()
+        )
+
+    def transform_amendment_sponsor(self, sponsor_data: Dict, congress: int, amendment_type: str, amendment_number: int) -> tuple:
+        """Transform amendment sponsor data"""
+        return (
+            congress,
+            amendment_type,
+            amendment_number,
+            sponsor_data.get('bioguideId'),
+            sponsor_data.get('firstName'),
+            sponsor_data.get('lastName'),
+            sponsor_data.get('party'),
+            sponsor_data.get('state'),
             datetime.now()
         )
 
@@ -578,6 +687,891 @@ class CongressCLI:
         self.close_db()
         print(f"🎉 Completed: {total_processed} Congress text versions")
 
+    def ingest_sessions(self):
+        """Ingest congress sessions"""
+        print("🚀 Starting Congress sessions ingestion")
+
+        if not self.connect_db():
+            return
+
+        # Ensure table exists
+        create_table_query = """
+        CREATE TABLE IF NOT EXISTS congress.sessions (
+            congress_number INTEGER,
+            session_number INTEGER,
+            type TEXT,
+            start_date DATE,
+            end_date DATE,
+            created_at TIMESTAMP,
+            updated_at TIMESTAMP,
+            PRIMARY KEY (congress_number, session_number)
+        );
+        """
+        if not self.dry_run:
+            cursor = self.conn.cursor()
+            cursor.execute(create_table_query)
+            self.conn.commit()
+            cursor.close()
+
+        total_processed = 0
+        offset = 0
+        import re
+
+        while True:
+            params = {'limit': self.batch_size, 'offset': offset}
+            data = self.get("/congress", params)
+
+            if not data or not data.get('congresses'):
+                break
+
+            sessions = []
+            for cong in data['congresses']:
+                congress_num = cong.get('congress')
+                if not congress_num:
+                    # Try to extract from URL
+                    url = cong.get('url', '')
+                    match = re.search(r'/congress/(\d+)', url)
+                    if match:
+                        congress_num = int(match.group(1))
+                    else:
+                        continue
+
+                if 'sessions' in cong:
+                    for sess in cong['sessions']:
+                        # Enrich session data with congress number
+                        sess_data = sess.copy()
+                        sess_data['congress'] = congress_num
+                        sessions.append(self.transform_session(sess_data))
+
+            if sessions:
+                query = """
+                INSERT INTO congress.sessions
+                (congress_number, session_number, type, start_date, end_date, created_at)
+                VALUES %s
+                ON CONFLICT (congress_number, session_number) DO UPDATE SET
+                    type = EXCLUDED.type,
+                    start_date = EXCLUDED.start_date,
+                    end_date = EXCLUDED.end_date,
+                    updated_at = now()
+                """
+
+                if self.dry_run:
+                    print(f"🔍 DRY RUN: Would insert {len(sessions)} sessions")
+                    total_processed += len(sessions)
+                else:
+                    cursor = self.conn.cursor()
+                    try:
+                        from psycopg2.extras import execute_values
+                        execute_values(cursor, query, sessions)
+                        self.conn.commit()
+                        total_processed += len(sessions)
+                        print(f"✅ Processed {total_processed} sessions")
+                    except Exception as e:
+                        print(f"❌ Batch insert failed: {e}")
+                        self.conn.rollback()
+                        break
+                    finally:
+                        cursor.close()
+
+            offset += self.batch_size
+            time.sleep(0.1)
+
+        self.close_db()
+        print(f"🎉 Completed: {total_processed} Congress sessions")
+
+    def ingest_chambers(self):
+        """Ingest congress chambers"""
+        print("🚀 Starting Congress chambers ingestion")
+
+        if not self.connect_db():
+            return
+
+        # Ensure table exists
+        create_table_query = """
+        CREATE TABLE IF NOT EXISTS congress.chambers (
+            chamber_code TEXT PRIMARY KEY,
+            name TEXT,
+            type TEXT,
+            created_at TIMESTAMP,
+            updated_at TIMESTAMP
+        );
+        """
+        if not self.dry_run:
+            cursor = self.conn.cursor()
+            cursor.execute(create_table_query)
+            self.conn.commit()
+            cursor.close()
+
+        # Hardcoded chambers since API endpoint /chamber doesn't exist
+        chambers = [
+            ('house', 'House of Representatives', 'house', datetime.now()),
+            ('senate', 'Senate', 'senate', datetime.now()),
+            ('joint', 'Joint Congress', 'joint', datetime.now())
+        ]
+
+        query = """
+        INSERT INTO congress.chambers
+        (chamber_code, name, type, created_at)
+        VALUES %s
+        ON CONFLICT (chamber_code) DO UPDATE SET
+            name = EXCLUDED.name,
+            type = EXCLUDED.type,
+            updated_at = now()
+        """
+
+        if self.dry_run:
+            print(f"🔍 DRY RUN: Would insert {len(chambers)} chambers")
+        else:
+            cursor = self.conn.cursor()
+            try:
+                from psycopg2.extras import execute_values
+                execute_values(cursor, query, chambers)
+                self.conn.commit()
+                print(f"✅ Processed {len(chambers)} chambers")
+            except Exception as e:
+                print(f"❌ Batch insert failed: {e}")
+                self.conn.rollback()
+            finally:
+                cursor.close()
+
+        self.close_db()
+        print(f"🎉 Completed: {len(chambers)} Congress chambers")
+
+    def ingest_committees(self, congress: int):
+        """Ingest congress committees"""
+        print(f"🚀 Starting Congress {congress} committees ingestion")
+
+        if not self.connect_db():
+            return
+
+        # Ensure table exists
+        create_table_query = """
+        CREATE TABLE IF NOT EXISTS congress.committees (
+            committee_code TEXT,
+            name TEXT,
+            chamber TEXT,
+            parent_committee_code TEXT,
+            type TEXT,
+            jurisdiction TEXT,
+            created_at TIMESTAMP,
+            updated_at TIMESTAMP,
+            PRIMARY KEY (committee_code)
+        );
+        """
+        if not self.dry_run:
+            cursor = self.conn.cursor()
+            cursor.execute(create_table_query)
+            self.conn.commit()
+            cursor.close()
+
+        total_processed = 0
+        offset = 0
+
+        while True:
+            params = {'limit': self.batch_size, 'offset': offset}
+            # /committee/{congress} lists committees for that congress
+            data = self.get(f"/committee/{congress}", params)
+
+            if not data or not data.get('committees'):
+                break
+
+            committees = []
+            for comm in data['committees']:
+                committees.append(self.transform_congress_committee(comm))
+
+            if committees:
+                query = """
+                INSERT INTO congress.committees
+                (committee_code, name, chamber, parent_committee_code, type, jurisdiction, created_at)
+                VALUES %s
+                ON CONFLICT (committee_code) DO UPDATE SET
+                    name = EXCLUDED.name,
+                    chamber = EXCLUDED.chamber,
+                    parent_committee_code = EXCLUDED.parent_committee_code,
+                    type = EXCLUDED.type,
+                    jurisdiction = EXCLUDED.jurisdiction,
+                    updated_at = now()
+                """
+
+                if self.dry_run:
+                    print(f"🔍 DRY RUN: Would insert {len(committees)} committees")
+                    total_processed += len(committees)
+                else:
+                    cursor = self.conn.cursor()
+                    try:
+                        from psycopg2.extras import execute_values
+                        execute_values(cursor, query, committees)
+                        self.conn.commit()
+                        total_processed += len(committees)
+                        print(f"✅ Processed {total_processed} committees")
+                    except Exception as e:
+                        print(f"❌ Batch insert failed: {e}")
+                        self.conn.rollback()
+                        break
+                    finally:
+                        cursor.close()
+
+            offset += self.batch_size
+            time.sleep(0.1)
+
+        self.close_db()
+        print(f"🎉 Completed: {total_processed} Congress committees")
+
+    def ingest_votes(self, congress: int):
+        """Ingest congress votes"""
+        print(f"🚀 Starting Congress {congress} votes ingestion")
+
+        if not self.connect_db():
+            return
+
+        # Ensure table exists
+        create_table_query = """
+        CREATE TABLE IF NOT EXISTS congress.votes (
+            congress_number INTEGER,
+            session_number INTEGER,
+            roll_call_number INTEGER,
+            question TEXT,
+            result TEXT,
+            date DATE,
+            positions JSONB,
+            created_at TIMESTAMP,
+            updated_at TIMESTAMP,
+            PRIMARY KEY (congress_number, session_number, roll_call_number)
+        );
+        """
+        if not self.dry_run:
+            cursor = self.conn.cursor()
+            cursor.execute(create_table_query)
+            self.conn.commit()
+            cursor.close()
+
+        total_processed = 0
+        offset = 0
+
+        # Only House votes are supported by the API currently via /house-vote
+        # Senate votes endpoint /senate-vote does not exist yet.
+        print("ℹ️ Note: Only House votes are currently supported by the Congress.gov API.")
+
+        while True:
+            params = {'congress': congress, 'limit': self.batch_size, 'offset': offset}
+            data = self.get("/house-vote", params)
+
+            if not data or not data.get('houseRollCallVotes'):
+                break
+
+            votes = []
+            for vote in data['houseRollCallVotes']:
+                # Filter by congress if API didn't filter correctly
+                if vote.get('congress') != congress:
+                    continue
+
+                # Fetch details to get positions
+                detail_url = vote.get('url')
+                if not detail_url:
+                    # Construct if missing: /house-vote/{congress}/{session}/{rollCall}
+                    session = vote.get('sessionNumber')
+                    roll_call = vote.get('rollCallNumber')
+                    if session and roll_call:
+                        detail_url = f"https://api.congress.gov/v3/house-vote/{congress}/{session}/{roll_call}"
+
+                if detail_url:
+                    # Remove base URL if present to use self.get properly or use full URL
+                    # self.get appends base_url. detail_url is full URL.
+                    # We can parse the path.
+                    import urllib.parse
+                    parsed = urllib.parse.urlparse(detail_url)
+                    path = parsed.path.replace('/v3', '') # self.base_url includes /v3? No, base_url is .../v3
+                    # self.base_url = "https://api.congress.gov/v3"
+                    # So path should start with /house-vote...
+
+                    detail_data = self.get(path)
+
+                    # Detail response structure: {'houseVote': {...}} ?
+                    # Let's assume standard wrapper.
+
+                    if detail_data:
+                        # The detail object might be wrapped in 'houseVote' or similar
+                        # Based on list key 'houseRollCallVotes', detail might be 'houseRollCallVote' or 'houseVote'
+                        # Let's check keys.
+                        vote_detail = detail_data.get('houseVote', detail_data)
+                        votes.append(self.transform_vote(vote_detail))
+
+            if votes:
+                query = """
+                INSERT INTO congress.votes
+                (congress_number, session_number, roll_call_number, question, result, date, positions, created_at)
+                VALUES %s
+                ON CONFLICT (congress_number, session_number, roll_call_number) DO UPDATE SET
+                    question = EXCLUDED.question,
+                    result = EXCLUDED.result,
+                    date = EXCLUDED.date,
+                    positions = EXCLUDED.positions,
+                    updated_at = now()
+                """
+
+                if self.dry_run:
+                    print(f"🔍 DRY RUN: Would insert {len(votes)} votes")
+                    total_processed += len(votes)
+                else:
+                    cursor = self.conn.cursor()
+                    try:
+                        from psycopg2.extras import execute_values
+                        execute_values(cursor, query, votes)
+                        self.conn.commit()
+                        total_processed += len(votes)
+                        print(f"✅ Processed {len(votes)} votes")
+                    except Exception as e:
+                        print(f"❌ Batch insert failed: {e}")
+                        self.conn.rollback()
+                        # Don't break here, try next batch
+                    finally:
+                        cursor.close()
+
+            offset += self.batch_size
+            time.sleep(0.1)
+
+        self.close_db()
+        print(f"🎉 Completed: {total_processed} Congress votes")
+
+    def ingest_bill_actions(self, congress: int):
+        """Ingest bill actions for all bills in congress"""
+        print(f"🚀 Starting bill actions for Congress {congress}")
+
+        if not self.connect_db():
+            return
+
+        # Create table if not exists
+        create_table_query = """
+        CREATE TABLE IF NOT EXISTS congress.bill_actions (
+            congress_number INTEGER,
+            bill_type TEXT,
+            bill_number INTEGER,
+            action_date DATE,
+            action_text TEXT,
+            action_type TEXT,
+            action_code TEXT,
+            created_at TIMESTAMP,
+            updated_at TIMESTAMP,
+            PRIMARY KEY (congress_number, bill_type, bill_number, action_date, action_text)
+        );
+        """
+        if not self.dry_run:
+            cursor = self.conn.cursor()
+            cursor.execute(create_table_query)
+            self.conn.commit()
+            cursor.close()
+
+        # Get all bills for this congress
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            SELECT congress_number, bill_type, bill_number
+            FROM congress.bills
+            WHERE congress_number = %s
+        """, (congress,))
+        bills = cursor.fetchall()
+        cursor.close()
+
+        print(f"📋 Found {len(bills)} bills to process")
+
+        total_processed = 0
+        for bill_congress, bill_type, bill_number in bills:
+            # Fetch actions for this bill
+            endpoint = f"/bill/{bill_congress}/{bill_type.lower()}/{bill_number}/actions"
+            data = self.get(endpoint)
+
+            if not data or not data.get('actions'):
+                continue
+
+            actions = []
+            for action in data['actions']:
+                actions.append(self.transform_bill_action(
+                    action, bill_congress, bill_type, bill_number
+                ))
+
+            if actions:
+                query = """
+                INSERT INTO congress.bill_actions
+                (congress_number, bill_type, bill_number, action_date,
+                 action_text, action_type, action_code, created_at)
+                VALUES %s
+                ON CONFLICT (congress_number, bill_type, bill_number, action_date, action_text)
+                DO UPDATE SET
+                    action_type = EXCLUDED.action_type,
+                    action_code = EXCLUDED.action_code,
+                    updated_at = now()
+                """
+
+                if self.dry_run:
+                    print(f"🔍 DRY RUN: {bill_type}{bill_number} - {len(actions)} actions")
+                    total_processed += len(actions)
+                else:
+                    cursor = self.conn.cursor()
+                    try:
+                        from psycopg2.extras import execute_values
+                        execute_values(cursor, query, actions)
+                        self.conn.commit()
+                        total_processed += len(actions)
+                        print(f"✅ {bill_type}{bill_number}: {len(actions)} actions")
+                    except Exception as e:
+                        print(f"❌ {bill_type}{bill_number}: {e}")
+                        self.conn.rollback()
+                    finally:
+                        cursor.close()
+
+            time.sleep(0.1)  # Rate limiting
+
+        self.close_db()
+        print(f"🎉 Completed: {total_processed} bill actions")
+
+    def ingest_bill_cosponsors(self, congress: int):
+        """Ingest bill cosponsors for all bills in congress"""
+        print(f"🚀 Starting bill cosponsors for Congress {congress}")
+
+        if not self.connect_db():
+            return
+
+        # Create table if not exists
+        create_table_query = """
+        CREATE TABLE IF NOT EXISTS congress.bill_cosponsors (
+            congress_number INTEGER,
+            bill_type TEXT,
+            bill_number INTEGER,
+            bioguide_id TEXT,
+            sponsorship_date DATE,
+            is_original_cosponsor BOOLEAN,
+            created_at TIMESTAMP,
+            updated_at TIMESTAMP,
+            PRIMARY KEY (congress_number, bill_type, bill_number, bioguide_id)
+        );
+        """
+        if not self.dry_run:
+            cursor = self.conn.cursor()
+            cursor.execute(create_table_query)
+            self.conn.commit()
+            cursor.close()
+
+        # Get all bills
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            SELECT congress_number, bill_type, bill_number
+            FROM congress.bills
+            WHERE congress_number = %s
+        """, (congress,))
+        bills = cursor.fetchall()
+        cursor.close()
+
+        print(f"📋 Found {len(bills)} bills to process")
+
+        total_processed = 0
+        for bill_congress, bill_type, bill_number in bills:
+            endpoint = f"/bill/{bill_congress}/{bill_type.lower()}/{bill_number}/cosponsors"
+            data = self.get(endpoint)
+
+            if not data or not data.get('cosponsors'):
+                continue
+
+            cosponsors = []
+            for cosponsor in data['cosponsors']:
+                cosponsors.append(self.transform_bill_cosponsor(
+                    cosponsor, bill_congress, bill_type, bill_number
+                ))
+
+            if cosponsors:
+                query = """
+                INSERT INTO congress.bill_cosponsors
+                (congress_number, bill_type, bill_number, bioguide_id,
+                 sponsorship_date, is_original_cosponsor, created_at)
+                VALUES %s
+                ON CONFLICT (congress_number, bill_type, bill_number, bioguide_id)
+                DO UPDATE SET
+                    sponsorship_date = EXCLUDED.sponsorship_date,
+                    is_original_cosponsor = EXCLUDED.is_original_cosponsor,
+                    updated_at = now()
+                """
+
+                if self.dry_run:
+                    print(f"🔍 DRY RUN: {bill_type}{bill_number} - {len(cosponsors)} cosponsors")
+                    total_processed += len(cosponsors)
+                else:
+                    cursor = self.conn.cursor()
+                    try:
+                        from psycopg2.extras import execute_values
+                        execute_values(cursor, query, cosponsors)
+                        self.conn.commit()
+                        total_processed += len(cosponsors)
+                        print(f"✅ {bill_type}{bill_number}: {len(cosponsors)} cosponsors")
+                    except Exception as e:
+                        print(f"❌ {bill_type}{bill_number}: {e}")
+                        self.conn.rollback()
+                    finally:
+                        cursor.close()
+
+            time.sleep(0.1)
+
+        self.close_db()
+        print(f"🎉 Completed: {total_processed} bill cosponsors")
+
+    def ingest_bill_subjects(self, congress: int):
+        """Ingest bill subjects for all bills in congress"""
+        print(f"🚀 Starting bill subjects for Congress {congress}")
+
+        if not self.connect_db():
+            return
+
+        # Create table if not exists
+        create_table_query = """
+        CREATE TABLE IF NOT EXISTS congress.bill_subjects (
+            congress_number INTEGER,
+            bill_type TEXT,
+            bill_number INTEGER,
+            subject_name TEXT,
+            created_at TIMESTAMP,
+            updated_at TIMESTAMP,
+            PRIMARY KEY (congress_number, bill_type, bill_number, subject_name)
+        );
+        """
+        if not self.dry_run:
+            cursor = self.conn.cursor()
+            cursor.execute(create_table_query)
+            self.conn.commit()
+            cursor.close()
+
+        # Get all bills
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            SELECT congress_number, bill_type, bill_number
+            FROM congress.bills
+            WHERE congress_number = %s
+        """, (congress,))
+        bills = cursor.fetchall()
+        cursor.close()
+
+        print(f"📋 Found {len(bills)} bills to process")
+
+        total_processed = 0
+        for bill_congress, bill_type, bill_number in bills:
+            endpoint = f"/bill/{bill_congress}/{bill_type.lower()}/{bill_number}/subjects"
+            data = self.get(endpoint)
+
+            # Subjects might be in different formats
+            subjects_list = data.get('subjects', {}).get('legislativeSubjects', []) if data else []
+
+            if not subjects_list:
+                continue
+
+            subjects = []
+            for subject in subjects_list:
+                subjects.append(self.transform_bill_subject(
+                    subject, bill_congress, bill_type, bill_number
+                ))
+
+            if subjects:
+                query = """
+                INSERT INTO congress.bill_subjects
+                (congress_number, bill_type, bill_number, subject_name, created_at)
+                VALUES %s
+                ON CONFLICT (congress_number, bill_type, bill_number, subject_name)
+                DO UPDATE SET
+                    updated_at = now()
+                """
+
+                if self.dry_run:
+                    print(f"🔍 DRY RUN: {bill_type}{bill_number} - {len(subjects)} subjects")
+                    total_processed += len(subjects)
+                else:
+                    cursor = self.conn.cursor()
+                    try:
+                        from psycopg2.extras import execute_values
+                        execute_values(cursor, query, subjects)
+                        self.conn.commit()
+                        total_processed += len(subjects)
+                        print(f"✅ {bill_type}{bill_number}: {len(subjects)} subjects")
+                    except Exception as e:
+                        print(f"❌ {bill_type}{bill_number}: {e}")
+                        self.conn.rollback()
+                    finally:
+                        cursor.close()
+
+            time.sleep(0.1)
+
+        self.close_db()
+        print(f"🎉 Completed: {total_processed} bill subjects")
+
+    def ingest_bill_titles(self, congress: int):
+        """Ingest bill titles for all bills in congress"""
+        print(f"🚀 Starting bill titles for Congress {congress}")
+
+        if not self.connect_db():
+            return
+
+        # Create table if not exists
+        create_table_query = """
+        CREATE TABLE IF NOT EXISTS congress.bill_titles (
+            congress_number INTEGER,
+            bill_type TEXT,
+            bill_number INTEGER,
+            title TEXT,
+            title_type TEXT,
+            title_type_code TEXT,
+            created_at TIMESTAMP,
+            updated_at TIMESTAMP,
+            PRIMARY KEY (congress_number, bill_type, bill_number, title)
+        );
+        """
+        if not self.dry_run:
+            cursor = self.conn.cursor()
+            cursor.execute(create_table_query)
+            self.conn.commit()
+            cursor.close()
+
+        # Get all bills
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            SELECT congress_number, bill_type, bill_number
+            FROM congress.bills
+            WHERE congress_number = %s
+        """, (congress,))
+        bills = cursor.fetchall()
+        cursor.close()
+
+        print(f"📋 Found {len(bills)} bills to process")
+
+        total_processed = 0
+        for bill_congress, bill_type, bill_number in bills:
+            endpoint = f"/bill/{bill_congress}/{bill_type.lower()}/{bill_number}/titles"
+            data = self.get(endpoint)
+
+            if not data or not data.get('titles'):
+                continue
+
+            titles = []
+            for title in data['titles']:
+                titles.append(self.transform_bill_title(
+                    title, bill_congress, bill_type, bill_number
+                ))
+
+            if titles:
+                query = """
+                INSERT INTO congress.bill_titles
+                (congress_number, bill_type, bill_number, title,
+                 title_type, title_type_code, created_at)
+                VALUES %s
+                ON CONFLICT (congress_number, bill_type, bill_number, title)
+                DO UPDATE SET
+                    title_type = EXCLUDED.title_type,
+                    title_type_code = EXCLUDED.title_type_code,
+                    updated_at = now()
+                """
+
+                if self.dry_run:
+                    print(f"🔍 DRY RUN: {bill_type}{bill_number} - {len(titles)} titles")
+                    total_processed += len(titles)
+                else:
+                    cursor = self.conn.cursor()
+                    try:
+                        from psycopg2.extras import execute_values
+                        execute_values(cursor, query, titles)
+                        self.conn.commit()
+                        total_processed += len(titles)
+                        print(f"✅ {bill_type}{bill_number}: {len(titles)} titles")
+                    except Exception as e:
+                        print(f"❌ {bill_type}{bill_number}: {e}")
+                        self.conn.rollback()
+                    finally:
+                        cursor.close()
+
+            time.sleep(0.1)
+
+        self.close_db()
+        print(f"🎉 Completed: {total_processed} bill titles")
+
+    def ingest_related_bills(self, congress: int):
+        """Ingest related bills for all bills in congress"""
+        print(f"🚀 Starting related bills for Congress {congress}")
+
+        if not self.connect_db():
+            return
+
+        # Create table if not exists
+        create_table_query = """
+        CREATE TABLE IF NOT EXISTS congress.related_bills (
+            congress_number INTEGER,
+            bill_type TEXT,
+            bill_number INTEGER,
+            related_congress INTEGER,
+            related_bill_type TEXT,
+            related_bill_number INTEGER,
+            relationship_type TEXT,
+            identified_by TEXT,
+            created_at TIMESTAMP,
+            updated_at TIMESTAMP,
+            PRIMARY KEY (congress_number, bill_type, bill_number, related_congress, related_bill_type, related_bill_number)
+        );
+        """
+        if not self.dry_run:
+            cursor = self.conn.cursor()
+            cursor.execute(create_table_query)
+            self.conn.commit()
+            cursor.close()
+
+        # Get all bills
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            SELECT congress_number, bill_type, bill_number
+            FROM congress.bills
+            WHERE congress_number = %s
+        """, (congress,))
+        bills = cursor.fetchall()
+        cursor.close()
+
+        print(f"📋 Found {len(bills)} bills to process")
+
+        total_processed = 0
+        for bill_congress, bill_type, bill_number in bills:
+            endpoint = f"/bill/{bill_congress}/{bill_type.lower()}/{bill_number}/relatedbills"
+            data = self.get(endpoint)
+
+            if not data or not data.get('relatedBills'):
+                continue
+
+            related = []
+            for rel_bill in data['relatedBills']:
+                related.append(self.transform_related_bill(
+                    rel_bill, bill_congress, bill_type, bill_number
+                ))
+
+            if related:
+                query = """
+                INSERT INTO congress.related_bills
+                (congress_number, bill_type, bill_number, related_congress,
+                 related_bill_type, related_bill_number, relationship_type, identified_by, created_at)
+                VALUES %s
+                ON CONFLICT (congress_number, bill_type, bill_number, related_congress, related_bill_type, related_bill_number)
+                DO UPDATE SET
+                    relationship_type = EXCLUDED.relationship_type,
+                    identified_by = EXCLUDED.identified_by,
+                    updated_at = now()
+                """
+
+                if self.dry_run:
+                    print(f"🔍 DRY RUN: {bill_type}{bill_number} - {len(related)} related bills")
+                    total_processed += len(related)
+                else:
+                    cursor = self.conn.cursor()
+                    try:
+                        from psycopg2.extras import execute_values
+                        execute_values(cursor, query, related)
+                        self.conn.commit()
+                        total_processed += len(related)
+                        print(f"✅ {bill_type}{bill_number}: {len(related)} related bills")
+                    except Exception as e:
+                        print(f"❌ {bill_type}{bill_number}: {e}")
+                        self.conn.rollback()
+                    finally:
+                        cursor.close()
+
+            time.sleep(0.1)
+
+        self.close_db()
+        print(f"🎉 Completed: {total_processed} related bills")
+
+    def ingest_committee_members(self, congress: int):
+        """Ingest committee members for all committees"""
+        print(f"🚀 Starting committee members ingestion for Congress {congress}")
+
+        if not self.connect_db():
+            return
+
+        # Ensure table exists
+        create_table_query = """
+        CREATE TABLE IF NOT EXISTS congress.committee_members (
+            congress_number INT,
+            chamber VARCHAR(10),
+            committee_code VARCHAR(10),
+            bioguide_id VARCHAR(10),
+            name TEXT,
+            party VARCHAR(50),
+            state VARCHAR(2),
+            rank INT,
+            created_at TIMESTAMP,
+            updated_at TIMESTAMP,
+            PRIMARY KEY (congress_number, chamber, committee_code, bioguide_id)
+        );
+        """
+        if not self.dry_run:
+            cursor = self.conn.cursor()
+            cursor.execute(create_table_query)
+            self.conn.commit()
+            cursor.close()
+
+        # Get all committees for this congress
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            SELECT committee_id, chamber_code
+            FROM congress.committees
+        """)
+        committees = cursor.fetchall()
+        cursor.close()
+
+        print(f"📋 Found {len(committees)} committees to process")
+
+        total_processed = 0
+        for committee_id, chamber_code in committees:
+            # Extract committee code from committee_id (format: hsag00 -> ag)
+            # Committee IDs are like "hsag00" (house agriculture), "sshr00" (senate health)
+            committee_code = committee_id[2:].rstrip('0')  # Remove prefix and trailing zeros
+
+            # Fetch committee details including members
+            endpoint = f"/committee/{congress}/{chamber_code.lower()}/{committee_code}"
+            data = self.get(endpoint)
+
+            if not data or not data.get('members'):
+                continue
+
+            members = []
+            for member in data['members']:
+                members.append(self.transform_committee_member(
+                    member, committee_id, congress, chamber_code
+                ))
+
+            if members:
+                query = """
+                INSERT INTO congress.committee_members
+                (committee_id, bioguide_id, chamber_code, congress_number,
+                 rank_in_committee, title, created_at)
+                VALUES %s
+                ON CONFLICT (committee_member_id)
+                DO UPDATE SET
+                    bioguide_id = EXCLUDED.bioguide_id,
+                    chamber_code = EXCLUDED.chamber_code,
+                    congress_number = EXCLUDED.congress_number,
+                    rank_in_committee = EXCLUDED.rank_in_committee,
+                    title = EXCLUDED.title,
+                    updated_at = now()
+                """
+
+                if self.dry_run:
+                    print(f"🔍 Would insert {len(members)} members for {chamber_code}-{committee_code}")
+                    total_processed += len(members)
+                else:
+                    cursor = self.conn.cursor()
+                    try:
+                        from psycopg2.extras import execute_values
+                        execute_values(cursor, query, members)
+                        self.conn.commit()
+                        total_processed += len(members)
+                        print(f"✅ {chamber}-{committee_code}: {len(members)} members")
+                    except Exception as e:
+                        print(f"❌ Failed {chamber}-{committee_code}: {e}")
+                        self.conn.rollback()
+                    finally:
+                        cursor.close()
+
+            time.sleep(0.1)  # Rate limiting
+
+        self.close_db()
+        print(f"🎉 Completed: {total_processed} committee members")
+
     def status(self):
         """Show Congress data status"""
         if not self.connect_db():
@@ -590,7 +1584,17 @@ class CongressCLI:
                 ("congress.bills", "Bills"),
                 ("congress.amendments", "Amendments"),
                 ("congress.bill_summaries", "Summaries"),
-                ("congress.bill_text_versions", "Text Versions")
+                ("congress.bill_text_versions", "Text Versions"),
+                ("congress.sessions", "Sessions"),
+                ("congress.chambers", "Chambers"),
+                ("congress.committees", "Committees"),
+                ("congress.votes", "Votes"),
+                ("congress.bill_actions", "Bill Actions"),
+                ("congress.bill_cosponsors", "Bill Cosponsors"),
+                ("congress.bill_subjects", "Bill Subjects"),
+                ("congress.bill_titles", "Bill Titles"),
+                ("congress.related_bills", "Related Bills"),
+                ("congress.committee_members", "Committee Members")
             ]
 
             print("📊 Congress Data Status:")
@@ -636,6 +1640,44 @@ def main():
     text_parser = subparsers.add_parser('ingest-text', help='Ingest bill text versions')
     text_parser.add_argument('congress', type=int, help='Congress number')
 
+    # Ingest Sessions
+    subparsers.add_parser('ingest-sessions', help='Ingest congress sessions')
+
+    # Ingest Chambers
+    subparsers.add_parser('ingest-chambers', help='Ingest congress chambers')
+
+    # Ingest Committees
+    comm_parser = subparsers.add_parser('ingest-committees', help='Ingest congress committees')
+    comm_parser.add_argument('congress', type=int, help='Congress number')
+
+    # Ingest Votes
+    vote_parser = subparsers.add_parser('ingest-votes', help='Ingest congress votes')
+    vote_parser.add_argument('congress', type=int, help='Congress number')
+
+    # Ingest Bill Actions
+    actions_parser = subparsers.add_parser('ingest-bill-actions', help='Ingest bill actions')
+    actions_parser.add_argument('congress', type=int, help='Congress number')
+
+    # Ingest Bill Cosponsors
+    cosp_parser = subparsers.add_parser('ingest-bill-cosponsors', help='Ingest bill cosponsors')
+    cosp_parser.add_argument('congress', type=int, help='Congress number')
+
+    # Ingest Bill Subjects
+    subj_parser = subparsers.add_parser('ingest-bill-subjects', help='Ingest bill subjects')
+    subj_parser.add_argument('congress', type=int, help='Congress number')
+
+    # Ingest Bill Titles
+    titles_parser = subparsers.add_parser('ingest-bill-titles', help='Ingest bill titles')
+    titles_parser.add_argument('congress', type=int, help='Congress number')
+
+    # Ingest Related Bills
+    related_parser = subparsers.add_parser('ingest-related-bills', help='Ingest related bills')
+    related_parser.add_argument('congress', type=int, help='Congress number')
+
+    # Ingest Committee Members
+    comm_mem_parser = subparsers.add_parser('ingest-committee-members', help='Ingest committee members')
+    comm_mem_parser.add_argument('congress', type=int, help='Congress number')
+
     # Status
     subparsers.add_parser('status', help='Show status')
 
@@ -664,6 +1706,26 @@ def main():
         cli.ingest_summaries(args.congress)
     elif args.command == 'ingest-text':
         cli.ingest_text(args.congress)
+    elif args.command == 'ingest-sessions':
+        cli.ingest_sessions()
+    elif args.command == 'ingest-chambers':
+        cli.ingest_chambers()
+    elif args.command == 'ingest-committees':
+        cli.ingest_committees(args.congress)
+    elif args.command == 'ingest-votes':
+        cli.ingest_votes(args.congress)
+    elif args.command == 'ingest-bill-actions':
+        cli.ingest_bill_actions(args.congress)
+    elif args.command == 'ingest-bill-cosponsors':
+        cli.ingest_bill_cosponsors(args.congress)
+    elif args.command == 'ingest-bill-subjects':
+        cli.ingest_bill_subjects(args.congress)
+    elif args.command == 'ingest-bill-titles':
+        cli.ingest_bill_titles(args.congress)
+    elif args.command == 'ingest-related-bills':
+        cli.ingest_related_bills(args.congress)
+    elif args.command == 'ingest-committee-members':
+        cli.ingest_committee_members(args.congress)
     elif args.command == 'status':
         cli.status()
 

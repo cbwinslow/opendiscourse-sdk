@@ -401,12 +401,22 @@ Any agent detecting Git security violations must:
 - **Congress Members**: 725 records ✅ (Congresses 116, 117, 118)
 - **OpenStates People**: 1,040 records ✅ (CA, TX, NY, FL, IL, OH)
 - **OpenStates Jurisdictions**: 59 records ✅
+- **Congress Bills**: Ingestion functions implemented & verified (dry-run) ✅
+  - `ingest-bills`
+  - `ingest-bill-actions`
+  - `ingest-bill-cosponsors`
+  - `ingest-bill-subjects`
+  - `ingest-bill-titles`
+  - `ingest-related-bills`
+
+### ⚠️ PARTIALLY WORKING SYSTEMS
+- **OpenStates**:
+  - `ingest-organizations`: Implemented but blocked by jurisdiction resolution bug
+  - `ingest-sessions`: Implemented but blocked by jurisdiction resolution bug
+  - `ingest-documents`: Implemented but blocked by jurisdiction resolution bug
 
 ### ❌ BROKEN INGESTION SYSTEMS
-- **Congress Bills**: 0 records ❌ (Processes 60,000+ but inserts 0)
-  - **Issue**: Data insertion logic broken, not duplicate detection
-  - **Status**: Script runs but no database records created
-  - **Root Cause**: Database function parameter mismatches and connection issues
+- **OpenStates Jurisdiction Resolution**: `resolve_jurisdiction_id('ca')` fails to resolve
 
 ### 🔧 KNOWN SOLUTIONS
 1. **Database Connection**: Use `database='opendiscourse'` and `host='/var/run/postgresql'`
