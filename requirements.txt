@@ -9,7 +9,7 @@
 
 # Database connectivity (CRITICAL - use exact versions)
 psycopg2-binary==2.9.9
-pgvector==0.2.4
+pgvector==0.4.1
 
 # HTTP requests and API interactions
 requests==2.31.0
