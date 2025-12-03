@@ -1,0 +1,68 @@
+{
+    "members": [
+        {
+            "bioguideId": "A000360",
+            "firstName": "Lamar",
+            "lastName": "Alexander",
+            "birthYear": "1940",
+            "deathYear": null,
+            "terms": [
+                {
+                    "congress": 116,
+                    "chamber": "Senate",
+                    "startDate": "2019-01-03",
+                    "endDate": "2021-01-03",
+                    "state": "Tennessee",
+                    "stateCode": "TN",
+                    "party": "Republican",
+                    "partyCode": "R",
+                    "district": null
+                }
+            ]
+        },
+        {
+            "bioguideId": "B001230",
+            "firstName": "Tammy",
+            "lastName": "Baldwin",
+            "birthYear": "1962",
+            "deathYear": null,
+            "terms": [
+                {
+                    "congress": 116,
+                    "chamber": "Senate",
+                    "startDate": "2019-01-03",
+                    "endDate": "2021-01-03",
+                    "state": "Wisconsin",
+                    "stateCode": "WI",
+                    "party": "Democratic",
+                    "partyCode": "D",
+                    "district": null
+                }
+            ]
+        },
+        {
+            "bioguideId": "M001111",
+            "firstName": "Patty",
+            "lastName": "Murray",
+            "birthYear": "1950",
+            "deathYear": null,
+            "terms": [
+                {
+                    "congress": 116,
+                    "chamber": "House",
+                    "startDate": "2019-01-03",
+                    "endDate": "2021-01-03",
+                    "state": "Washington",
+                    "stateCode": "WA",
+                    "party": "Democratic",
+                    "partyCode": "D",
+                    "district": "2"
+                }
+            ]
+        }
+    ],
+    "pagination": {
+        "count": 3,
+        "next": null
+    }
+}

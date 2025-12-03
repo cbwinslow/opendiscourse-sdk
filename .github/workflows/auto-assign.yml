@@ -1,0 +1,74 @@
+name: Auto-Assign Issues and PRs
+
+on:
+  issues:
+    types: [opened]
+  pull_request_target:
+    types: [opened]
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  auto-assign:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Auto-assign based on file paths
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            let assignees = [];
+            const isPR = context.eventName === 'pull_request_target';
+            const number = isPR ? context.payload.pull_request.number : context.payload.issue.number;
+            
+            // Default assignee
+            const defaultAssignee = 'cbwinslow';
+            
+            if (isPR) {
+              // Get changed files in PR
+              const { data: files } = await github.rest.pulls.listFiles({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: number
+              });
+              
+              const changedPaths = files.map(f => f.filename);
+              
+              // Assign based on file paths
+              if (changedPaths.some(p => p.startsWith('.github/'))) {
+                assignees.push(defaultAssignee);
+              } else if (changedPaths.some(p => p.startsWith('web/') || p.startsWith('webui/'))) {
+                assignees.push(defaultAssignee);
+              } else if (changedPaths.some(p => p.endsWith('.py'))) {
+                assignees.push(defaultAssignee);
+              } else if (changedPaths.some(p => p.startsWith('docs/'))) {
+                assignees.push(defaultAssignee);
+              } else {
+                assignees.push(defaultAssignee);
+              }
+            } else {
+              // For issues, use labels to determine assignment
+              const labels = context.payload.issue.labels.map(l => l.name);
+              
+              if (labels.includes('bug') || labels.includes('enhancement')) {
+                assignees.push(defaultAssignee);
+              }
+            }
+            
+            // Remove duplicates
+            assignees = [...new Set(assignees)];
+            
+            if (assignees.length > 0) {
+              const endpoint = isPR ? github.rest.issues.addAssignees : github.rest.issues.addAssignees;
+              await endpoint({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: number,
+                assignees: assignees
+              });
+            }

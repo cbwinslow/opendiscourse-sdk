@@ -1,0 +1,34 @@
+{
+  "versioning": {
+    "scheme": "semver",
+    "prefix": "v",
+    "major": 1,
+    "minor": 0,
+    "patch": 0
+  },
+  "changelog": {
+    "categories": [
+      "Added",
+      "Changed",
+      "Deprecated",
+      "Removed",
+      "Fixed",
+      "Security"
+    ],
+    "ignore_patterns": [
+      "^chore:",
+      "^ci:",
+      "^test:"
+    ]
+  },
+  "release_notes": {
+    "template": "templates/release.md",
+    "sections": [
+      "Overview",
+      "New Features",
+      "Breaking Changes",
+      "Bug Fixes",
+      "Documentation Updates"
+    ]
+  }
+}

@@ -1,0 +1,26 @@
+[
+  {
+    "type": "pulse",
+    "name": "Ingestion MVP",
+    "description": "Milestones for ingest/refactor improvements and monitoring.",
+    "status": "planned",
+    "due_date": "2025-12-31",
+    "owner_id": "linear_user_placeholder",
+    "related_issues": []
+  },
+  {
+    "type": "customer",
+    "name": "OpenDiscourse",
+    "contact_email": "ops@example.org",
+    "account_type": "pro",
+    "notes": "Primary stakeholder for ingestion improvements."
+  },
+  {
+    "type": "member",
+    "name": "OpenDiscourse Bot",
+    "role": "Automation Agent",
+    "email": "bot@example.org",
+    "joined_at": "2024-01-01",
+    "status": "active"
+  }
+]

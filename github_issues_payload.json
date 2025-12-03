@@ -1,0 +1,47 @@
+[
+  {
+    "title": "🚨 Critical: Congress Bills ingestion fails due to chamber mapping foreign key constraint",
+    "body": "The Congress Bills ingestion is failing with foreign key constraint violations related to chamber mapping. The API returns \"House\" but the database expects \"house\" (lowercase). Fix involves standardizing the chamber mapping in the data transformation layer.",
+    "labels": ["bug", "ingestion", "congress", "priority-high", "critical"]
+  },
+  {
+    "title": "⚡ High: Enhanced OpenStates ingestion - Missing implementation methods",
+    "body": "Several core ingestion methods are placeholders (ingest_person_details, ingest_person_bill_relationships, ingest_bills_with_details, ingest_committees_with_details, ingest_events_with_details). Implement these to complete the enhanced ingestion pipeline.",
+    "labels": ["enhancement", "openstates", "ingestion", "priority-high"]
+  },
+  {
+    "title": "📊 Medium: Monitoring system issues - Delegate mismatch and error recovery",
+    "body": "Delegates for Congress member terms show mismatch; missing error recovery logic for failed DB insertions; progress calculation edge cases; GovInfo delegate integration missing.",
+    "labels": ["monitoring", "bug", "database", "priority-medium"]
+  },
+  {
+    "title": "🔧 Medium: Database connection standards violations",
+    "body": "Audit all database connections to ensure they use the approved patterns (e.g., database='opendiscourse', host='/var/run/postgresql').",
+    "labels": ["database", "standards", "code-quality", "priority-medium"]
+  },
+  {
+    "title": "🛠️ Enhancement: Complete PGVector integration for semantic search",
+    "body": "Full PGVector integration for semantic search: install extension, create vector storage, embedding pipeline, and provide semantic search endpoints.",
+    "labels": ["enhancement", "vector-database", "rag", "project-v2"]
+  },
+  {
+    "title": "🏛️ Enhancement: Expand Congress data ingestion to include historical data",
+    "body": "Expand ingestion to include historical Congress data (115 and earlier), roll call votes, committee data, amendments, and historical member records.",
+    "labels": ["enhancement", "congress", "historical-data", "project-v2"]
+  },
+  {
+    "title": "🧹 Cleanup: OpenStates scrapers have TODO comments needing attention",
+    "body": "144 TODO/FIXME/BUG comments across openstates-scrapers require updates for date handling, vote processing, and error handling.",
+    "labels": ["openstates", "scrapers", "cleanup", "project-v2"]
+  },
+  {
+    "title": "🤖 Enhancement: Improve GitHub integration automation",
+    "body": "Automate monitoring issue creation, improve issue templates, and enable agent-based status updates and progress tracking.",
+    "labels": ["automation", "github", "monitoring", "project-v2"]
+  },
+  {
+    "title": "🧪 Enhancement: Expand test coverage for ingestion pipeline",
+    "body": "Extend tests for rate limiting, parallel processing, data validation, monitoring integration, and recovery mechanisms.",
+    "labels": ["testing", "infrastructure", "coverage", "project-v2"]
+  }
+]

@@ -1,0 +1,54 @@
+{
+  "timestamp": "2025-12-03T17:51:11.244912Z",
+  "repository": "cbwinslow/opendiscourse",
+  "total_payloads": 9,
+  "created_issues": [],
+  "failed_issues": 9,
+  "failures": [
+    {
+      "title": "\ud83d\udea8 Critical: Congress Bills ingestion fails due to chamber mapping foreign key constraint",
+      "code": 401,
+      "response": "{\r\n  \"message\": \"Bad credentials\",\r\n  \"documentation_url\": \"https://docs.github.com/rest\",\r\n  \"status\": \"401\"\r\n}"
+    },
+    {
+      "title": "\u26a1 High: Enhanced OpenStates ingestion - Missing implementation methods",
+      "code": 401,
+      "response": "{\r\n  \"message\": \"Bad credentials\",\r\n  \"documentation_url\": \"https://docs.github.com/rest\",\r\n  \"status\": \"401\"\r\n}"
+    },
+    {
+      "title": "\ud83d\udcca Medium: Monitoring system issues - Delegate mismatch and error recovery",
+      "code": 401,
+      "response": "{\r\n  \"message\": \"Bad credentials\",\r\n  \"documentation_url\": \"https://docs.github.com/rest\",\r\n  \"status\": \"401\"\r\n}"
+    },
+    {
+      "title": "\ud83d\udd27 Medium: Database connection standards violations",
+      "code": 401,
+      "response": "{\r\n  \"message\": \"Bad credentials\",\r\n  \"documentation_url\": \"https://docs.github.com/rest\",\r\n  \"status\": \"401\"\r\n}"
+    },
+    {
+      "title": "\ud83d\udee0\ufe0f Enhancement: Complete PGVector integration for semantic search",
+      "code": 401,
+      "response": "{\r\n  \"message\": \"Bad credentials\",\r\n  \"documentation_url\": \"https://docs.github.com/rest\",\r\n  \"status\": \"401\"\r\n}"
+    },
+    {
+      "title": "\ud83c\udfdb\ufe0f Enhancement: Expand Congress data ingestion to include historical data",
+      "code": 401,
+      "response": "{\r\n  \"message\": \"Bad credentials\",\r\n  \"documentation_url\": \"https://docs.github.com/rest\",\r\n  \"status\": \"401\"\r\n}"
+    },
+    {
+      "title": "\ud83e\uddf9 Cleanup: OpenStates scrapers have TODO comments needing attention",
+      "code": 401,
+      "response": "{\r\n  \"message\": \"Bad credentials\",\r\n  \"documentation_url\": \"https://docs.github.com/rest\",\r\n  \"status\": \"401\"\r\n}"
+    },
+    {
+      "title": "\ud83e\udd16 Enhancement: Improve GitHub integration automation",
+      "code": 401,
+      "response": "{\r\n  \"message\": \"Bad credentials\",\r\n  \"documentation_url\": \"https://docs.github.com/rest\",\r\n  \"status\": \"401\"\r\n}"
+    },
+    {
+      "title": "\ud83e\uddea Enhancement: Expand test coverage for ingestion pipeline",
+      "code": 401,
+      "response": "{\r\n  \"message\": \"Bad credentials\",\r\n  \"documentation_url\": \"https://docs.github.com/rest\",\r\n  \"status\": \"401\"\r\n}"
+    }
+  ]
+}

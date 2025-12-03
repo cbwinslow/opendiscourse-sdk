@@ -1,0 +1,37 @@
+{
+  "name": "opendiscourse-webui",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.6",
+    "@supabase/auth-helpers-nextjs": "^0.8.7",
+    "next": "^14.2.16",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "formidable": "^3.5.1",
+    "@types/formidable": "^3.4.5",
+    "axios": "^1.12.0",
+    "recharts": "^2.12.7",
+    "react-query": "^3.39.3",
+    "lucide-react": "^0.462.0",
+    "tailwindcss": "^3.4.17",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.5.1",
+    "clsx": "^2.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.7",
+    "@types/react": "^18.3.17",
+    "@types/react-dom": "^18.3.5",
+    "typescript": "^5.7.2",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^14.2.16"
+  }
+}

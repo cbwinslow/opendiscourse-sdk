@@ -1,0 +1,31 @@
+# Integration Configuration
+
+# Jira Settings
+jira:
+  base_url: "https://opendiscourse.atlassian.net"
+  username: "your-jira-email"
+  api_token: "your-jira-api-token"
+  webhook_url: "https://opendiscourse-webhook.vercel.app/webhook/jira"  # Replace with your actual webhook endpoint
+  project_key: "OPD"  # Project key for OpenDiscourse
+
+# GitHub Settings
+github:
+  token: "your-github-token"  # Replace with your actual GitHub token
+  repository: "cbwinslow/opendiscourse"
+
+# Bitbucket Settings
+bitbucket:
+  base_url: "https://api.bitbucket.org/2.0"
+  username: "cbwinslow"
+  app_password: "your-bitbucket-app-password"  # Replace with your actual Bitbucket app password
+  workspace: "cbwinslow"
+
+# Webhook URLs
+webhooks:
+  jira: "https://opendiscourse.atlassian.net/rest/webhooks/1.0/webhook"
+  bitbucket: "https://api.bitbucket.org/2.0/repositories/cbwinslow/opendiscourse/hooks"
+
+# Commit Message Format
+commit_format:
+  prefix: "JIRA-"
+  required_fields: ["issue_key", "message"]

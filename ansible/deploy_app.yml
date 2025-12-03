@@ -1,0 +1,19 @@
+---
+- name: Deploy the application
+  hosts: all
+  become: yes
+  tasks:
+    - name: Create app directory
+      file:
+        path: /app
+        state: directory
+
+    - name: Copy application files
+      copy:
+        src: ..
+        dest: /app
+
+    - name: Run docker-compose
+      command: docker-compose -f /app/docker-compose.yml up -d
+      args:
+        chdir: /app

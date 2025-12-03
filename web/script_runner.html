@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Script Runner</title>
+    <link rel="stylesheet" href="/web/static/css/theme.css">
+</head>
+<body>
+<nav>
+    <a href="/web/index.html">Home</a>
+</nav>
+<div class="container">
+    <h1>Execute Scripts</h1>
+    <select id="script"></select>
+    <button onclick="runScript()">Run</button>
+    <pre id="output"></pre>
+</div>
+<script>
+async function loadScripts(){
+ const resp = await fetch('/api/scripts');
+ const json = await resp.json();
+ const select=document.getElementById('script');
+ json.forEach(s=>{const o=document.createElement('option');o.value=s;o.text=s;select.appendChild(o);});
+}
+async function runScript(){
+ const script=document.getElementById('script').value;
+ const resp=await fetch('/api/scripts/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({script})});
+ const text=await resp.text();
+ document.getElementById('output').textContent=text;
+}
+loadScripts();
+</script>
+<script src="/web/static/js/track.js"></script>
+</body>
+</html>

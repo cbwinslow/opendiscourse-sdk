@@ -1,0 +1,181 @@
+---
+# Bulk Ingestion Configuration
+# Defines what data to ingest and how to ingest it
+
+# OpenStates Configuration
+openstates:
+  enabled: true
+  api_key: ${OPENSTATES_API_KEY}
+
+  # All US states + territories
+  jurisdictions:
+    - ca  # California
+    - ny  # New York
+    - tx  # Texas
+    - fl  # Florida
+    - il  # Illinois
+    - pa  # Pennsylvania
+    - oh  # Ohio
+    - ga  # Georgia
+    - nc  # North Carolina
+    - mi  # Michigan
+    - nj  # New Jersey
+    - va  # Virginia
+    - wa  # Washington
+    - az  # Arizona
+    - ma  # Massachusetts
+    - tn  # Tennessee
+    - in  # Indiana
+    - mo  # Missouri
+    - md  # Maryland
+    - wi  # Wisconsin
+    - co  # Colorado
+    - mn  # Minnesota
+    - sc  # South Carolina
+    - al  # Alabama
+    - la  # Louisiana
+    - ky  # Kentucky
+    - or  # Oregon
+    - ok  # Oklahoma
+    - ct  # Connecticut
+    - ut  # Utah
+    - ia  # Iowa
+    - nv  # Nevada
+    - ar  # Arkansas
+    - ms  # Mississippi
+    - ks  # Kansas
+    - nm  # New Mexico
+    - ne  # Nebraska
+    - wv  # West Virginia
+    - id  # Idaho
+    - hi  # Hawaii
+    - nh  # New Hampshire
+    - me  # Maine
+    - mt  # Montana
+    - ri  # Rhode Island
+    - de  # Delaware
+    - sd  # South Dakota
+    - nd  # North Dakota
+    - ak  # Alaska
+    - vt  # Vermont
+    - wy  # Wyoming
+    - dc  # District of Columbia
+    - pr  # Puerto Rico
+
+  # Data types to ingest
+  data_types:
+    - jurisdictions
+    - people
+    - bills
+    - vote_events
+    - committees
+    - events
+    - organizations
+    - sessions
+
+  # Rate limiting (requests per minute)
+  rate_limit: 100
+  concurrent_requests: 15  # Increased from 10
+
+  # Date range
+  years_back: 10
+
+# Congress.gov Configuration
+congress:
+  enabled: true
+  api_key: ${CONGRESS_API_KEY}
+
+  # Congress numbers to ingest (113-119 = 2013-2025)
+  congresses: [113, 114, 115, 116, 117, 118, 119]
+
+  # Data types
+  data_types:
+    - members
+    - bills
+    - amendments
+    - committees
+    - nominations
+    - treaties
+
+  # Rate limiting
+  rate_limit: 600  # Very conservative
+  concurrent_requests: 30  # Increased from 20
+
+# GovInfo Configuration
+govinfo:
+  enabled: true
+  api_key: ${GOVINFO_API_KEY}
+
+  # Document collections
+  collections:
+    - BILLS
+    - BILLSTATUS
+    - CRPT  # Committee Reports
+    - CHRG  # Committee Hearings
+    - FR    # Federal Register
+    - CFR   # Code of Federal Regulations
+    - STATUTE
+    - PLAW  # Public Laws
+
+  # Date range
+  start_date: "2015-01-01"
+  end_date: null  # null = today
+
+  # Rate limiting
+  rate_limit: 120
+  concurrent_requests: 20  # Increased from 15
+
+# Database Configuration
+database:
+  name: opendiscourse
+  user: ${DB_USER:-cbwinslow}
+  password: ${DB_PASSWORD:-}
+  host: ${DB_HOST:-}  # Empty for Unix socket
+  port: ${DB_PORT:-}
+
+  # Connection pool settings
+  min_pool_size: 10
+  max_pool_size: 30  # Increased from 20
+
+  # Batch insert size
+  batch_size: 100
+
+# Performance Settings
+performance:
+  # Use asyncio for concurrent requests
+  async_mode: true
+
+  # Process multiple jurisdictions/congresses in parallel
+  parallel_jobs: 10  # Increased from 5 for faster processing
+
+  # Worker threads for data transformation
+  worker_threads: 4
+
+  # Use connection pooling
+  connection_pooling: true
+
+# Checkpointing
+checkpointing:
+  enabled: true
+  save_interval: 100  # Save checkpoint every N records
+  resume_on_startup: true
+
+# Error Handling
+error_handling:
+  max_retries: 3
+  retry_delay: 1  # seconds
+  exponential_backoff: true
+  continue_on_error: true
+
+# Logging
+logging:
+  level: INFO
+  file: logs/bulk_ingestion.log
+  console: true
+
+# Progress Reporting
+reporting:
+  console_updates: true
+  update_interval: 50  # records
+  progress_bar: true
+  final_summary: true

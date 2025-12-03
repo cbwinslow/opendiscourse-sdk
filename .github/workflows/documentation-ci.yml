@@ -1,0 +1,80 @@
+name: Documentation CI
+
+on:
+  push:
+    paths:
+      - '**.md'
+      - 'docs/**'
+  pull_request:
+    paths:
+      - '**.md'
+      - 'docs/**'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          
+      - name: Install dependencies
+        run: |
+          npm install -g markdownlint-cli
+          npm install -g markdown-link-check
+          npm install -g remark-cli
+          npm install -g remark-validate-links
+          
+      - name: Markdown Linting
+        run: markdownlint '**/*.md' --ignore node_modules
+        
+      - name: Link Validation
+        run: |
+          find . -name \*.md -exec markdown-link-check {} \;
+          
+      - name: Format Verification
+        run: |
+          remark . --use remark-validate-links --frail
+          
+      - name: Traceability Check
+        run: |
+          python3 .github/scripts/doc_trace.py
+          
+  version-track:
+    needs: validate
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          
+      - name: Generate Changelog
+        id: changelog
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { execSync } = require('child_process');
+            const lastTag = execSync('git describe --tags --abbrev=0 || echo ""').toString().trim();
+            const range = lastTag ? `${lastTag}..HEAD` : 'HEAD';
+            const changes = execSync(`git log ${range} --pretty=format:"* %s (%h)" -- "*.md" "docs/"`).toString();
+            return changes;
+            
+      - name: Update Version
+        run: |
+          echo "${{ steps.changelog.outputs.result }}" >> CHANGELOG.md
+          
+      - name: Create Release Notes
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          body: ${{ steps.changelog.outputs.result }}
+          draft: false
+          prerelease: false

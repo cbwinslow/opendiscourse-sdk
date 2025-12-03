@@ -1,0 +1,109 @@
+[
+  {
+    "agent": "MonitoringSystem",
+    "error": "Delegate Registration Mismatch for Congress Member Terms",
+    "timestamp": "2025-11-23T12:45:00Z",
+    "description": "The monitoring system delegates are registered for 'congress.gov:congress.members' but the ingestion script also processes and inserts into 'congress.member_terms' table without a corresponding delegate. This causes inconsistent progress tracking for term data.",
+    "potential_causes": "Incomplete delegate setup; the setup_all_delegates function only registers delegates for the main members table but not for related term data.",
+    "severity": "Medium",
+    "steps_to_reproduce": "1. Run 'python scripts/ingest_members_monitored.py --congress-start 118 --congress-end 118'\n2. Observe that member processing is tracked via delegate but term insertions are not logged via delegate functions.",
+    "assignee": "Copilot",
+    "priority": "High",
+    "code_locations": [
+      "monitoring/delegates.py:72-85",
+      "scripts/ingest_members_monitored.py:345-366"
+    ],
+    "labels": ["monitoring", "ingestion", "bug"]
+  },
+  {
+    "agent": "ProgressMonitor",
+    "error": "Progress Percentage Calculation Flaw",
+    "timestamp": "2025-11-23T12:45:00Z",
+    "description": "When total_estimated is None, the progress calculation uses processed records as the denominator, potentially showing progress > 100% which is misleading.",
+    "potential_causes": "Poor default handling in progress calculation formula.",
+    "severity": "Low",
+    "steps_to_reproduce": "1. Start ingestion job without total_estimated parameter\n2. Monitor progress during ingestion\n3. Progress percentage may exceed 100% after initial estimates.",
+    "assignee": "Backend Team",
+    "priority": "Medium",
+    "code_locations": ["monitoring/progress_monitor.py:216"],
+    "labels": ["monitoring", "bug"]
+  },
+  {
+    "agent": "DataIngestion",
+    "error": "Redundant Date Parsing Logic",
+    "timestamp": "2025-11-23T12:45:00Z",
+    "description": "In the parse_date function, both conditional branches execute the same datetime.strptime call with '%Y-%m-%d' format, making the if-else redundant.",
+    "potential_causes": "Copy-paste error during development.",
+    "severity": "Low",
+    "steps_to_reproduce": "1. Examine 'parse_date' function in ingest_members_monitored.py\n2. Both 'if '-' in date_str' and 'else' branches perform identical parsing.",
+    "assignee": "Junior Developer",
+    "priority": "Low",
+    "code_locations": ["scripts/ingest_members_monitored.py:270-282"],
+    "labels": ["ingestion", "maintainability"]
+  },
+  {
+    "agent": "DataIngestion",
+    "error": "Missing Error Recovery Mechanism",
+    "timestamp": "2025-11-23T12:45:00Z",
+    "description": "When database insertion fails for a batch, the script rolls back but doesn't attempt to retry individual records or quarantine failed data.",
+    "potential_causes": "Incomplete error handling strategy.",
+    "severity": "Medium",
+    "steps_to_reproduce": "1. Simulate database connection issues during batch insertion\n2. Observe that entire batch is lost rather than individual records being retried.",
+    "assignee": "DBA Team",
+    "priority": "High",
+    "code_locations": ["scripts/ingest_members_monitored.py:378-398"],
+    "labels": ["database", "ingestion", "bug"]
+  },
+  {
+    "agent": "MonitoringSystem",
+    "error": "Inconsistent Delegate Context Usage",
+    "timestamp": "2025-11-23T12:45:00Z",
+    "description": "Delegate functions access context.record_type but the registered delegates don't validate or utilize the record_type parameter effectively.",
+    "potential_causes": "Delegate pattern not fully utilized for different record types within the same data source/table combination.",
+    "severity": "Low",
+    "steps_to_reproduce": "1. Review delegate functions and how they use context parameters\n2. Notice that record_type is passed but not leveraged for conditional logic.",
+    "assignee": "DevOps Team",
+    "priority": "Medium",
+    "code_locations": ["monitoring/delegates.py:9-27"],
+    "labels": ["monitoring", "enhancement"]
+  },
+  {
+    "agent": "DataIngestion",
+    "error": "Hardcoded State Mapping",
+    "timestamp": "2025-11-23T12:45:00Z",
+    "description": "State name to code mapping is hardcoded in the script, making it difficult to maintain and extend for future territories or changes.",
+    "potential_causes": "Static data approach instead of database-driven configuration.",
+    "severity": "Low",
+    "steps_to_reproduce": "1. Review state_mapping dictionary in normalize_term_data\n2. Any changes to state codes would require code changes.",
+    "assignee": "Data Team",
+    "priority": "Low",
+    "code_locations": ["scripts/ingest_members_monitored.py:213-228"],
+    "labels": ["ingestion", "maintainability"]
+  },
+  {
+    "agent": "MonitoringSystem",
+    "error": "Throughput Calculation Edge Case",
+    "timestamp": "2025-11-23T12:45:00Z",
+    "description": "Throughput calculation uses max(elapsed / 60, 0.01) to avoid division by zero, but 0.01 minutes is an arbitrary small value that could skew initial throughput calculations.",
+    "potential_causes": "Attempt to handle very fast operations but introduces artificial throughput values.",
+    "severity": "Low",
+    "steps_to_reproduce": "1. Start ingestion and check throughput within first few seconds\n2. Notice artificially high throughput due to 0.01 minute minimum.",
+    "assignee": "Backend Team",
+    "priority": "Low",
+    "code_locations": ["monitoring/progress_monitor.py:175", "monitoring/delegates.py:14"],
+    "labels": ["monitoring", "performance"]
+  },
+  {
+    "agent": "MonitoringSystem",
+    "error": "Missing Monitoring for GovInfo Delegates",
+    "timestamp": "2025-11-23T12:45:00Z",
+    "description": "The setup_all_delegates registers a govinfo_documents_delegate but there are no corresponding ingestion scripts that use the monitoring system for GovInfo data.",
+    "potential_causes": "Delegate registered but not integrated with actual ingestion workflows.",
+    "severity": "Medium",
+    "steps_to_reproduce": "1. Check setup_all_delegates for govinfo registration\n2. Verify no scripts use 'govinfo.gov' data source with monitoring.",
+    "assignee": "Integration Team",
+    "priority": "Medium",
+    "code_locations": ["monitoring/delegates.py:72-83"],
+    "labels": ["monitoring", "ingestion"]
+  }
+]

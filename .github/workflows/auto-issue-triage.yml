@@ -1,0 +1,22 @@
+name: Auto-Issue-Triage
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+
+jobs:
+  triage:
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GH_TOKEN_BOT }}
+        script: |
+          const body = `CI failed in ${process.env.GITHUB_RUN_URL}.`;
+          await github.rest.issues.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: 'CI Failure 🚨',
+            body
+          });

@@ -1,0 +1,5 @@
+include README.md
+include LICENSE
+include requirements/*.txt
+recursive-include opendiscourse/config *.yaml
+recursive-include opendiscourse/data *.csv

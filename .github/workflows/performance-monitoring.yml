@@ -1,0 +1,114 @@
+name: Performance Monitoring
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+  push:
+    branches: [main, develop]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  check-bundle-size:
+    runs-on: ubuntu-latest
+    if: contains(github.event.pull_request.labels.*.name, 'frontend') || github.event_name == 'push'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          if [ -d "web" ]; then
+            cd web
+            npm ci || npm install
+          fi
+
+      - name: Build and check bundle size
+        run: |
+          if [ -d "web" ]; then
+            cd web
+            npm run build || echo "Build failed"
+            
+            # Get build output size
+            if [ -d "dist" ] || [ -d "build" ] || [ -d ".next" ]; then
+              du -sh dist build .next 2>/dev/null | tee bundle-size.txt || echo "No dist folder found"
+            fi
+          fi
+
+      - name: Comment bundle size
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            
+            try {
+              const bundleSize = fs.readFileSync('web/bundle-size.txt', 'utf8');
+              
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: `📦 **Bundle Size Report**\n\n\`\`\`\n${bundleSize}\n\`\`\`\n\nPlease ensure bundle size remains reasonable.`
+              });
+            } catch (error) {
+              console.log('No bundle size info available');
+            }
+
+  check-python-imports:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Check for slow imports
+        run: |
+          pip install tuna || true
+          python -X importtime -c "import opendiscourse" 2> import-profile.txt || echo "Import profiling skipped"
+
+      - name: Analyze import time
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            
+            try {
+              const importProfile = fs.readFileSync('import-profile.txt', 'utf8');
+              const lines = importProfile.split('\n');
+              
+              // Find slow imports (>100ms)
+              const slowImports = lines.filter(line => {
+                const match = line.match(/(\d+)\s*\|\s*(\d+)/);
+                if (match) {
+                  const time = parseInt(match[2]);
+                  return time > 100000; // microseconds
+                }
+                return false;
+              });
+              
+              if (slowImports.length > 0) {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  body: `⚠️ **Slow Import Detected**\n\nSome imports are taking longer than expected:\n\`\`\`\n${slowImports.slice(0, 10).join('\n')}\n\`\`\`\n\nConsider optimizing import times for better performance.`
+                });
+              }
+            } catch (error) {
+              console.log('Import profiling not available');
+            }

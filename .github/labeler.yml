@@ -1,0 +1,25 @@
+# Add labels to PR based on the paths that are modified in the PR
+ingestion:
+  - opendiscourse/ingestion/**
+
+documentation:
+  - "*.md"
+  - docs/**
+
+tests:
+  - tests/**
+
+database:
+  - "*.sql"
+  - src/database/**
+
+scripts:
+  - scripts/**
+
+dependencies:
+  - requirements/**
+  - pyproject.toml
+  - setup.py
+
+github-actions:
+  - .github/**

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Entity Viewer</title>
+    <link rel="stylesheet" href="/web/static/css/theme.css">
+</head>
+<body>
+<nav>
+    <a href="/web/index.html">Home</a>
+</nav>
+<div class="container">
+    <h1>Entities</h1>
+    <div id="entities"></div>
+</div>
+<script>
+async function loadEntities(){
+ const resp = await fetch('/api/entities');
+ const json = await resp.json();
+ document.getElementById('entities').textContent = JSON.stringify(json,null,2);
+}
+loadEntities();
+</script>
+<script src="/web/static/js/track.js"></script>
+</body>
+</html>

@@ -1,0 +1,39 @@
+# Production configuration for OpenDiscourse
+
+[app]
+debug = false
+log_level = "INFO"
+environment = "production"
+
+[database]
+host = "${DB_HOST}"
+port = 5432
+user = "${DB_USER}"
+password = "${DB_PASSWORD}"
+name = "${DB_NAME}"
+
+[api]
+host = "0.0.0.0"
+port = 8000
+cors_origins = ["${FRONTEND_URL}"]
+
+[external_services]
+openai_timeout = 60
+huggingface_timeout = 60
+enable_mock_services = false
+
+[cache]
+type = "redis"
+host = "${REDIS_HOST}"
+port = 6379
+ttl = 3600
+
+[logging]
+level = "INFO"
+format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+file = "logs/production.log"
+
+[security]
+secret_key = "${SECRET_KEY}"
+session_timeout = 86400
+rate_limit_per_minute = 60

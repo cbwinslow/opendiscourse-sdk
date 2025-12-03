@@ -1,0 +1,49 @@
+checkpointing:
+  enabled: true
+  resume_on_startup: true
+  save_interval: 50
+congress:
+  enabled: false
+database:
+  batch_size: 50
+  host: ''
+  max_pool_size: 5
+  min_pool_size: 2
+  name: opendiscourse
+  password: ''
+  port: ''
+  user: cbwinslow
+error_handling:
+  continue_on_error: true
+  exponential_backoff: true
+  max_retries: 3
+  retry_delay: 1
+govinfo:
+  enabled: false
+logging:
+  console: true
+  file: logs/test_ingestion.log
+  level: INFO
+openstates:
+  api_key: ''
+  concurrent_requests: 5
+  data_types:
+  - jurisdictions
+  - people
+  - organizations
+  - sessions
+  enabled: true
+  jurisdictions:
+  - ca
+  - ny
+  rate_limit: 100
+performance:
+  async_mode: true
+  connection_pooling: true
+  parallel_jobs: 2
+  worker_threads: 2
+reporting:
+  console_updates: true
+  final_summary: true
+  progress_bar: true
+  update_interval: 10

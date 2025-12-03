@@ -1,0 +1,37 @@
+# Testing configuration for OpenDiscourse
+
+[app]
+debug = true
+log_level = "WARNING"
+environment = "testing"
+
+[database]
+host = "localhost"
+port = 5432
+user = "test_user"
+password = "test_password"
+name = "opendiscourse_test"
+
+[api]
+host = "localhost"
+port = 8001
+cors_origins = ["*"]
+
+[external_services]
+openai_timeout = 5
+huggingface_timeout = 5
+enable_mock_services = true
+
+[cache]
+type = "memory"
+ttl = 60
+
+[logging]
+level = "WARNING"
+format = "%(asctime)s - %(levelname)s - %(message)s"
+file = "logs/test.log"
+
+[testing]
+use_test_data = true
+mock_external_apis = true
+fast_mode = true

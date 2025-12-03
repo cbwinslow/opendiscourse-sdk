@@ -1,0 +1,25 @@
+---
+- name: Copy .env file
+  copy:
+    src: ../../.env
+    dest: /root/.env
+    mode: '0600'
+
+- name: Copy docker-compose.infrastructure.yml
+  copy:
+    src: ../../docker-compose.infrastructure.yml
+    dest: /root/docker-compose.infrastructure.yml
+    mode: '0644'
+
+- name: Start all infrastructure services
+  command: docker-compose --env-file /root/.env -f /root/docker-compose.infrastructure.yml up -d
+  args:
+    chdir: /root
+  async: 120
+  poll: 0
+
+- name: Deploy Nextcloud service
+  import_tasks: nextcloud.yml
+
+- name: Deploy Nextcloud Caddy config
+  import_tasks: nextcloud_caddy.yml

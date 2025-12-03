@@ -1,0 +1,12 @@
+
+- title: Data Ingestion & Automation
+  description: "Bias detection, agent logging, and real-time media ingestion"
+  due_on: 2025-07-01T00:00:00
+
+- title: Entity Tracking & Fact‑Check
+  description: "Entity DB and fact-check pipeline"
+  due_on: 2025-07-15T00:00:00
+
+- title: Dashboard & Deployment
+  description: "Frontend, CI/CD, and final polish"
+  due_on: 2025-07-31T00:00:00

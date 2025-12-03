@@ -1,0 +1,23 @@
+@startuml
+entity Document {
+  *id : UUID
+  *title : text
+  *content : text
+}
+
+entity Entity {
+  *id : UUID
+  *name : text
+  *type : text
+}
+
+entity Declaration {
+  *id : UUID
+  *document_id : UUID
+  *entity_id : UUID
+  *text : text
+}
+
+Document ||--o{ Declaration
+Entity ||--o{ Declaration
+@enduml

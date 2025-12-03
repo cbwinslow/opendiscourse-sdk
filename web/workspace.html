@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workspace</title>
+    <link rel="stylesheet" href="/web/static/css/theme.css">
+</head>
+<body>
+<nav>
+    <a href="/web/index.html">Home</a>
+</nav>
+<div class="container">
+    <h1>Query Workspace</h1>
+    <textarea id="query" rows="4" cols="80" placeholder="Enter a question..."></textarea><br>
+    <button onclick="runQuery()">Run</button>
+    <button onclick="saveQuery()">Save Query</button>
+    <h2>Results</h2>
+    <pre id="result"></pre>
+    <h2>Saved Queries</h2>
+    <ul id="history"></ul>
+</div>
+<script src="/web/static/js/workspace.js"></script>
+<script src="/web/static/js/track.js"></script>
+</body>
+</html>

@@ -1,0 +1,41 @@
+# LangChain Core Dependencies
+langchain>=0.3.26
+langchain-core>=0.3.66
+langchain-community>=0.3.26
+langchain-text-splitters>=0.3.8
+
+# LLM Providers
+langchain-huggingface>=0.1.0
+# langchain-openai>=0.2.0  # Uncomment if using OpenAI
+# langchain-ollama>=0.2.0  # Uncomment if using Ollama
+
+# Vector Databases
+chromadb>=1.0.13
+# faiss-cpu>=1.7.4  # Alternative vector store
+# weaviate-client>=4.0.0  # Alternative vector store
+
+# Embeddings
+sentence-transformers>=3.0.1
+transformers>=4.45.0
+torch>=2.0.0
+
+# Document Processing
+# beautifulsoup4>=4.12.0  # For HTML documents
+# pypdf>=4.0.0  # For PDF documents
+# python-docx>=1.1.0  # For Word documents
+
+# API Dependencies (if using RAG API)
+fastapi>=0.115.0
+uvicorn>=0.30.0
+python-multipart>=0.0.6  # For file uploads
+
+# Utility Dependencies
+numpy>=1.26.0
+pandas>=2.0.0
+tqdm>=4.66.0
+python-dotenv>=1.0.0
+
+# Optional: Advanced NLP
+# spacy>=3.7.0
+# nltk>=3.8.0
+

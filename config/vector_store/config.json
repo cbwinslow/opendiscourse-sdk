@@ -1,0 +1,109 @@
+{
+    "dimension": 768,
+    "metric": "cosine",
+    "index_type": "IVF_FLAT",
+    "stores": {
+        "pgvector": {
+            "host": "localhost",
+            "port": 5432,
+            "database": "opendiscourse",
+            "credentials_path": "config/vector_store/credentials/postgres.json",
+            "settings": {
+                "table_name": "document_vectors",
+                "embedding_column": "embedding",
+                "similarity_function": "cosine",
+                "index_type": "ivfflat",
+                "lists": 100,
+                "proximity": 0.8
+            }
+        },
+        "qdrant": {
+            "host": "localhost",
+            "port": 6333,
+            "database": "vector_store",
+            "credentials_path": "config/vector_store/credentials/qdrant.json",
+            "settings": {
+                "collection_name": "documents",
+                "distance_metric": "cosine",
+                "vector_size": 768,
+                "replication_factor": 1,
+                "write_consistency_factor": 1,
+                "optimizers_config": {
+                    "default_segment_number": 0,
+                    "max_segment_size_kb": null,
+                    "memmap_threshold_kb": null,
+                    "indexing_threshold": 20000,
+                    "flush_interval_sec": 5,
+                    "max_optimization_threads": null
+                }
+            }
+        },
+        "chromadb": {
+            "host": "localhost",
+            "port": 8000,
+            "database": "vector_store",
+            "credentials_path": "config/vector_store/credentials/chroma.json",
+            "settings": {
+                "collection_name": "documents",
+                "distance_func": "cosine"
+            }
+        },
+        "elasticsearch": {
+            "host": "localhost",
+            "port": 9200,
+            "database": "vector_store",
+            "credentials_path": "config/vector_store/credentials/elastic.json",
+            "settings": {
+                "index_name": "documents",
+                "similarity": "cosine",
+                "num_replicas": 1,
+                "refresh_interval": "1s"
+            }
+        },
+        "pinecone": {
+            "host": "api.pinecone.io",
+            "port": 443,
+            "database": "vector_store",
+            "credentials_path": "config/vector_store/credentials/pinecone.json",
+            "settings": {
+                "environment": "production",
+                "index_name": "documents",
+                "metric": "cosine"
+            }
+        }
+    },
+    "monitoring": {
+        "metrics_enabled": true,
+        "log_level": "INFO",
+        "thresholds": {
+            "error_rate": 0.05,
+            "latency_ms": 1000,
+            "memory_usage_percent": 90,
+            "cpu_usage_percent": 80,
+            "disk_usage_percent": 85
+        },
+        "alert_channels": {
+            "email": {
+                "enabled": true,
+                "recipients": ["admin@example.com"]
+            },
+            "slack": {
+                "enabled": true,
+                "webhook_url": "config/vector_store/credentials/slack_webhook.json"
+            }
+        }
+    },
+    "health_check": {
+        "interval_seconds": 300,
+        "timeout_seconds": 30,
+        "retries": 3,
+        "test_vector_count": 100
+    },
+    "performance": {
+        "cache_size_mb": 1024,
+        "max_connections": 100,
+        "connection_timeout_ms": 5000,
+        "operation_timeout_ms": 10000,
+        "batch_size": 50
+    }
+}

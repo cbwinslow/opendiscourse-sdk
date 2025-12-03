@@ -1,0 +1,41 @@
+name: Deploy Hetzner
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+env:
+  COMPOSE_FILE: deploy/hetzner/compose.yml
+
+jobs:
+  deploy:
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Build & push Docker images
+      run: |
+        docker build -t ghcr.io/${{ github.repository }}/app:${{ github.sha }} .
+        echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+        docker push ghcr.io/${{ github.repository }}/app:${{ github.sha }}
+
+    - name: Copy compose + env to server
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USER }}
+        key: ${{ secrets.SSH_KEY }}
+        source: "deploy/hetzner/*"
+        target: "~/app"
+
+    - name: Pull & restart containers
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USER }}
+        key: ${{ secrets.SSH_KEY }}
+        script: |
+          cd ~/app
+          docker compose pull
+          docker compose up -d --remove-orphans

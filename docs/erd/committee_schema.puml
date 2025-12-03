@@ -1,0 +1,151 @@
+@startuml committee_schema
+
+!define Table(name,desc) class name as "desc" << (T,#FFAAAA) >>
+!define primary_key(x) <u>x</u>
+!define foreign_key(x) <i>x</i>
+
+title Committee Data Pipeline - Entity Relationship Diagram
+
+' Committees table
+Table(committees, "committees") {
+  primary_key(committee_id): UUID
+  --
+  committee_code: VARCHAR(20)
+  committee_name: VARCHAR(200)
+  committee_type: VARCHAR(50)
+  parent_committee_code: VARCHAR(20)
+  --
+  chamber: VARCHAR(20)
+  is_subcommittee: BOOLEAN
+  is_active: BOOLEAN
+  --
+  jurisdiction: TEXT
+  website_url: TEXT
+  phone: VARCHAR(20)
+  address: TEXT
+  --
+  established_date: DATE
+  abolished_date: DATE
+  --
+  raw_data: JSONB
+  created_at: TIMESTAMP
+  updated_at: TIMESTAMP
+}
+
+' Committee members table
+Table(committee_members, "committee_members") {
+  primary_key(member_id): UUID
+  --
+  foreign_key(committee_id): UUID
+  foreign_key(bioguide_id): VARCHAR(7)
+  --
+  member_name: VARCHAR(200)
+  party: VARCHAR(50)
+  state: VARCHAR(2)
+  role: VARCHAR(50)
+  rank: INTEGER
+  --
+  start_date: DATE
+  end_date: DATE
+  --
+  created_at: TIMESTAMP
+  updated_at: TIMESTAMP
+}
+
+' Committee hearings table
+Table(committee_hearings, "committee_hearings") {
+  primary_key(hearing_id): UUID
+  --
+  foreign_key(committee_id): UUID
+  --
+  hearing_number: VARCHAR(50)
+  hearing_title: TEXT
+  hearing_date: DATE
+  hearing_location: VARCHAR(200)
+  --
+  transcript_url: TEXT
+  video_url: TEXT
+  --
+  raw_data: JSONB
+  created_at: TIMESTAMP
+  updated_at: TIMESTAMP
+}
+
+' Committee reports table
+Table(committee_reports, "committee_reports") {
+  primary_key(report_id): UUID
+  --
+  foreign_key(committee_id): UUID
+  --
+  report_number: VARCHAR(50)
+  report_type: VARCHAR(50)
+  report_title: TEXT
+  report_date: DATE
+  --
+  document_url: TEXT
+  pdf_url: TEXT
+  --
+  raw_data: JSONB
+  created_at: TIMESTAMP
+  updated_at: TIMESTAMP
+}
+
+' Committee history table
+Table(committee_history, "committee_history") {
+  primary_key(history_id): UUID
+  --
+  foreign_key(committee_id): UUID
+  --
+  event_date: DATE
+  event_type: VARCHAR(50)
+  event_description: TEXT
+  congress_number: INTEGER
+  --
+  created_at: TIMESTAMP
+}
+
+' Committee assignments table
+Table(committee_assignments, "committee_assignments") {
+  primary_key(assignment_id): UUID
+  --
+  foreign_key(committee_id): UUID
+  foreign_key(bioguide_id): VARCHAR(7)
+  --
+  congress_number: INTEGER
+  session_number: INTEGER
+  position: VARCHAR(100)
+  --
+  assignment_date: DATE
+  end_date: DATE
+  --
+  created_at: TIMESTAMP
+  updated_at: TIMESTAMP
+}
+
+' Relationships
+committees "1" -- "0..*" committee_members
+committees "1" -- "0..*" committee_hearings
+committees "1" -- "0..*" committee_reports
+committees "1" -- "0..*" committee_history
+committees "1" -- "0..*" committee_assignments
+
+' Self-referential relationship for subcommittees
+committees "0..*" -- "0..1" committees : parent
+
+note right of committees
+  Main table storing committee
+  information including both
+  full committees and subcommittees
+end note
+
+note right of committee_members
+  Current and historical
+  committee membership
+end note
+
+note right of committee_hearings
+  Links to hearing transcripts
+  and video recordings
+end note
+
+@enduml

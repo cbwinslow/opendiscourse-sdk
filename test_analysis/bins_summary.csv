@@ -1,0 +1,13 @@
+bin_type,category,count
+policy_areas,Unknown,100
+sponsor_parties,Unknown,100
+sponsor_states,Unknown,100
+bill_types,HR,74
+bill_types,HCONRES,4
+bill_types,HRES,15
+bill_types,S,5
+bill_types,SRES,1
+bill_types,SJRES,1
+complexity_levels,simple,99
+complexity_levels,moderate,0
+complexity_levels,complex,1

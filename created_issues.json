@@ -1,0 +1,22 @@
+[
+  {
+    "number": 50,
+    "title": "Fix Congress CLI Votes Ingestion Endpoint",
+    "url": "https://github.com/cbwinslow/opendiscourse-sdk/issues/50"
+  },
+  {
+    "number": 51,
+    "title": "Verify Committee Members Ingestion After Parent Data Fix",
+    "url": "https://github.com/cbwinslow/opendiscourse-sdk/issues/51"
+  },
+  {
+    "number": 52,
+    "title": "Review and Update Transform Functions for API Compatibility",
+    "url": "https://github.com/cbwinslow/opendiscourse-sdk/issues/52"
+  },
+  {
+    "number": 53,
+    "title": "Document Bill Details Ingestion Dependencies",
+    "url": "https://github.com/cbwinslow/opendiscourse-sdk/issues/53"
+  }
+]

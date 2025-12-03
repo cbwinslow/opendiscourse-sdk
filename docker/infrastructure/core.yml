@@ -1,0 +1,101 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: opendiscourse-postgres
+    restart: unless-stopped
+    networks:
+      opendiscourse-net:
+        ipv4_address: 10.13.0.2
+    environment:
+      POSTGRES_USER: ${OPD_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${OPD_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${OPD_POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${OPD_POSTGRES_USER}"]
+      interval: 10s
+      retries: 5
+
+  nextcloud:
+    image: nextcloud:29-fpm-alpine
+    container_name: opendiscourse-nextcloud
+    restart: unless-stopped
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: ${OPD_POSTGRES_DB}
+      POSTGRES_USER: ${OPD_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${OPD_POSTGRES_PASSWORD}
+      NEXTCLOUD_ADMIN_USER: ${NEXTCLOUD_ADMIN_USER}
+      NEXTCLOUD_ADMIN_PASSWORD: ${NEXTCLOUD_ADMIN_PASSWORD}
+      NEXTCLOUD_TRUSTED_DOMAINS: ${NEXTCLOUD_TRUSTED_DOMAINS}
+      SMTP_HOST: ${NEXTCLOUD_SMTP_HOST}
+      SMTP_SECURE: ${NEXTCLOUD_SMTP_SECURE}
+      SMTP_PORT: ${NEXTCLOUD_SMTP_PORT}
+      SMTP_AUTHTYPE: ${NEXTCLOUD_SMTP_AUTHTYPE}
+      SMTP_NAME: ${NEXTCLOUD_SMTP_NAME}
+      SMTP_PASSWORD: ${NEXTCLOUD_SMTP_PASSWORD}
+      MAIL_FROM_ADDRESS: ${NEXTCLOUD_MAIL_FROM}
+      MAIL_DOMAIN: ${NEXTCLOUD_MAIL_DOMAIN}
+      REDIS_HOST: redis
+      REDIS_HOST_PORT: 6379
+      OVERWRITEPROTOCOL: https
+      OVERWRITECLIURL: https://${NEXTCLOUD_TRUSTED_DOMAINS}
+      OVERWRITEHOST: ${NEXTCLOUD_TRUSTED_DOMAINS}
+    volumes:
+      - nextcloud_data:/var/www/html
+      - nextcloud_config:/var/www/html/config
+      - nextcloud_apps:/var/www/html/custom_apps
+      - nextcloud_themes:/var/www/html/themes
+    depends_on:
+      - postgres
+      - redis
+      - caddy
+    networks:
+      opendiscourse-net:
+        ipv4_address: 10.13.0.3
+
+  redis:
+    image: redis:7-alpine
+    container_name: opendiscourse-redis
+    restart: unless-stopped
+    networks:
+      opendiscourse-net:
+        ipv4_address: 10.13.0.4
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: opendiscourse-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+      - "8443:8443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+      - ./Caddyfile:/etc/caddy/Caddyfile
+    networks:
+      opendiscourse-net:
+        ipv4_address: 10.13.0.5
+
+volumes:
+  postgres_data:
+
+  nextcloud_config:
+  nextcloud_apps:
+  nextcloud_themes:
+  caddy_data:
+  caddy_config:
+
+  nextcloud_data:
+
+networks:
+  opendiscourse-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.13.0.0/24

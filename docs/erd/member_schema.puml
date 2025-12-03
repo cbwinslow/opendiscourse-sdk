@@ -1,0 +1,194 @@
+@startuml member_schema
+
+!define Table(name,desc) class name as "desc" << (T,#FFAAAA) >>
+!define primary_key(x) <u>x</u>
+!define foreign_key(x) <i>x</i>
+
+title Member Data Pipeline - Entity Relationship Diagram
+
+' Members table
+Table(members, "members") {
+  primary_key(bioguide_id): VARCHAR(7)
+  --
+  first_name: VARCHAR(100)
+  middle_name: VARCHAR(100)
+  last_name: VARCHAR(100)
+  suffix: VARCHAR(20)
+  official_name: VARCHAR(200)
+  direct_order_name: VARCHAR(200)
+  --
+  birth_year: INTEGER
+  death_year: INTEGER
+  --
+  image_url: TEXT
+  biographical_text: TEXT
+  --
+  current_member: BOOLEAN
+  --
+  raw_data: JSONB
+  created_at: TIMESTAMP
+  updated_at: TIMESTAMP
+}
+
+' Member terms table
+Table(member_terms, "member_terms") {
+  primary_key(term_id): UUID
+  --
+  foreign_key(bioguide_id): VARCHAR(7)
+  --
+  congress_number: INTEGER
+  chamber: VARCHAR(20)
+  state: VARCHAR(2)
+  district: INTEGER
+  --
+  party_code: VARCHAR(10)
+  party_name: VARCHAR(100)
+  --
+  start_date: DATE
+  end_date: DATE
+  --
+  created_at: TIMESTAMP
+  updated_at: TIMESTAMP
+}
+
+' Party affiliations table
+Table(party_affiliations, "party_affiliations") {
+  primary_key(affiliation_id): UUID
+  --
+  foreign_key(bioguide_id): VARCHAR(7)
+  --
+  party_code: VARCHAR(10)
+  party_name: VARCHAR(100)
+  start_date: DATE
+  end_date: DATE
+  --
+  created_at: TIMESTAMP
+}
+
+' Leadership roles table
+Table(leadership_roles, "leadership_roles") {
+  primary_key(role_id): UUID
+  --
+  foreign_key(bioguide_id): VARCHAR(7)
+  --
+  role_title: VARCHAR(200)
+  chamber: VARCHAR(20)
+  congress_number: INTEGER
+  --
+  start_date: DATE
+  end_date: DATE
+  --
+  created_at: TIMESTAMP
+  updated_at: TIMESTAMP
+}
+
+' Member contact information table
+Table(member_contact, "member_contact") {
+  primary_key(contact_id): UUID
+  --
+  foreign_key(bioguide_id): VARCHAR(7)
+  --
+  address: TEXT
+  phone: VARCHAR(20)
+  fax: VARCHAR(20)
+  email: VARCHAR(200)
+  website: TEXT
+  --
+  contact_form_url: TEXT
+  --
+  effective_date: DATE
+  end_date: DATE
+  --
+  created_at: TIMESTAMP
+  updated_at: TIMESTAMP
+}
+
+' Member social media table
+Table(member_social_media, "member_social_media") {
+  primary_key(social_id): UUID
+  --
+  foreign_key(bioguide_id): VARCHAR(7)
+  --
+  platform: VARCHAR(50)
+  handle: VARCHAR(100)
+  profile_url: TEXT
+  --
+  verified: BOOLEAN
+  followers_count: INTEGER
+  --
+  effective_date: DATE
+  end_date: DATE
+  --
+  created_at: TIMESTAMP
+  updated_at: TIMESTAMP
+}
+
+' Congressional service table
+Table(congressional_service, "congressional_service") {
+  primary_key(service_id): UUID
+  --
+  foreign_key(bioguide_id): VARCHAR(7)
+  --
+  service_start: DATE
+  service_end: DATE
+  total_years: DECIMAL(10,2)
+  --
+  house_years: DECIMAL(10,2)
+  senate_years: DECIMAL(10,2)
+  --
+  created_at: TIMESTAMP
+  updated_at: TIMESTAMP
+}
+
+' Member offices table
+Table(member_offices, "member_offices") {
+  primary_key(office_id): UUID
+  --
+  foreign_key(bioguide_id): VARCHAR(7)
+  --
+  office_type: VARCHAR(50)
+  address: TEXT
+  city: VARCHAR(100)
+  state: VARCHAR(2)
+  zip: VARCHAR(10)
+  phone: VARCHAR(20)
+  --
+  is_district_office: BOOLEAN
+  district_number: INTEGER
+  --
+  created_at: TIMESTAMP
+  updated_at: TIMESTAMP
+}
+
+' Relationships
+members "1" -- "0..*" member_terms
+members "1" -- "0..*" party_affiliations
+members "1" -- "0..*" leadership_roles
+members "1" -- "0..*" member_contact
+members "1" -- "0..*" member_social_media
+members "1" -- "0..1" congressional_service
+members "1" -- "0..*" member_offices
+
+note right of members
+  Core member information
+  from Congress API with
+  biographical details
+end note
+
+note right of member_terms
+  Tracks all congressional
+  terms served by each member
+  across different congresses
+end note
+
+note right of congressional_service
+  Aggregated service statistics
+  for each member
+end note
+
+note right of member_social_media
+  Social media profiles and
+  verified account information
+end note
+
+@enduml

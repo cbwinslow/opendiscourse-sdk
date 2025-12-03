@@ -1,0 +1,29 @@
+name: Push Issues and Project Data to Linear
+
+on:
+  push:
+    branches:
+      - main
+      - 2.0.0
+  workflow_dispatch:
+
+jobs:
+  push-to-linear:
+    runs-on: ubuntu-latest
+    env:
+      LINEAR_APP_API_KEY: ${{ secrets.LINEAR_APP_API_KEY }}
+      LINEAR_APP_LONG_TOKEN: ${{ secrets.LINEAR_APP_LONG_TOKEN }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+      - name: Push all project files and issues to Linear
+        run: |
+          python push_to_linear.py

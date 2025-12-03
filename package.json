@@ -1,0 +1,42 @@
+{
+  "name": "opendiscourse",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Enterprise-grade platform for government document analysis and retrieval",
+  "workspaces": [
+    "web",
+    "api"
+  ],
+  "scripts": {
+    "dev": "pnpm --filter opendiscourse-web dev",
+    "build": "pnpm --filter opendiscourse-web build",
+    "start": "pnpm --filter opendiscourse-web start",
+    "lint": "pnpm --filter opendiscourse-web lint",
+    "test": "pnpm --filter opendiscourse-web test",
+    "type-check": "pnpm --filter opendiscourse-web type-check",
+    "clean": "pnpm --filter opendiscourse-web run clean && rm -rf node_modules/.cache",
+    "install:all": "pnpm install",
+    "dev:web": "pnpm --filter opendiscourse-web dev",
+    "build:web": "pnpm --filter opendiscourse-web build",
+    "deploy": "./deploy-local.sh",
+    "test:all": "./run-tests.sh all",
+    "test:e2e": "pytest tests/e2e"
+  },
+  "keywords": [
+    "political-analysis",
+    "document-analysis",
+    "government-data",
+    "semantic-search",
+    "nlp",
+    "rag",
+    "nextjs",
+    "enterprise"
+  ],
+  "author": "OpenDiscourse Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@8.15.0"
+}

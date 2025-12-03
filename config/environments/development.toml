@@ -1,0 +1,32 @@
+# Development configuration for OpenDiscourse
+
+[app]
+debug = true
+log_level = "DEBUG"
+environment = "development"
+
+[database]
+host = "localhost"
+port = 5432
+user = "opendiscourse_dev"
+password = "dev_password"
+name = "opendiscourse_dev"
+
+[api]
+host = "localhost"
+port = 8000
+cors_origins = ["http://localhost:3000", "http://localhost:8080"]
+
+[external_services]
+openai_timeout = 30
+huggingface_timeout = 30
+enable_mock_services = true
+
+[cache]
+type = "memory"
+ttl = 300
+
+[logging]
+level = "DEBUG"
+format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+file = "logs/development.log"

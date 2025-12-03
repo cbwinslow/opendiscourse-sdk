@@ -1,0 +1,24 @@
+
+- name: enhancement
+  color: "84b6eb"
+  description: "Improvement to existing features"
+
+- name: feature
+  color: "0e8a16"
+  description: "New functionality"
+
+- name: bug
+  color: "d73a4a"
+  description: "Something isn't working"
+
+- name: documentation
+  color: "0075ca"
+  description: "Improvements or additions to docs"
+
+- name: ci/cd
+  color: "5319e7"
+  description: "Build or deployment tasks"
+
+- name: agent-logs
+  color: "f9d0c4"
+  description: "Automatically generated from agent logs"

@@ -1,0 +1,18 @@
+version: '3.9'
+services:
+  api:
+    image: ghcr.io/${GH_REPO}/app:${GIT_SHA}
+    env_file: .env.production
+    depends_on: [db, redis]
+    restart: unless-stopped
+  db:
+    image: postgres:16
+    volumes: [db_data:/var/lib/postgresql/data]
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    restart: unless-stopped
+  redis:
+    image: redis:7
+    restart: unless-stopped
+volumes:
+  db_data:

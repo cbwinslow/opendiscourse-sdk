@@ -1,0 +1,16 @@
+@startuml
+entity Inference {
+  *id : UUID
+  *document_id : UUID
+  *content : text
+  confidence : float
+}
+
+entity Vector {
+  *id : UUID
+  *inference_id : UUID
+  *embedding : vector
+}
+
+Inference ||--o{ Vector
+@enduml

@@ -1,0 +1,6 @@
+[submodule "openstates.org"]
+	path = openstates.org
+	url = https://github.com/openstates/openstates.org.git
+[submodule "openstates-scrapers"]
+	path = openstates-scrapers
+	url = https://github.com/openstates/openstates-scrapers.git

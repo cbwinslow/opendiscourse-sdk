@@ -1,0 +1,8 @@
+---
+- hosts: hetzner
+  become: yes
+  vars_files:
+    - ../.env
+  roles:
+    - docker
+    - deploy

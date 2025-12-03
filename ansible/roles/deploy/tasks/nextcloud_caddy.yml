@@ -1,0 +1,10 @@
+---
+- name: Copy Nextcloud Caddy config
+  copy:
+    src: ../../../../sites/nextcloud.caddy
+    dest: /root/sites/nextcloud.caddy
+    mode: '0644'
+
+- name: Reload Caddy to apply Nextcloud config
+  command: docker exec opendiscourse-caddy caddy reload --config /etc/caddy/Caddyfile
+  ignore_errors: yes

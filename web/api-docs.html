@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Documentation - OpenDiscourse</title>
+    <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@4.15.5/swagger-ui.css" />
+    <style>
+        html {
+            box-sizing: border-box;
+            overflow: -moz-scrollbars-vertical;
+            overflow-y: scroll;
+        }
+        *, *:before, *:after {
+            box-sizing: inherit;
+        }
+        body {
+            margin: 0;
+            background: #fafafa;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+        }
+        .header {
+            background: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 {
+            margin: 0;
+            color: #1e293b;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+        .header nav a {
+            color: #64748b;
+            text-decoration: none;
+            margin-left: 2rem;
+            font-weight: 500;
+        }
+        .header nav a:hover {
+            color: #2563eb;
+        }
+        #swagger-ui {
+            max-width: none;
+        }
+        .swagger-ui .topbar {
+            display: none;
+        }
+        .swagger-ui .info {
+            margin: 2rem 0;
+        }
+        .swagger-ui .info .title {
+            font-size: 2rem;
+            color: #1e293b;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+        .intro-section {
+            background: white;
+            margin: 2rem auto;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            max-width: 1200px;
+        }
+        .intro-section h2 {
+            color: #1e293b;
+            margin-top: 0;
+        }
+        .quick-links {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+        .quick-link {
+            padding: 1rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            text-decoration: none;
+            color: #334155;
+            transition: all 0.2s;
+        }
+        .quick-link:hover {
+            border-color: #2563eb;
+            background: #f8fafc;
+            color: #2563eb;
+        }
+        .quick-link h3 {
+            margin: 0 0 0.5rem 0;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+        .quick-link p {
+            margin: 0;
+            font-size: 0.875rem;
+            color: #64748b;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1>OpenDiscourse API Documentation</h1>
+        <nav>
+            <a href="/web/index.html">Dashboard</a>
+            <a href="/web/search.html">Search</a>
+            <a href="/web/document_upload.html">Upload</a>
+            <a href="https://github.com/cbwinslow/opendiscourse">GitHub</a>
+        </nav>
+    </header>
+
+    <div class="intro-section">
+        <h2>Welcome to the OpenDiscourse API</h2>
+        <p>
+            The OpenDiscourse API provides comprehensive access to government document analysis, 
+            semantic search, and AI-powered research capabilities. This documentation covers all 
+            available endpoints, request/response formats, and authentication methods.
+        </p>
+
+        <div class="quick-links">
+            <a href="#/Search" class="quick-link">
+                <h3>🔍 Search API</h3>
+                <p>Semantic and keyword search across document corpus</p>
+            </a>
+            <a href="#/Ingestion" class="quick-link">
+                <h3>📁 Document Ingestion</h3>
+                <p>Upload and process documents for analysis</p>
+            </a>
+            <a href="#/Chat" class="quick-link">
+                <h3>💬 AI Chat</h3>
+                <p>AI-powered question answering with sources</p>
+            </a>
+            <a href="#/Tasks" class="quick-link">
+                <h3>📋 Task Management</h3>
+                <p>Create and manage analysis tasks</p>
+            </a>
+            <a href="#/Diagnostics" class="quick-link">
+                <h3>🔧 System Diagnostics</h3>
+                <p>Monitor system health and performance</p>
+            </a>
+            <a href="#/Entities" class="quick-link">
+                <h3>🏷️ Entity Extraction</h3>
+                <p>Manage extracted entities and relationships</p>
+            </a>
+        </div>
+
+        <h3>Authentication</h3>
+        <p>
+            Most API endpoints require authentication. You can use either:
+        </p>
+        <ul>
+            <li><strong>API Key:</strong> Include <code>X-API-Key</code> header with your API key</li>
+            <li><strong>JWT Token:</strong> Include <code>Authorization: Bearer &lt;token&gt;</code> header</li>
+        </ul>
+
+        <h3>Rate Limits</h3>
+        <p>
+            API requests are rate limited to ensure fair usage:
+        </p>
+        <ul>
+            <li><strong>Search:</strong> 100 requests per minute</li>
+            <li><strong>Upload:</strong> 10 requests per minute</li>
+            <li><strong>Chat:</strong> 20 requests per minute</li>
+        </ul>
+
+        <h3>Response Formats</h3>
+        <p>
+            All responses are in JSON format. Successful responses include the requested data,
+            while error responses follow a standard format with error codes and messages.
+        </p>
+    </div>
+
+    <div id="swagger-ui"></div>
+
+    <script src="https://unpkg.com/swagger-ui-dist@4.15.5/swagger-ui-bundle.js"></script>
+    <script src="https://unpkg.com/swagger-ui-dist@4.15.5/swagger-ui-standalone-preset.js"></script>
+    <script>
+        window.onload = function() {
+            // Fetch the OpenAPI spec
+            fetch('/docs/openapi.yaml')
+                .then(response => response.text())
+                .then(spec => {
+                    const ui = SwaggerUIBundle({
+                        spec: jsyaml.load(spec),
+                        dom_id: '#swagger-ui',
+                        deepLinking: true,
+                        presets: [
+                            SwaggerUIBundle.presets.apis,
+                            SwaggerUIStandalonePreset
+                        ],
+                        plugins: [
+                            SwaggerUIBundle.plugins.DownloadUrl
+                        ],
+                        layout: "StandaloneLayout",
+                        tryItOutEnabled: true,
+                        requestInterceptor: function(request) {
+                            // Add base URL if needed
+                            if (request.url.startsWith('/')) {
+                                request.url = window.location.origin + '/api' + request.url;
+                            }
+                            return request;
+                        }
+                    });
+                })
+                .catch(error => {
+                    console.error('Failed to load OpenAPI spec:', error);
+                    document.getElementById('swagger-ui').innerHTML = `
+                        <div style="text-align: center; padding: 3rem; color: #dc2626;">
+                            <h3>Failed to load API documentation</h3>
+                            <p>Please ensure the OpenAPI spec is available at /docs/openapi.yaml</p>
+                            <p>Error: ${error.message}</p>
+                        </div>
+                    `;
+                });
+        };
+    </script>
+    <script src="https://unpkg.com/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+</body>
+</html>

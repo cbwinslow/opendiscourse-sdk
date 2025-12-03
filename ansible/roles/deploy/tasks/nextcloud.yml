@@ -1,0 +1,20 @@
+---
+- name: Copy Nextcloud config (if any)
+  copy:
+    src: ../../nextcloud/config.php
+    dest: /root/nextcloud/config/config.php
+    mode: '0644'
+  ignore_errors: yes
+
+- name: Ensure Nextcloud data directory exists
+  file:
+    path: /root/nextcloud/data
+    state: directory
+    mode: '0755'
+
+- name: Start Nextcloud service (Docker Compose)
+  command: docker-compose --env-file /root/.env -f /root/docker-compose.infrastructure.yml up -d nextcloud
+  args:
+    chdir: /root
+  async: 120
+  poll: 0
