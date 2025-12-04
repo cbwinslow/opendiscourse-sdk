@@ -11,6 +11,7 @@ import hashlib
 import json
 import time
 import psycopg2
+import psycopg2.pool
 from psycopg2.extras import execute_values
 from datetime import datetime
 from typing import Dict, Any, List, Optional, Tuple
@@ -30,16 +31,34 @@ class IncrementalGovInfoBillsIngestor:
         self.api_key = get_optional_env_var('GOVINFO_API_KEY')
         self.base_url = "https://api.govinfo.gov"
         self.batch_size = 100
-        self.db_conn = psycopg2.connect(
-            database='cbwinslow',
-            user='cbwinslow'
-        )
+        self.db_pool = None
+        self._setup_database_pool()
+
+    def _setup_database_pool(self):
+        """Setup database connection pool"""
+        try:
+            self.db_pool = psycopg2.pool.ThreadedConnectionPool(
+                minconn=2,
+                maxconn=10,
+                database="opendiscourse",
+                user="cbwinslow",
+                host="/var/run/postgresql"
+            )
+            print("✅ Database connection pool established")
+        except Exception as e:
+            print(f"❌ Database pool setup failed: {e}")
+            self.db_pool = None
 
     def start_ingestion_session(self, congress: int) -> str:
         """Start ingestion session for tracking"""
         session_id = f"govinfo_bills_{congress}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
-        cursor = self.db_conn.cursor()
+        if not self.db_pool:
+            print("❌ Database pool not available")
+            return None
+
+        conn = self.db_pool.getconn()
+        cursor = conn.cursor()
         try:
             cursor.execute("""
                 INSERT INTO incremental.ingestion_sessions (
@@ -47,36 +66,42 @@ class IncrementalGovInfoBillsIngestor:
                 ) VALUES (%s, %s, %s, %s, %s)
             """, (session_id, 'govinfo.gov', 'bills', 'running', datetime.now()))
 
-            self.db_conn.commit()
+            self.db_pool.putconn(conn)
             return session_id
         except Exception as e:
-            self.db_conn.rollback()
+            self.db_pool.putconn(conn)
             raise e
-        finally:
-            cursor.close()
 
     def complete_ingestion_session(self, session_id: str, status: str, error_message: str = None):
         """Complete ingestion session"""
-        cursor = self.db_conn.cursor()
+        if not self.db_pool:
+            print("❌ Database pool not available")
+            return
+
+        conn = self.db_pool.getconn()
+        cursor = conn.cursor()
         try:
             cursor.execute("""
                 UPDATE incremental.ingestion_sessions SET
                     status = %s,
                     completed_at = %s,
-                    error_message = %s
+                    error_summary = %s
                 WHERE session_id = %s
             """, (status, datetime.now(), error_message, session_id))
 
-            self.db_conn.commit()
+            self.db_pool.putconn(conn)
         except Exception as e:
-            self.db_conn.rollback()
+            self.db_pool.putconn(conn)
             raise e
-        finally:
-            cursor.close()
 
     def get_next_ingestion_params(self, congress: int) -> Dict[str, Any]:
         """Get next ingestion parameters from checkpoint"""
-        cursor = self.db_conn.cursor()
+        if not self.db_pool:
+            print("❌ Database pool not available")
+            return {}
+
+        conn = self.db_pool.getconn()
+        cursor = conn.cursor()
         try:
             cursor.execute("""
                 SELECT * FROM incremental.get_next_ingestion_params('govinfo.gov', 'bills', %s)
@@ -98,24 +123,49 @@ class IncrementalGovInfoBillsIngestor:
                     'last_run': None
                 }
         finally:
+            self.db_pool.putconn(conn)
             cursor.close()
 
     def is_record_processed(self, bill_id: str, bill_data: Dict[str, Any]) -> bool:
         """Check if bill was already processed using fingerprint"""
-        cursor = self.db_conn.cursor()
+        if not self.db_pool:
+            print("❌ Database pool not available")
+            return False
+
+        # Generate content hash
+        content_str = json.dumps(bill_data, sort_keys=True, separators=(',', ':'))
+        content_hash = hashlib.sha256(content_str.encode()).hexdigest()
+
+        conn = self.db_pool.getconn()
+        cursor = conn.cursor()
         try:
-            # Generate content hash
-            content_str = json.dumps(bill_data, sort_keys=True, separators=(',', ':'))
-            content_hash = hashlib.sha256(content_str.encode()).hexdigest()
-
+            # Check if record fingerprint exists
             cursor.execute("""
-                SELECT * FROM incremental.is_record_processed('govinfo.gov', 'bills', %s, %s, %s)
-            """, (bill_id, content_hash, datetime.now()))
+                SELECT 1 FROM incremental.record_fingerprints
+                WHERE data_source = %s AND data_type = %s AND record_id = %s
+            """, ('govinfo.gov', 'bills', bill_id))
 
-            result = cursor.fetchone()
-            return result[0] if result else False
-        finally:
-            cursor.close()
+            exists = cursor.fetchone() is not None
+
+            if not exists:
+                # Insert new fingerprint
+                cursor.execute("""
+                    INSERT INTO incremental.record_fingerprints (
+                        data_source, data_type, record_id, record_hash,
+                        record_timestamp, first_seen_at, last_updated_at
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """, (
+                    'govinfo.gov', 'bills', bill_id, content_hash,
+                    datetime.now(), datetime.now(), datetime.now()
+                ))
+
+            self.db_pool.putconn(conn)
+            return exists
+
+        except Exception as e:
+            self.db_pool.putconn(conn)
+            print(f"❌ Error checking record fingerprint: {e}")
+            return False
 
     def fetch_bill_packages(self, congress: int, offset: int = 0) -> Dict[str, Any]:
         """Fetch bill packages from GovInfo.gov API"""
@@ -269,6 +319,10 @@ class IncrementalGovInfoBillsIngestor:
                         else:
                             bill_number = bill_number_part
 
+            # If we couldn't parse congress from package_id, set a default
+            if congress is None:
+                congress = 118  # Default to current congress
+
             # Get title from package metadata
             title = package_data.get('title', '')
 
@@ -312,7 +366,12 @@ class IncrementalGovInfoBillsIngestor:
 
     def insert_bills_batch(self, bills: List[Dict[str, Any]]) -> int:
         """Insert batch of bills into database"""
-        cursor = self.db_conn.cursor()
+        if not self.db_pool:
+            print("❌ Database pool not available")
+            return 0
+
+        conn = self.db_pool.getconn()
+        cursor = conn.cursor()
         try:
             bill_query = """
                 INSERT INTO govinfo.bills (
@@ -349,10 +408,13 @@ class IncrementalGovInfoBillsIngestor:
                 # Update bill versions table
                 self._update_bill_versions(cursor, bills)
 
+                self.db_pool.putconn(conn)
                 return inserted
+            self.db_pool.putconn(conn)
             return 0
         except Exception as e:
             print(f"❌ Error inserting bills batch: {e}")
+            self.db_pool.putconn(conn)
             return 0
         finally:
             cursor.close()
@@ -372,7 +434,12 @@ class IncrementalGovInfoBillsIngestor:
 
     def update_checkpoint(self, congress: int, offset: int, batch_size: int):
         """Update checkpoint progress"""
-        cursor = self.db_conn.cursor()
+        if not self.db_pool:
+            print("❌ Database pool not available")
+            return
+
+        conn = self.db_pool.getconn()
+        cursor = conn.cursor()
         try:
             cursor.execute("""
                 CALL incremental.update_checkpoint_progress(
@@ -380,9 +447,9 @@ class IncrementalGovInfoBillsIngestor:
                 )
             """, (str(congress), offset, batch_size, True))
 
-            self.db_conn.commit()
+            self.db_pool.putconn(conn)
         except Exception as e:
-            self.db_conn.rollback()
+            self.db_pool.putconn(conn)
             print(f"❌ Error updating checkpoint: {e}")
         finally:
             cursor.close()

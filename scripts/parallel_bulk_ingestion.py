@@ -25,18 +25,21 @@ from dataclasses import dataclass
 from enum import Enum
 
 # Add project root to path
-sys.path.append('/home/cbwinslow/Videos/opendiscourse')
+sys.path.append("/home/cbwinslow/Videos/opendiscourse")
 
 # Configure comprehensive logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[
-        logging.FileHandler('/home/cbwinslow/Videos/opendiscourse/logs/parallel_bulk_ingestion.log'),
-        logging.StreamHandler(sys.stdout)
-    ]
+        logging.FileHandler(
+            "/home/cbwinslow/Videos/opendiscourse/logs/parallel_bulk_ingestion.log"
+        ),
+        logging.StreamHandler(sys.stdout),
+    ],
 )
 logger = logging.getLogger(__name__)
+
 
 class IngestionStatus(Enum):
     PENDING = "pending"
@@ -45,9 +48,11 @@ class IngestionStatus(Enum):
     FAILED = "failed"
     CANCELLED = "cancelled"
 
+
 @dataclass
 class IngestionJob:
     """Represents a single ingestion job"""
+
     job_id: str
     source: str
     command: List[str]
@@ -58,11 +63,12 @@ class IngestionJob:
     records_processed: int = 0
     records_total: int = 0
     error_message: Optional[str] = None
-    metrics: Dict[str, Any] = None
+    metrics: Optional[Dict[str, Any]] = None
 
     def __post_init__(self):
         if self.metrics is None:
             self.metrics = {}
+
 
 class ParallelBulkIngestion:
     """Parallel bulk ingestion system for votes and bill details"""
@@ -85,8 +91,8 @@ class ParallelBulkIngestion:
                 "congress_votes": {"jobs": [], "records": 0, "success": 0},
                 "congress_bill_details": {"jobs": [], "records": 0, "success": 0},
                 "openstates_votes": {"jobs": [], "records": 0, "success": 0},
-                "openstates_bill_details": {"jobs": [], "records": 0, "success": 0}
-            }
+                "openstates_bill_details": {"jobs": [], "records": 0, "success": 0},
+            },
         }
 
         # Ensure directories exist
@@ -109,18 +115,22 @@ class ParallelBulkIngestion:
 
             for attempt in range(max_retries):
                 try:
-                    self.db_pool = psycopg2.pool.ThreadedConnectionPool(
+                    from psycopg2 import pool
+
+                    self.db_pool = pool.ThreadedConnectionPool(
                         minconn=5,
                         maxconn=20,
                         database="opendiscourse",
                         user="cbwinslow",
-                        host="/var/run/postgresql"
+                        host="/var/run/postgresql",
                     )
                     logger.info("✅ Database connection pool established")
                     return  # Success, exit the retry loop
                 except Exception as e:
                     if attempt < max_retries - 1:
-                        logger.warning(f"⚠️ Database connection attempt {attempt + 1} failed, retrying in {retry_delay} seconds: {e}")
+                        logger.warning(
+                            f"⚠️ Database connection attempt {attempt + 1} failed, retrying in {retry_delay} seconds: {e}"
+                        )
                         time.sleep(retry_delay)
                     else:
                         raise  # Re-raise the exception if all retries fail
@@ -140,9 +150,9 @@ class ParallelBulkIngestion:
     def _validate_api_keys(self) -> bool:
         """Validate all required API keys are present"""
         required_keys = {
-            'CONGRESS_API_KEY': os.getenv('CONGRESS_API_KEY'),
-            'GOVINFO_API_KEY': os.getenv('GOVINFO_API_KEY'),
-            'OPENSTATES_API_KEY': os.getenv('OPENSTATES_API_KEY')
+            "CONGRESS_API_KEY": os.getenv("CONGRESS_API_KEY"),
+            "GOVINFO_API_KEY": os.getenv("GOVINFO_API_KEY"),
+            "OPENSTATES_API_KEY": os.getenv("OPENSTATES_API_KEY"),
         }
 
         missing_keys = [key for key, value in required_keys.items() if not value]
@@ -164,83 +174,139 @@ class ParallelBulkIngestion:
 
         for congress in congress_congresses:
             # Votes by bill type
-            bill_types = ['hr', 's', 'hjres', 'sjres', 'hconres', 'sconres', 'hres', 'sres']
+            bill_types = ["hr", "s", "hjres", "sjres", "hconres", "sconres", "hres", "sres"]
 
             for bill_type in bill_types:
                 job_id = f"congress_votes_{congress}_{bill_type}"
                 command = [
-                    sys.executable, "scripts/data_ingestion/congress_api_ingest.py",
-                    "--source", "congress",
-                    "--congress", str(congress),
-                    "--data-type", "votes",
-                    "--bill-type", bill_type,
-                    "--limit", "500"
+                    sys.executable,
+                    "scripts/data_ingestion/congress_api_ingest.py",
+                    "--source",
+                    "congress",
+                    "--congress",
+                    str(congress),
+                    "--data-type",
+                    "votes",
+                    "--bill-type",
+                    bill_type,
+                    "--limit",
+                    "500",
                 ]
-                jobs.append(IngestionJob(
-                    job_id=job_id,
-                    source="congress_votes",
-                    command=command,
-                    status=IngestionStatus.PENDING
-                ))
+                jobs.append(
+                    IngestionJob(
+                        job_id=job_id,
+                        source="congress_votes",
+                        command=command,
+                        status=IngestionStatus.PENDING,
+                    )
+                )
                 job_counter += 1
 
             # Bill details (amendments, summaries, texts)
             job_id = f"congress_bill_details_{congress}"
             command = [
-                sys.executable, "scripts/data_ingestion/congress_api_ingest.py",
-                "--source", "congress",
-                "--congress", str(congress),
-                "--data-type", "bill_details",
-                "--include", "amendments,summaries,texts",
-                "--limit", "1000"
+                sys.executable,
+                "scripts/data_ingestion/congress_api_ingest.py",
+                "--source",
+                "congress",
+                "--congress",
+                str(congress),
+                "--data-type",
+                "bill_details",
+                "--include",
+                "amendments,summaries,texts",
+                "--limit",
+                "1000",
             ]
-            jobs.append(IngestionJob(
-                job_id=job_id,
-                source="congress_bill_details",
-                command=command,
-                status=IngestionStatus.PENDING
-            ))
+            jobs.append(
+                IngestionJob(
+                    job_id=job_id,
+                    source="congress_bill_details",
+                    command=command,
+                    status=IngestionStatus.PENDING,
+                )
+            )
             job_counter += 1
 
         # OpenStates Votes Jobs (30 states, 10 years)
         openstates_states = [
-            'ca', 'ny', 'tx', 'fl', 'il', 'pa', 'oh', 'ga', 'nc', 'mi',
-            'nj', 'va', 'wa', 'az', 'ma', 'tn', 'in', 'mo', 'md', 'wi',
-            'co', 'mn', 'sc', 'al', 'la', 'ky', 'or', 'ok', 'ct', 'ut'
+            "ca",
+            "ny",
+            "tx",
+            "fl",
+            "il",
+            "pa",
+            "oh",
+            "ga",
+            "nc",
+            "mi",
+            "nj",
+            "va",
+            "wa",
+            "az",
+            "ma",
+            "tn",
+            "in",
+            "mo",
+            "md",
+            "wi",
+            "co",
+            "mn",
+            "sc",
+            "al",
+            "la",
+            "ky",
+            "or",
+            "ok",
+            "ct",
+            "ut",
         ]
 
         for state in openstates_states:
             # State votes
             job_id = f"openstates_votes_{state}"
             command = [
-                sys.executable, "scripts/ingestion/openstates_cli.py",
-                "--jurisdiction", state,
-                "--data-types", "votes",
-                "--years-back", "10"
+                sys.executable,
+                "scripts/ingestion/openstates_cli.py",
+                "--jurisdiction",
+                state,
+                "--data-types",
+                "votes",
+                "--years-back",
+                "10",
             ]
-            jobs.append(IngestionJob(
-                job_id=job_id,
-                source="openstates_votes",
-                command=command,
-                status=IngestionStatus.PENDING
-            ))
+            jobs.append(
+                IngestionJob(
+                    job_id=job_id,
+                    source="openstates_votes",
+                    command=command,
+                    status=IngestionStatus.PENDING,
+                )
+            )
             job_counter += 1
 
             # State bill details
             job_id = f"openstates_bill_details_{state}"
             command = [
-                sys.executable, "scripts/ingestion/openstates_cli.py",
-                "--jurisdiction", state,
-                "--data-types", "bills",
-                "--include-details", "true",
-                "--years-back", "10"
+                sys.executable,
+                "scripts/ingestion/openstates_cli.py",
+                "--jurisdiction",
+                state,
+                "--data-types",
+                "bills",
+                "--include-details",
+                "true",
+                "--years-back",
+                "10",
             ]
-            jobs.append(IngestionJob(
-                job_id=job_id,
-                source="openstates_bill_details",
-                command=command,
-                status=IngestionStatus.PENDING
-            ))
+            jobs.append(
+                IngestionJob(
+                    job_id=job_id,
+                    source="openstates_bill_details",
+                    command=command,
+                    status=IngestionStatus.PENDING,
+                )
+            )
             job_counter += 1
 
         logger.info(f"📋 Created {len(jobs)} parallel ingestion jobs for votes and bill details")
@@ -262,7 +328,7 @@ class ParallelBulkIngestion:
                 stderr=subprocess.PIPE,
                 text=True,
                 bufsize=1,
-                universal_newlines=True
+                universal_newlines=True,
             )
 
             # Monitor process in real-time
@@ -297,7 +363,10 @@ class ParallelBulkIngestion:
         """Update job metrics from database or process output"""
         try:
             # Check database for record counts
-            conn = self.db_pool.getconn()
+            if self.db_pool:
+                conn = self.db_pool.getconn()
+            else:
+                return  # Skip if no database pool
             try:
                 cursor = conn.cursor()
 
@@ -327,7 +396,9 @@ class ParallelBulkIngestion:
 
     def _run_jobs_parallel(self, jobs: List[IngestionJob], max_workers: int = 10) -> None:
         """Run jobs in parallel using ThreadPoolExecutor"""
-        logger.info(f"🔄 Starting parallel execution with {max_workers} workers for votes/bill details")
+        logger.info(
+            f"🔄 Starting parallel execution with {max_workers} workers for votes/bill details"
+        )
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             # Submit all jobs
@@ -354,13 +425,19 @@ class ParallelBulkIngestion:
                 if job.status == IngestionStatus.COMPLETED:
                     self.results["sources"][job.source]["success"] += 1
 
-                logger.info(f"📊 Progress: {completed}/{total} jobs completed ({completed/total*100:.1f}%)")
+                logger.info(
+                    f"📊 Progress: {completed}/{total} jobs completed ({completed / total * 100:.1f}%)"
+                )
 
     def _monitor_parallel_stats(self) -> None:
         """Monitor parallel ingestion statistics"""
         while self.monitoring_active:
             try:
-                conn = self.db_pool.getconn()
+                if self.db_pool:
+                    conn = self.db_pool.getconn()
+                else:
+                    time.sleep(15)
+                    continue
                 try:
                     cursor = conn.cursor()
 
@@ -418,41 +495,41 @@ class ParallelBulkIngestion:
 - **Start Time**: {self.start_time.strftime("%Y-%m-%d %H:%M:%S")}
 - **End Time**: {end_time.strftime("%Y-%m-%d %H:%M:%S")}
 - **Total Duration**: {duration}
-- **Total Jobs**: {self.results['total_jobs']}
-- **Completed Jobs**: {self.results['completed_jobs']}
-- **Failed Jobs**: {self.results['failed_jobs']}
-- **Success Rate**: {(self.results['completed_jobs'] / self.results['total_jobs'] * 100):.1f}%
+- **Total Jobs**: {self.results["total_jobs"]}
+- **Completed Jobs**: {self.results["completed_jobs"]}
+- **Failed Jobs**: {self.results["failed_jobs"]}
+- **Success Rate**: {(self.results["completed_jobs"] / self.results["total_jobs"] * 100):.1f}%
 
 ## Records Processed
-- **Total Records**: {self.results['total_records']:,}
-- **Successful Records**: {self.results['successful_records']:,}
-- **Failed Records**: {self.results['total_records'] - self.results['successful_records']:,}
+- **Total Records**: {self.results["total_records"]:,}
+- **Successful Records**: {self.results["successful_records"]:,}
+- **Failed Records**: {self.results["total_records"] - self.results["successful_records"]:,}
 
 ## Source Breakdown
 
 ### Congress Votes
-- **Jobs**: {len(self.results['sources']['congress_votes']['jobs'])}
-- **Records**: {self.results['sources']['congress_votes']['records']:,}
-- **Success Rate**: {(self.results['sources']['congress_votes']['success'] / max(len(self.results['sources']['congress_votes']['jobs']), 1) * 100):.1f}%
+- **Jobs**: {len(self.results["sources"]["congress_votes"]["jobs"])}
+- **Records**: {self.results["sources"]["congress_votes"]["records"]:,}
+- **Success Rate**: {(self.results["sources"]["congress_votes"]["success"] / max(len(self.results["sources"]["congress_votes"]["jobs"]), 1) * 100):.1f}%
 
 ### Congress Bill Details
-- **Jobs**: {len(self.results['sources']['congress_bill_details']['jobs'])}
-- **Records**: {self.results['sources']['congress_bill_details']['records']:,}
-- **Success Rate**: {(self.results['sources']['congress_bill_details']['success'] / max(len(self.results['sources']['congress_bill_details']['jobs']), 1) * 100):.1f}%
+- **Jobs**: {len(self.results["sources"]["congress_bill_details"]["jobs"])}
+- **Records**: {self.results["sources"]["congress_bill_details"]["records"]:,}
+- **Success Rate**: {(self.results["sources"]["congress_bill_details"]["success"] / max(len(self.results["sources"]["congress_bill_details"]["jobs"]), 1) * 100):.1f}%
 
 ### OpenStates Votes
-- **Jobs**: {len(self.results['sources']['openstates_votes']['jobs'])}
-- **Records**: {self.results['sources']['openstates_votes']['records']:,}
-- **Success Rate**: {(self.results['sources']['openstates_votes']['success'] / max(len(self.results['sources']['openstates_votes']['jobs']), 1) * 100):.1f}%
+- **Jobs**: {len(self.results["sources"]["openstates_votes"]["jobs"])}
+- **Records**: {self.results["sources"]["openstates_votes"]["records"]:,}
+- **Success Rate**: {(self.results["sources"]["openstates_votes"]["success"] / max(len(self.results["sources"]["openstates_votes"]["jobs"]), 1) * 100):.1f}%
 
 ### OpenStates Bill Details
-- **Jobs**: {len(self.results['sources']['openstates_bill_details']['jobs'])}
-- **Records**: {self.results['sources']['openstates_bill_details']['records']:,}
-- **Success Rate**: {(self.results['sources']['openstates_bill_details']['success'] / max(len(self.results['sources']['openstates_bill_details']['jobs']), 1) * 100):.1f}%
+- **Jobs**: {len(self.results["sources"]["openstates_bill_details"]["jobs"])}
+- **Records**: {self.results["sources"]["openstates_bill_details"]["records"]:,}
+- **Success Rate**: {(self.results["sources"]["openstates_bill_details"]["success"] / max(len(self.results["sources"]["openstates_bill_details"]["jobs"]), 1) * 100):.1f}%
 
 ## Performance Metrics
-- **Average Records per Second**: {self.results['total_records'] / duration.total_seconds() if duration.total_seconds() > 0 else 0:.2f}
-- **Average Job Duration**: {duration / self.results['total_jobs'] if self.results['total_jobs'] > 0 else 'N/A'}
+- **Average Records per Second**: {self.results["total_records"] / duration.total_seconds() if duration.total_seconds() > 0 else 0:.2f}
+- **Average Job Duration**: {duration / self.results["total_jobs"] if self.results["total_jobs"] > 0 else "N/A"}
 - **Peak Parallel Jobs**: 10
 - **Database Pool Size**: 20 connections
 
@@ -462,7 +539,11 @@ class ParallelBulkIngestion:
 
         # Add final database stats
         try:
-            conn = self.db_pool.getconn()
+            if self.db_pool:
+                conn = self.db_pool.getconn()
+            else:
+                report += "No database connection available for final stats\n"
+                return report
             try:
                 cursor = conn.cursor()
 
@@ -522,7 +603,7 @@ class ParallelBulkIngestion:
             "records_processed": job.records_processed,
             "records_total": job.records_total,
             "error_message": job.error_message,
-            "metrics": job.metrics
+            "metrics": job.metrics,
         }
 
     def run_parallel_ingestion(self) -> Dict[str, Any]:
@@ -571,7 +652,7 @@ class ParallelBulkIngestion:
 
             # Save report
             report_path = f"{self.base_path}/ingestion_results/parallel_ingestion_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
-            with open(report_path, 'w') as f:
+            with open(report_path, "w") as f:
                 f.write(report)
 
             # Save results as JSON
@@ -579,15 +660,17 @@ class ParallelBulkIngestion:
                 **self.results,
                 "end_time": datetime.now().isoformat(),
                 "execution_duration_seconds": execution_duration.total_seconds(),
-                "report_path": report_path
+                "report_path": report_path,
             }
 
             # Convert job objects to serializable format for JSON output
             for source in json_results["sources"]:
-                json_results["sources"][source]["jobs"] = [self._job_to_dict(job) for job in self.jobs.values() if job.source == source]
+                json_results["sources"][source]["jobs"] = [
+                    self._job_to_dict(job) for job in self.jobs.values() if job.source == source
+                ]
 
             json_path = f"{self.base_path}/ingestion_results/parallel_ingestion_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-            with open(json_path, 'w') as f:
+            with open(json_path, "w") as f:
                 json.dump(json_results, f, indent=2, default=str)
 
             logger.info(f"📄 Parallel report saved to: {report_path}")
@@ -606,6 +689,7 @@ class ParallelBulkIngestion:
             if self.db_pool:
                 self.db_pool.closeall()
                 logger.info("🔐 Database connections closed")
+
 
 def main():
     """Main entry point"""
@@ -631,7 +715,7 @@ def main():
     # Confirm before proceeding (auto-confirm for testing)
     response = "yes"  # Auto-confirm for non-interactive testing
     # response = input("Do you want to proceed? (yes/no): ")
-    if response.lower() != 'yes':
+    if response.lower() != "yes":
         print("❌ Parallel ingestion cancelled by user")
         return
 
@@ -656,6 +740,7 @@ def main():
     except Exception as e:
         print(f"\n❌ Parallel ingestion failed: {e}")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

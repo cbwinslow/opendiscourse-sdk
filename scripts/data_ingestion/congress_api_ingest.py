@@ -30,6 +30,7 @@ except ImportError:
     # Fallback if module is not available
     class DocumentMetadata(TypedDict, total=False):
         """Metadata used when saving documents."""
+
         title: str
         source_url: str
         source_id: str
@@ -38,6 +39,7 @@ except ImportError:
         source_collection: str
         created_at: datetime
         document_type: Optional[str]
+        type: Optional[str]  # Add missing type field
 
     def _save_document(content: str, metadata: DocumentMetadata) -> Optional[int]:
         """Save bill to database."""
@@ -55,74 +57,87 @@ except ImportError:
                 congress_number = int(parts[0])
                 bill_type = parts[1]
                 bill_number = int(parts[2])
-        else:
+            else:
                 logger.error("Invalid source_id format: %s", source_id)
                 return None
 
             # Connect to database
             conn = psycopg2.connect(
-            database='opendiscourse',
-            user='cbwinslow',
-            host='/var/run/postgresql'
-        )
-        cursor = conn.cursor()
+                database="opendiscourse", user="cbwinslow", host="/var/run/postgresql"
+            )
+            cursor = conn.cursor()
 
-        # Insert bill into congress.bills table
-        insert_query = """
-        INSERT INTO congress.bills (
-            congress_number, bill_type, bill_number, official_title,
-            introduced_date, latest_action_date, latest_action_text,
-            policy_area, summary_text, sponsor_bioguide_id,
-            created_at, updated_at
-        ) VALUES (
-            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
-        ) ON CONFLICT (congress_number, bill_type, bill_number)
-        DO UPDATE SET
-            official_title = EXCLUDED.official_title,
-            updated_at = EXCLUDED.updated_at
-        RETURNING bill_id;
-        """
+            # Insert bill into congress.bills table
+            insert_query = """
+            INSERT INTO congress.bills (
+                congress_number, bill_type, bill_number, official_title,
+                introduced_date, latest_action_date, latest_action_text,
+                policy_area, summary_text, sponsor_bioguide_id,
+                created_at, updated_at
+            ) VALUES (
+                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+            ) ON CONFLICT (congress_number, bill_type, bill_number)
+            DO UPDATE SET
+                official_title = EXCLUDED.official_title,
+                updated_at = EXCLUDED.updated_at
+            RETURNING bill_id;
+            """
 
-        # Parse dates safely
-        introduced_date = None
-        if source_date:
-            try:
-                introduced_date = datetime.strptime(source_date.replace('Z', ''), '%Y-%m-%dT%H:%M:%S').date()
-            except ValueError:
-                pass
+            # Parse dates safely
+            introduced_date = None
+            if source_date:
+                try:
+                    introduced_date = datetime.strptime(
+                        source_date.replace("Z", ""), "%Y-%m-%dT%H:%M:%S"
+                    ).date()
+                except ValueError:
+                    pass
 
-        cursor.execute(insert_query, (
-            congress_number,
-            bill_type,
-            bill_number,
-            title,
-            introduced_date,
-            None,  # latest_action_date
-            None,  # latest_action_text
-            None,  # policy_area
-            content[:1000] if content else None,  # summary_text (truncated)
-            None,  # sponsor_bioguide_id
-            datetime.now(),
-            datetime.now()
-        ))
+            cursor.execute(
+                insert_query,
+                (
+                    congress_number,
+                    bill_type,
+                    bill_number,
+                    title,
+                    introduced_date,
+                    None,  # latest_action_date
+                    None,  # latest_action_text
+                    None,  # policy_area
+                    content[:1000] if content else None,  # summary_text (truncated)
+                    None,  # sponsor_bioguide_id
+                    datetime.now(),
+                    datetime.now(),
+                ),
+            )
 
-        bill_id = cursor.fetchone()[0]
-        conn.commit()
-        cursor.close()
-        conn.close()
+            result = cursor.fetchone()
+            if result:
+                bill_id = result[0]
+            else:
+                logger.error("No bill_id returned from database")
+                return None
+            conn.commit()
+            cursor.close()
+            conn.close()
 
-        logger.info("Successfully saved bill %s-%s-%s to database (ID: %s)",
-                   congress_number, bill_type, bill_number, bill_id)
-        return bill_id
+            logger.info(
+                "Successfully saved bill %s-%s-%s to database (ID: %s)",
+                congress_number,
+                bill_type,
+                bill_number,
+                bill_id,
+            )
+            return bill_id
 
-    except Exception as e:
-        logger.error("Failed to save bill to database: %s", e)
-        return None
+        except Exception as e:
+            logger.error("Failed to save bill to database: %s", e)
+            return None
+
 
 # Set up logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -140,7 +155,7 @@ class BulkDataIngester:
         govinfo_api_key: Optional[str] = None,
         congress_api_key: Optional[str] = None,
         data_dir: str = DEFAULT_DATA_DIR,
-        timeout: int = DEFAULT_TIMEOUT
+        timeout: int = DEFAULT_TIMEOUT,
     ):
         """Initialize the bulk data ingester.
 
@@ -166,7 +181,7 @@ class BulkDataIngester:
             "total_documents": 0,
             "successful_ingestions": 0,
             "failed_ingestions": 0,
-            "skipped_documents": 0
+            "skipped_documents": 0,
         }
 
     def _create_session(self) -> requests.Session:
@@ -176,7 +191,7 @@ class BulkDataIngester:
             total=3,
             backoff_factor=1,
             status_forcelist=[429, 500, 502, 503, 504],
-            allowed_methods=["GET", "POST"]
+            allowed_methods=["GET", "POST"],
         )
         adapter = HTTPAdapter(max_retries=retry_strategy)
         session.mount("http://", adapter)
@@ -188,7 +203,7 @@ class BulkDataIngester:
         collection_code: str,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
-        limit: Optional[int] = None
+        limit: Optional[int] = None,
     ) -> Dict[str, int]:
         """Ingest documents from a GovInfo collection.
 
@@ -213,21 +228,21 @@ class BulkDataIngester:
 
         logger.info(
             "Starting bulk ingestion for collection %s from %s to %s",
-            collection_code, start_date, end_date
+            collection_code,
+            start_date,
+            end_date,
         )
 
         # Get packages in collection
-        packages_url = f"{self.govinfo_base_url}/collections/{collection_code}/{start_date}/{end_date}"
+        packages_url = (
+            f"{self.govinfo_base_url}/collections/{collection_code}/{start_date}/{end_date}"
+        )
         headers = {"X-Api-Key": self.govinfo_api_key}
 
         try:
             # Rate limiting for GovInfo API
             rate_limiter.wait("govinfo.gov")
-            response = self.session.get(
-                packages_url,
-                headers=headers,
-                timeout=self.timeout
-            )
+            response = self.session.get(packages_url, headers=headers, timeout=self.timeout)
             response.raise_for_status()
             packages_data = response.json()
 
@@ -271,11 +286,7 @@ class BulkDataIngester:
 
             # Rate limiting for GovInfo API
             rate_limiter.wait("govinfo.gov")
-            response = self.session.get(
-                summary_url,
-                headers=headers,
-                timeout=self.timeout
-            )
+            response = self.session.get(summary_url, headers=headers, timeout=self.timeout)
             response.raise_for_status()
             package_data = response.json()
 
@@ -333,11 +344,7 @@ class BulkDataIngester:
                 content_url = f"{self.govinfo_base_url}/packages/{package_id}/{fmt}"
                 # Rate limiting for GovInfo API
                 rate_limiter.wait("govinfo.gov")
-                response = self.session.get(
-                    content_url,
-                    headers=headers,
-                    timeout=self.timeout
-                )
+                response = self.session.get(content_url, headers=headers, timeout=self.timeout)
 
                 if response.status_code == 200:
                     if fmt == "xml":
@@ -356,10 +363,7 @@ class BulkDataIngester:
         return None
 
     def ingest_congress_bills(
-        self,
-        congress_number: int,
-        bill_type: Optional[str] = None,
-        limit: Optional[int] = None
+        self, congress_number: int, bill_type: Optional[str] = None, limit: Optional[int] = None
     ) -> Dict[str, int]:
         """Ingest bills from Congress.gov API.
 
@@ -378,7 +382,7 @@ class BulkDataIngester:
         logger.info(
             "Starting bulk ingestion for Congress %d bills%s",
             congress_number,
-            f" (type: {bill_type})" if bill_type else ""
+            f" (type: {bill_type})" if bill_type else "",
         )
 
         # Build API URL
@@ -409,7 +413,9 @@ class BulkDataIngester:
                 if not bill_number or not bill_type_code:
                     continue
 
-                logger.info("Processing bill %d/%d: %s-%s", idx, len(bills), bill_type_code, bill_number)
+                logger.info(
+                    "Processing bill %d/%d: %s-%s", idx, len(bills), bill_type_code, bill_number
+                )
                 self._ingest_congress_bill(congress_number, bill_type_code, bill_number)
                 time.sleep(RATE_LIMIT_DELAY)
 
@@ -445,7 +451,11 @@ class BulkDataIngester:
             text_versions = bill_data.get("textVersions", {}).get("textVersions", [])
 
             if not text_versions:
-                logger.warning("No text versions for bill %s%s - ingesting metadata only", bill_type, bill_number)
+                logger.warning(
+                    "No text versions for bill %s%s - ingesting metadata only",
+                    bill_type,
+                    bill_number,
+                )
                 # Continue with metadata ingestion even without text versions
 
             # Get the latest text version
@@ -455,7 +465,11 @@ class BulkDataIngester:
                 text_url = latest_version.get("formats", [{}])[0].get("url")
 
                 if not text_url:
-                    logger.warning("No text URL for bill %s%s - ingesting metadata only", bill_type, bill_number)
+                    logger.warning(
+                        "No text URL for bill %s%s - ingesting metadata only",
+                        bill_type,
+                        bill_number,
+                    )
                     # Continue with metadata ingestion
                 else:
                     # Fetch bill text
@@ -465,7 +479,11 @@ class BulkDataIngester:
                     text_response.raise_for_status()
                     content = text_response.text
             else:
-                logger.info("No text content available for bill %s%s - using metadata only", bill_type, bill_number)
+                logger.info(
+                    "No text content available for bill %s%s - using metadata only",
+                    bill_type,
+                    bill_number,
+                )
 
             # Prepare metadata
             metadata: DocumentMetadata = {
@@ -482,7 +500,9 @@ class BulkDataIngester:
             # Save to database
             doc_id = _save_document(content, metadata)
             if doc_id:
-                logger.info("Successfully ingested bill %s-%s (doc_id: %s)", bill_type, bill_number, doc_id)
+                logger.info(
+                    "Successfully ingested bill %s-%s (doc_id: %s)", bill_type, bill_number, doc_id
+                )
                 self.stats["successful_ingestions"] += 1
                 return True
             else:
@@ -497,18 +517,20 @@ class BulkDataIngester:
 
     def print_statistics(self):
         """Print ingestion statistics."""
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("Bulk Data Ingestion Statistics")
-        print("="*60)
+        print("=" * 60)
         print(f"Total documents processed: {self.stats['total_documents']}")
         print(f"Successful ingestions:     {self.stats['successful_ingestions']}")
         print(f"Failed ingestions:         {self.stats['failed_ingestions']}")
         print(f"Skipped documents:         {self.stats['skipped_documents']}")
 
-        if self.stats['total_documents'] > 0:
-            success_rate = (self.stats['successful_ingestions'] / self.stats['total_documents']) * 100
+        if self.stats["total_documents"] > 0:
+            success_rate = (
+                self.stats["successful_ingestions"] / self.stats["total_documents"]
+            ) * 100
             print(f"Success rate:              {success_rate:.1f}%")
-        print("="*60 + "\n")
+        print("=" * 60 + "\n")
 
 
 def main():
@@ -520,39 +542,17 @@ def main():
         "--source",
         choices=["govinfo", "congress"],
         required=True,
-        help="Data source to ingest from"
+        help="Data source to ingest from",
     )
+    parser.add_argument("--collection", help="GovInfo collection code (e.g., BILLS, FR, CREC)")
     parser.add_argument(
-        "--collection",
-        help="GovInfo collection code (e.g., BILLS, FR, CREC)"
+        "--congress", type=int, help="Congress number for Congress.gov API (e.g., 118)"
     )
-    parser.add_argument(
-        "--congress",
-        type=int,
-        help="Congress number for Congress.gov API (e.g., 118)"
-    )
-    parser.add_argument(
-        "--bill-type",
-        help="Bill type for Congress.gov API (e.g., hr, s)"
-    )
-    parser.add_argument(
-        "--start-date",
-        help="Start date in YYYY-MM-DD format"
-    )
-    parser.add_argument(
-        "--end-date",
-        help="End date in YYYY-MM-DD format"
-    )
-    parser.add_argument(
-        "--limit",
-        type=int,
-        help="Maximum number of documents to ingest"
-    )
-    parser.add_argument(
-        "--data-dir",
-        default=DEFAULT_DATA_DIR,
-        help="Directory for storing data"
-    )
+    parser.add_argument("--bill-type", help="Bill type for Congress.gov API (e.g., hr, s)")
+    parser.add_argument("--start-date", help="Start date in YYYY-MM-DD format")
+    parser.add_argument("--end-date", help="End date in YYYY-MM-DD format")
+    parser.add_argument("--limit", type=int, help="Maximum number of documents to ingest")
+    parser.add_argument("--data-dir", default=DEFAULT_DATA_DIR, help="Directory for storing data")
 
     args = parser.parse_args()
 
@@ -568,7 +568,7 @@ def main():
                 collection_code=args.collection,
                 start_date=args.start_date,
                 end_date=args.end_date,
-                limit=args.limit
+                limit=args.limit,
             )
 
         elif args.source == "congress":
@@ -576,9 +576,7 @@ def main():
                 parser.error("--congress required for congress source")
 
             ingester.ingest_congress_bills(
-                congress_number=args.congress,
-                bill_type=args.bill_type,
-                limit=args.limit
+                congress_number=args.congress, bill_type=args.bill_type, limit=args.limit
             )
 
     except KeyboardInterrupt:

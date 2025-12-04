@@ -66,6 +66,10 @@ docs = [
 mysql = [
     "mysql-connector-python>=8.0.0",
 ]
+export = [
+    "pandas>=2.0.0",
+    "pyarrow>=10.0.0",
+]
 all = [
     "opendiscourse[export,dev,docs]",
 ]

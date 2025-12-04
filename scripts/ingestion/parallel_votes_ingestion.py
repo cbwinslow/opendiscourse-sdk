@@ -546,6 +546,62 @@ class ParallelVotesIngestor:
                                 self.ingest_senate_congress, congress, year)
                             )
                             futures.append(future)
+                    
+                    if "senate-clerk" in source_types:
+                        # Senate Clerk data - split by years
+                        congress_years = {
+                            113: (2013, 2014), 114: (2015, 2016), 115: (2017, 2018),
+                            116: (2019, 2020), 117: (2021, 2022), 118: (2023, 2024)
+                        }
+                        
+                        years = congress_years.get(congress, (2024, 2024))
+                        for year in years:
+                            future = executor.submit(
+                                self.ingest_senate_congress, congress, year)
+                            )
+                            futures.append(future)
+                    
+                    if "senate-clerk" in source_types:
+                        # Senate Clerk data - split by years
+                        congress_years = {
+                            113: (2013, 2014), 114: (2015, 2016), 115: (2017, 2018),
+                            116: (2019, 2020), 117: (2021, 2022), 118: (2023, 2024)
+                        }
+                        
+                        years = congress_years.get(congress, (2024, 2024))
+                        for year in years:
+                            future = executor.submit(
+                                self.ingest_senate_congress, congress, year)
+                            )
+                            futures.append(future)
+                    
+                    if "senate-clerk" in source_types:
+                        # Senate Clerk data - split by years
+                        congress_years = {
+                            113: (2013, 2014), 114: (2015, 2016), 115: (2017, 2018),
+                            116: (2019, 2020), 117: (2021, 2022), 118: (2023, 2024)
+                        }
+                        
+                        years = congress_years.get(congress, (2024, 2024))
+                        for year in years:
+                            future = executor.submit(
+                                self.ingest_senate_congress, congress, year)
+                            )
+                            futures.append(future)
+                    
+                    if "senate-clerk" in source_types:
+                        # Senate Clerk data - split by years
+                        congress_years = {
+                            113: (2013, 2014), 114: (2015, 2016), 115: (2017, 2018),
+                            116: (2019, 2020), 117: (2021, 2022), 118: (2023, 2024)
+                        }
+                        
+                        years = congress_years.get(congress, (2024, 2024))
+                        for year in years:
+                            future = executor.submit(
+                                self.ingest_senate_congress, congress, year)
+                            )
+                            futures.append(future)
 
                 # Process completed tasks
                 for future in as_completed(futures):

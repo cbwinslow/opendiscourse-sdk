@@ -39,8 +39,8 @@ class VoteIngestionAPI:
         """Setup database connection pool"""
         try:
             self.db_pool = psycopg2.pool.ThreadedConnectionPool(
-                minconn=5,
-                maxconn=20,
+                minconn=2,
+                maxconn=10,
                 database="opendiscourse",
                 user="cbwinslow",
                 host="/var/run/postgresql"
@@ -226,7 +226,7 @@ class VoteIngestionAPI:
                 self.db_pool.putconn(conn)
             return 0
 
-    def ingest_congress_votes(self, congress: int, year: int, limit: int = 1000) -> int:
+    def ingest_congress_votes(self, congress: int, year: int, offset: int = 0, limit: int = 1000) -> int:
         """Bulk ingest Congress votes for specific congress and year"""
         print(f"📊 Ingesting Congress votes: Congress {congress}, Year {year}")
 
@@ -236,7 +236,7 @@ class VoteIngestionAPI:
         params = {
             "congress": congress,
             "limit": limit,
-            "offset": 0,
+            "offset": offset,
             "year": year,
             "format": "json"
         }
