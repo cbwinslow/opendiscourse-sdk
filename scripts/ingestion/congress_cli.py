@@ -25,6 +25,278 @@ try:
 except ImportError:
     sys.path.append(os.path.join(os.path.dirname(__file__), '../utils'))
     import resource_manager
+"""
+    Congress.gov CLI Tool
+
+    A comprehensive command-line interface for ingesting Congressional data from the
+    Congress.gov API into a PostgreSQL database. This class provides ETL (Extract,
+    Transform, Load) functionality for various types of Congressional data including:
+
+    - Members (current and historical)
+    - Bills and legislation
+    - Amendments
+    - Committee information
+    - Vote records
+    - Congressional Record entries
+    - Nominations and treaties
+
+    The class handles API rate limiting, error handling, batch processing, and
+    database schema management automatically.
+
+    Attributes:
+        api_key (str): Congress.gov API key for authentication
+        db_config (dict): PostgreSQL database connection configuration
+        batch_size (int): Number of records to process per batch (default: 50)
+        dry_run (bool): If True, simulates operations without making database changes
+        base_url (str): Base URL for Congress.gov API
+        session (requests.Session): Configured HTTP session with authentication
+        conn (psycopg2.connection): Database connection object
+
+    Example:
+        Initialize and ingest members:
+        >>> cli = CongressCLI(api_key="your_key", db_config=config)
+        >>> cli.ingest_members(118)  # Ingest 118th Congress members
+    """
+
+    def __init__(self, api_key: str = None, db_config: Dict = None, batch_size: int = None, dry_run: bool = False):
+        """
+        Initialize Congress CLI.
+
+        Sets up the CLI with API credentials, database configuration, and processing
+        parameters. Automatically loads configuration from environment if not provided.
+
+        Args:
+            api_key: Congress.gov API key. If None, attempts to load from environment
+                    variables or configuration system
+            db_config: Database configuration dictionary. If None, loads from config system
+            batch_size: Number of records to process per batch. Default is 50 if not specified
+            dry_run: If True, simulates operations without making database changes.
+                    Useful for testing and validation
+
+        Raises:
+            SystemExit: If required API key cannot be found
+        """
+        # Try to load from configuration system
+        settings = None
+        try:
+            from scripts.core.config import get_settings
+            settings = get_settings()
+        except (ImportError, Exception):
+            pass
+
+        # API key: use provided or load from config
+        if api_key:
+            self.api_key = api_key
+        elif settings:
+            self.api_key = settings.congress_api.api_key.get_secret_value() if settings.congress_api.api_key else None
+        else:
+            self.api_key = resource_manager.CONGRESS_API_KEY
+
+        if not self.api_key:
+            print("❌ Congress API key not found. Set CONGRESS_API__API_KEY in .env")
+            sys.exit(1)
+
+        # Database config: use provided or load from config
+        if db_config:
+            self.db_config = db_config
+        elif settings:
+            self.db_config = {
+                'host': settings.database.host,
+                'port': settings.database.port,
+                'database': settings.database.name,
+                'user': settings.database.user,
+                'password': settings.database.password.get_secret_value() if settings.database.password else None,
+            }
+            # Remove None password
+            if self.db_config['password'] is None:
+                self.db_config.pop('password')
+        else:
+            self.db_config = resource_manager.get_database_config()
+
+        # Batch size: use provided or load from config
+        if batch_size is not None:
+            self.batch_size = batch_size
+        elif settings and hasattr(settings, 'ingestion'):
+            self.batch_size = settings.ingestion.batch_size
+        else:
+            self.batch_size = 50
+
+        self.dry_run = dry_run
+        self.base_url = "https://api.congress.gov/v3"
+        self.session = requests.Session()
+        self.session.headers.update({
+            'X-API-Key': self.api_key,
+            'Accept': 'application/json'
+        })
+        self.conn = None
+class CongressCLI:
+    """
+    Congress.gov CLI Tool
+
+    A comprehensive command-line interface for ingesting Congressional data from the
+    Congress.gov API into a PostgreSQL database. This class provides ETL (Extract,
+    Transform, Load) functionality for various types of Congressional data including:
+
+    - Members (current and historical)
+    - Bills and legislation
+    - Amendments
+    - Committee information
+    - Vote records
+    def transform_member(self, member_data: Dict, congress: int) -> tuple:
+        """
+        Transform Congress member data from API format to database format.
+
+        Converts raw member data from the Congress.gov API into a database-ready tuple
+        for insertion into the congress.members table. Handles nested member objects
+        and applies business logic for data normalization.
+
+        Args:
+            member_data: Raw member data dictionary from API response. Can be either
+                        a direct member object or wrapped in a 'member' key
+            congress: Congress number for context (e.g., 118 for current Congress)
+
+        Returns:
+            Tuple containing:
+            - bioguide_id (str): Unique member identifier
+            - full_name (str): Member's full name
+            - first_name (str): Member's first name
+            - last_name (str): Member's last name
+            - party (str): Political party affiliation
+            - state (str): State or territory represented
+            - district (str): District number (None for Senators)
+            - congress_number (int): Congress number
+            - active (bool): Whether member is currently active
+            - created_at (datetime): Timestamp of record creation
+
+        Example:
+            >>> data = {'member': {'bioguideId': 'A000001', 'fullName': 'John Smith'}}
+            >>> result = cli.transform_member(data, 118)
+            >>> print(result[0])  # 'A000001'
+        """
+        member = member_data.get('member', member_data)
+        return (
+            member.get('bioguideId'),
+            member.get('fullName'),
+    def transform_bill(self, bill_data: Dict, congress: int) -> tuple:
+        """
+        Transform Congress bill data from API format to database format.
+
+        Converts raw bill data from the Congress.gov API into a database-ready tuple
+        for insertion into the congress.bills table. Handles chamber code mapping
+        and data normalization for proper database storage.
+
+        Args:
+            bill_data: Raw bill data dictionary from API response. Can be either
+                      a direct bill object or wrapped in a 'bill' key
+            congress: Congress number for context (e.g., 118 for current Congress)
+
+        Returns:
+            Tuple containing:
+            - congress_number (int): Congress number
+            - bill_type (str): Type of bill (hr, s, hjres, etc.)
+            - bill_number (int): Bill number
+            - origin_chamber (str): Origin chamber (house, senate, joint)
+            - introduced_date (str): Date bill was introduced
+            - latest_action_date (str): Date of latest action
+            - latest_action_text (str): Text of latest action
+            - policy_area (str): Policy area classification
+            - official_title (str): Official title of bill
+            - sponsor_bioguide_id (str): Bioguide ID of primary sponsor
+            - created_at (datetime): Timestamp of record creation
+
+        Note:
+            Chamber codes are mapped: 'House' -> 'house', 'Senate' -> 'senate',
+    def transform_amendment(self, amendment_data: Dict, congress: int) -> tuple:
+        """
+        Transform Congress amendment data from API format to database format.
+
+        Converts raw amendment data from the Congress.gov API into a database-ready tuple
+        for insertion into the congress.amendments table.
+
+        Args:
+            amendment_data: Raw amendment data dictionary from API response
+            congress: Congress number for context (e.g., 118 for current Congress)
+
+        Returns:
+            Tuple containing:
+            - congress_number (int): Congress number
+            - amendment_type (str): Type of amendment
+            - amendment_number (int): Amendment number
+            - description (str): Description of amendment
+            - purpose (str): Purpose of amendment
+            - latest_action_date (str): Date of latest action
+            - latest_action_text (str): Text of latest action
+            - submitted_date (str): Date amendment was submitted
+            - created_at (datetime): Timestamp of record creation
+
+        Example:
+            >>> data = {'type': 'hamdt', 'number': 1, 'description': 'Test amendment'}
+            >>> result = cli.transform_amendment(data, 118)
+        """
+            'Joint' -> 'joint' to maintain database consistency.
+        """
+        bill = bill_data.get('bill', bill_data)
+
+        # Map chamber codes
+        chamber_mapping = {
+            'House': 'house',
+            'Senate': 'senate',
+            'Joint': 'joint'
+        }
+        origin_chamber = chamber_mapping.get(bill.get('originChamber', ''), bill.get('originChamber', '').lower())
+
+        return (
+            congress,
+            bill.get('type', ''),
+            int(bill.get('number', 0)),
+            origin_chamber,
+            bill.get('introducedDate'),
+            bill.get('latestAction', {}).get('actionDate'),
+            bill.get('latestAction', {}).get('text'),
+            bill.get('policyArea', {}).get('name') if bill.get('policyArea') else '',
+            bill.get('title', ''),
+            bill.get('sponsor', {}).get('bioguideId'),
+            datetime.now()
+        )
+            member.get('firstName'),
+            member.get('lastName'),
+            member.get('party'),
+            member.get('state'),
+            member.get('district'),
+            congress,
+            member.get('active'),
+            datetime.now()
+        )
+    - Congressional Record entries
+    - Nominations and treaties
+
+    The class handles API rate limiting, error handling, batch processing, and
+    database schema management automatically.
+
+    Attributes:
+        api_key (str): Congress.gov API key for authentication
+        db_config (dict): PostgreSQL database connection configuration
+        batch_size (int): Number of records to process per batch (default: 50)
+        dry_run (bool): If True, simulates operations without making database changes
+        base_url (str): Base URL for Congress.gov API
+        session (requests.Session): Configured HTTP session with authentication
+        conn (psycopg2.connection): Database connection object
+
+    Example:
+        Initialize and ingest members:
+        >>> cli = CongressCLI(api_key="your_key", db_config=config)
+        >>> cli.ingest_members(118)  # Ingest 118th Congress members
+    """
+
+# Import core components
+try:
+    from scripts.core.worker_pool import WorkerPool, Job
+    from scripts.core.deduplication import DeduplicationEngine, DeduplicationStrategy
+except ImportError:
+    # Fallback for direct execution
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from core.worker_pool import WorkerPool, Job
+    from core.deduplication import DeduplicationEngine, DeduplicationStrategy
 
 class CongressCLI:
     def __init__(self, api_key: str = None, db_config: Dict = None, batch_size: int = None, dry_run: bool = False):
@@ -90,6 +362,21 @@ class CongressCLI:
             'Accept': 'application/json'
         })
         self.conn = None
+
+        # Initialize Deduplication Engine
+        self.deduplication = DeduplicationEngine(
+            strategy=DeduplicationStrategy.UPDATE,
+            cache_size=10000
+        )
+
+        # Initialize Worker Pool (default configuration, can be tuned)
+        # Rate limit is per worker. Congress.gov limit is 5000/hour ≈ 1.4/sec total.
+        # With 4 workers, we should be conservative: 0.3 req/s per worker = 1.2 req/s total.
+        self.worker_pool = WorkerPool(
+            num_workers=4,
+            rate_limit=0.3,
+            queue_size=1000
+        )
 
     def connect_db(self):
         """Establish database connection"""
@@ -1129,6 +1416,41 @@ class CongressCLI:
         self.close_db()
         print(f"🎉 Completed Congress votes")
 
+    def _process_bill_detail_job(self, job: Job) -> List[tuple]:
+        """
+        Worker job to fetch and transform bill details.
+        """
+        congress = job.data['congress']
+        bill_type = job.data['bill_type']
+        bill_number = job.data['bill_number']
+        endpoint_suffix = job.data['endpoint_suffix']
+        data_key = job.data['data_key']
+        transform_name = job.data['transform_name']
+
+        # Get transform method by name
+        transform_func = getattr(self, transform_name)
+
+        url = f"/bill/{congress}/{bill_type.lower()}/{bill_number}/{endpoint_suffix}"
+        # Use existing get method which handles rate limiting (though WorkerPool also has rate limiting)
+        # We might want to disable rate limiting in get() if WorkerPool handles it,
+        # but double safety is fine as long as it doesn't slow down too much.
+        # WorkerPool rate limit is per worker. get() rate limit is global via rate_limiter.
+        # This might cause contention.
+        # For now, let's rely on get() for the actual request.
+        data = self.get(url)
+
+        items = []
+        if data and data.get(data_key):
+            for item in data[data_key]:
+                # Handle special case for subjects
+                if data_key == 'subjects' and 'legislativeSubjects' in item:
+                     for sub in item['legislativeSubjects']:
+                         items.append(transform_func(sub, congress, bill_type, bill_number))
+                else:
+                    items.append(transform_func(item, congress, bill_type, bill_number))
+
+        return items
+
     def ingest_bill_details(self, congress: int, detail_type: str):
         """
         Generic ingestor for bill details (actions, cosponsors, subjects, titles, related bills).
@@ -1236,13 +1558,6 @@ class CongressCLI:
             print(f"❌ Unknown detail type: {detail_type}")
             return
 
-        offset = 0
-        total_processed = 0
-
-        # Iterate over bills to fetch details
-        # This is inefficient but necessary if no bulk endpoint exists.
-        # We can optimize by fetching bills from DB first to get the list.
-
         # Fetch bills from DB to iterate
         cursor = self.conn.cursor()
         cursor.execute("SELECT bill_type, bill_number FROM congress.bills WHERE congress_number = %s", (congress,))
@@ -1251,53 +1566,64 @@ class CongressCLI:
 
         print(f"  Found {len(bills_to_process)} bills to process for {detail_type}")
 
-        for bill_type, bill_number in bills_to_process:
-            url = f"/bill/{congress}/{bill_type.lower()}/{bill_number}/{cfg['endpoint_suffix']}"
-            data = self.get(url)
+        # Process in batches to manage memory and queue size
+        # WorkerPool queue size is 1000, so we process in chunks of 500 to be safe
+        chunk_size = 500
+        total_processed = 0
 
-            if data and data.get(cfg['data_key']):
-                items = []
-                for item in data[cfg['data_key']]:
-                    # Pass extra args if needed by transform
-                    if detail_type == 'actions':
-                        items.append(cfg['transform'](item, congress, bill_type, bill_number))
-                    elif detail_type == 'cosponsors':
-                        items.append(cfg['transform'](item, congress, bill_type, bill_number))
-                    elif detail_type == 'subjects':
-                         # API returns 'subjects': {'legislativeSubjects': [...], 'policyArea': ...}
-                         # or just list? Check API.
-                         # Assuming list for now based on transform.
-                         # If nested, we need to adjust.
-                         # transform_bill_subject expects item.
-                         if 'legislativeSubjects' in item: # Handle nested structure if present
-                             for sub in item['legislativeSubjects']:
-                                 items.append(cfg['transform'](sub, congress, bill_type, bill_number))
-                         else:
-                             items.append(cfg['transform'](item, congress, bill_type, bill_number))
-                    elif detail_type == 'titles':
-                        items.append(cfg['transform'](item, congress, bill_type, bill_number))
-                    elif detail_type == 'related':
-                        items.append(cfg['transform'](item, congress, bill_type, bill_number))
+        for i in range(0, len(bills_to_process), chunk_size):
+            batch = bills_to_process[i:i+chunk_size]
+            jobs = []
 
-                if items:
-                    if self.dry_run:
-                        print(f"🔍 DRY RUN: Would insert {len(items)} {detail_type} for {bill_type}{bill_number}")
-                        total_processed += len(items)
-                    else:
-                        cursor = self.conn.cursor()
-                        try:
-                            from psycopg2.extras import execute_values
-                            execute_values(cursor, cfg['insert_query'], items)
-                            self.conn.commit()
-                            total_processed += len(items)
-                            # print(f"✅ Processed {len(items)} {detail_type} for {bill_type}{bill_number}")
-                        except Exception as e:
-                            print(f"❌ Batch insert failed for {bill_type}{bill_number}: {e}")
-                            self.conn.rollback()
-                        finally:
-                            cursor.close()
+            print(f"🔄 Processing batch {i//chunk_size + 1}/{(len(bills_to_process)-1)//chunk_size + 1} ({len(batch)} bills)...")
 
-            time.sleep(0.1) # Rate limit
+            for bill_type, bill_number in batch:
+                job = Job(
+                    task_func=self._process_bill_detail_job,
+                    data={
+                        'congress': congress,
+                        'bill_type': bill_type,
+                        'bill_number': bill_number,
+                        'endpoint_suffix': cfg['endpoint_suffix'],
+                        'data_key': cfg['data_key'],
+                        'transform_name': cfg['transform'].__name__
+                    }
+                )
+                jobs.append(job)
+
+            # Submit and run batch
+            self.worker_pool.submit_batch(jobs)
+            results = self.worker_pool.run()
+
+            # Collect results
+            batch_items = []
+            for res in results:
+                if res.success and res.result:
+                    batch_items.extend(res.result)
+                elif not res.success:
+                    print(f"⚠️ Job failed: {res.error}")
+
+            # Batch insert
+            if batch_items:
+                if self.dry_run:
+                    print(f"🔍 DRY RUN: Would insert {len(batch_items)} {detail_type} items")
+                    total_processed += len(batch_items)
+                else:
+                    cursor = self.conn.cursor()
+                    try:
+                        from psycopg2.extras import execute_values
+                        execute_values(cursor, cfg['insert_query'], batch_items)
+                        self.conn.commit()
+                        total_processed += len(batch_items)
+                        # print(f"✅ Processed {len(batch_items)} items in batch")
+                    except Exception as e:
+                        print(f"❌ Batch insert failed: {e}")
+                        self.conn.rollback()
+                    finally:
+                        cursor.close()
+
+            # Clear queue for next batch (though run() should have drained it)
+            self.worker_pool.clear_queue()
 
         self.close_db()
         print(f"🎉 Completed: {total_processed} Congress {detail_type}")
@@ -1902,9 +2228,12 @@ class CongressCLI:
             self.close_db()
 
 def main():
-    parser = argparse.ArgumentParser(description='Congress.gov Ingestion CLI')
-    parser.add_argument('--dry-run', action='store_true', help='Run without making changes')
-    parser.add_argument('--batch-size', type=int, help='Batch size')
+    # Create parent parser with shared arguments
+    parent_parser = argparse.ArgumentParser(add_help=False)
+    parent_parser.add_argument('--dry-run', action='store_true', help='Run without making changes')
+    parent_parser.add_argument('--batch-size', type=int, help='Batch size')
+
+    parser = argparse.ArgumentParser(description='Congress.gov Ingestion CLI', parents=[parent_parser])
 
     subparsers = parser.add_subparsers(dest='command', help='Commands')
 
@@ -2002,9 +2331,10 @@ def main():
     # Status
     status_parser = subparsers.add_parser('status', help='Show status')
 
-    # Bill details (composite)
-    details_parser = subparsers.add_parser('ingest-bill-details', help='Ingest bill details (actions, cosponsors, etc)')
+    # Bill details (composite) - with parallel processing support
+    details_parser = subparsers.add_parser('ingest-bill-details', help='Ingest bill details (actions, cosponsors, etc)', parents=[parent_parser])
     details_parser.add_argument('congress', type=int, help='Congress number')
+    details_parser.add_argument('type', help='Detail type (actions, cosponsors, subjects, titles, related)')
 
     args = parser.parse_args()
 

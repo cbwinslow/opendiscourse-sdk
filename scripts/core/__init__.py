@@ -10,9 +10,8 @@ from scripts.core.config import (
 
 # Database
 from scripts.core.database import (
-    DatabaseManager,
-    create_database,
-    run_migrations,
+    DatabaseBootstrap,
+    bootstrap_interactive,
 )
 
 # Deduplication

@@ -13,18 +13,24 @@ from rich.table import Table
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
 
 import psycopg2
-from psycopg2.extras import RealDictCursor
+
+try:
+    from psycopg2.extras import RealDictCursor, Json
+except ImportError:
+    RealDictCursor = None
+    Json = None
 
 
 @dataclass
 class IngestionContext:
     """Context passed to delegate functions"""
+
     job_id: int
     data_source: str
     table_name: str
     record_type: str
     current_record_id: Optional[str] = None
-    metadata: Dict[str, Any] = None
+    metadata: Optional[Dict[str, Any]] = None
 
     def __post_init__(self):
         if self.metadata is None:
@@ -32,7 +38,7 @@ class IngestionContext:
 
 
 class UniversalProgressMonitor:
-    def __init__(self, db_connection, display_mode: str = 'tui'):
+    def __init__(self, db_connection, display_mode: str = "tui"):
         self.db = db_connection
         self.display_mode = display_mode
         self.console = Console()
@@ -40,27 +46,46 @@ class UniversalProgressMonitor:
         self.active_jobs = {}
         self.live_display = None
 
-    def register_delegate(self, data_source: str, table_name: str,
-                         delegate_func: Callable[[IngestionContext, Dict[str, Any]], None]):
+    def register_delegate(
+        self,
+        data_source: str,
+        table_name: str,
+        delegate_func: Callable[[IngestionContext, Dict[str, Any]], None],
+    ):
         """Register a delegate function for specific data source + table combination"""
         key = f"{data_source}:{table_name}"
         self.delegates[key] = delegate_func
 
-    def start_job(self, job_name: str, data_source: str, table_name: str,
-                  record_type: str, total_estimated: Optional[int] = None,
-                  metadata: Dict[str, Any] = None) -> int:
+    def start_job(
+        self,
+        job_name: str,
+        data_source: str,
+        table_name: str,
+        record_type: str,
+        total_estimated: Optional[int] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> int:
         """Start a new ingestion job with progress tracking"""
         cursor = self.db.cursor()
 
         # Create job record
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT INTO ingestion_jobs (
                 job_name, data_source, table_name, record_type,
                 total_records, metadata, status
             ) VALUES (%s, %s, %s, %s, %s, %s, 'running')
             RETURNING id
-        """, (job_name, data_source, table_name, record_type,
-              total_estimated, psycopg2.extras.Json(metadata or {})))
+        """,
+            (
+                job_name,
+                data_source,
+                table_name,
+                record_type,
+                total_estimated,
+                Json(metadata or {}) if Json else str(metadata or {}),
+            ),
+        )
 
         job_id = cursor.fetchone()[0]
         self.db.commit()
@@ -71,38 +96,42 @@ class UniversalProgressMonitor:
             data_source=data_source,
             table_name=table_name,
             record_type=record_type,
-            metadata=metadata or {}
+            metadata=metadata or {},
         )
 
         self.active_jobs[job_id] = {
-            'context': context,
-            'start_time': time.time(),
-            'processed': 0,
-            'failed': 0
+            "context": context,
+            "start_time": time.time(),
+            "processed": 0,
+            "failed": 0,
         }
 
         # Start TUI display if enabled
-        if self.display_mode == 'tui':
+        if self.display_mode == "tui":
             self._start_tui_display(job_id)
 
         return job_id
 
-    def update_progress(self, job_id: int, success: bool,
-                       record_id: Optional[str] = None,
-                       error_details: Optional[Dict] = None):
+    def update_progress(
+        self,
+        job_id: int,
+        success: bool,
+        record_id: Optional[str] = None,
+        error_details: Optional[Dict] = None,
+    ):
         """Update progress for a job"""
         if job_id not in self.active_jobs:
             return
 
         job_data = self.active_jobs[job_id]
-        context = job_data['context']
+        context = job_data["context"]
         context.current_record_id = record_id
 
         # Update counters
         if success:
-            job_data['processed'] += 1
+            job_data["processed"] += 1
         else:
-            job_data['failed'] += 1
+            job_data["failed"] += 1
 
         # Log error if any
         if error_details:
@@ -112,19 +141,19 @@ class UniversalProgressMonitor:
         delegate_key = f"{context.data_source}:{context.table_name}"
         if delegate_key in self.delegates:
             delegate_context = {
-                'success': success,
-                'error_details': error_details,
-                'processed_count': job_data['processed'],
-                'failed_count': job_data['failed'],
-                'elapsed_time': time.time() - job_data['start_time']
+                "success": success,
+                "error_details": error_details,
+                "processed_count": job_data["processed"],
+                "failed_count": job_data["failed"],
+                "elapsed_time": time.time() - job_data["start_time"],
             }
             self.delegates[delegate_key](context, delegate_context)
 
         # Update database
-        self._update_db_progress(job_id, job_data['processed'], job_data['failed'])
+        self._update_db_progress(job_id, job_data["processed"], job_data["failed"])
 
         # Update display
-        if self.display_mode == 'tui':
+        if self.display_mode == "tui":
             self._update_tui_display(job_id, job_data)
 
     def complete_job(self, job_id: int):
@@ -133,11 +162,14 @@ class UniversalProgressMonitor:
             return
 
         cursor = self.db.cursor()
-        cursor.execute("""
+        cursor.execute(
+            """
             UPDATE ingestion_jobs
             SET status = 'completed', completed_at = CURRENT_TIMESTAMP
             WHERE id = %s
-        """, (job_id,))
+        """,
+            (job_id,),
+        )
         self.db.commit()
 
         # Clean up
@@ -150,19 +182,77 @@ class UniversalProgressMonitor:
     def _log_error(self, job_id: int, error_details: Dict):
         """Log error to database"""
         cursor = self.db.cursor()
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT INTO ingestion_errors (
                 job_id, error_type, error_message, record_id,
                 error_metadata
             ) VALUES (%s, %s, %s, %s, %s)
-        """, (
-            job_id,
-            error_details.get('error_type', 'unknown_error'),
-            error_details.get('error_message', 'Unknown error'),
-            error_details.get('record_id'),
-            psycopg2.extras.Json(error_details.get('metadata', {}))
-        ))
+        """,
+            (
+                job_id,
+                error_details.get("error_type", "unknown_error"),
+                error_details.get("error_message", "Unknown error"),
+                error_details.get("record_id"),
+                Json(error_details.get("metadata", {}))
+                if Json
+                else str(error_details.get("metadata", {})),
+            ),
+        )
         self.db.commit()
+
+    def set_total_estimated(self, total_estimated: int):
+        """Set total estimated records for current job"""
+        # Update the first active job (or create a default job)
+        if self.active_jobs:
+            job_id = next(iter(self.active_jobs))
+            job_data = self.active_jobs[job_id]
+            job_data["context"].metadata["total_estimated"] = total_estimated
+
+            # Update database
+            cursor = self.db.cursor()
+            cursor.execute(
+                """
+                UPDATE ingestion_jobs
+                SET total_records = %s, updated_at = CURRENT_TIMESTAMP
+                WHERE id = %s
+            """,
+                (total_estimated, job_id),
+            )
+            self.db.commit()
+
+    def add_progress(self, increment: int = 1):
+        """Add progress to current job"""
+        # Update the first active job
+        if self.active_jobs:
+            job_id = next(iter(self.active_jobs))
+            job_data = self.active_jobs[job_id]
+            job_data["processed"] += increment
+
+            # Update database
+            self._update_db_progress(job_id, job_data["processed"], job_data["failed"])
+
+    def start(self):
+        """Start progress monitoring"""
+        # This method is called to start monitoring
+        # Jobs are started individually with start_job()
+        if self.display_mode == "tui" and not self.live_display:
+            # Create a simple display since we don't have a specific job
+            try:
+                from rich.progress import Progress, SpinnerColumn, TextColumn
+                from rich.live import Live
+
+                progress = Progress(SpinnerColumn(), TextColumn("Starting ingestion..."))
+                self.live_display = Live(progress, refresh_per_second=4)
+                self.live_display.start()
+            except ImportError:
+                print("Starting ingestion...")
+
+    def stop(self):
+        """Stop the progress monitoring"""
+        if self.live_display:
+            self.live_display.stop()
+            self.live_display = None
 
     def _update_db_progress(self, job_id: int, processed: int, failed: int):
         """Update progress in database"""
@@ -171,23 +261,26 @@ class UniversalProgressMonitor:
         # Calculate throughput
         job_data = self.active_jobs.get(job_id)
         if job_data:
-            elapsed = time.time() - job_data['start_time']
+            elapsed = time.time() - job_data["start_time"]
             throughput = processed / max(elapsed / 60, 0.01) if elapsed > 0 else 0
 
             # Calculate ETA
             eta = None
-            if job_data['context'].metadata.get('total_estimated') and throughput > 0:
-                remaining = job_data['context'].metadata['total_estimated'] - processed
+            if job_data["context"].metadata.get("total_estimated") and throughput > 0:
+                remaining = job_data["context"].metadata["total_estimated"] - processed
                 eta_seconds = remaining / throughput * 60
                 eta = datetime.now() + timedelta(seconds=eta_seconds)
 
-            cursor.execute("""
+            cursor.execute(
+                """
                 UPDATE ingestion_jobs
                 SET processed_records = %s, failed_records = %s,
                     throughput_per_minute = %s, eta_timestamp = %s,
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = %s
-            """, (processed, failed, throughput, eta, job_id))
+            """,
+                (processed, failed, throughput, eta, job_id),
+            )
 
         self.db.commit()
 
@@ -205,14 +298,14 @@ class UniversalProgressMonitor:
         if not self.live_display:
             return
 
-        context = job_data['context']
-        processed = job_data['processed']
-        failed = job_data['failed']
-        elapsed = time.time() - job_data['start_time']
+        context = job_data["context"]
+        processed = job_data["processed"]
+        failed = job_data["failed"]
+        elapsed = time.time() - job_data["start_time"]
 
         # Calculate metrics
         throughput = processed / max(elapsed / 60, 0.01)
-        total_estimated = context.metadata.get('total_estimated')
+        total_estimated = context.metadata.get("total_estimated")
         progress_percent = (processed / max(total_estimated or processed, 1)) * 100
 
         # Calculate ETA
@@ -228,7 +321,9 @@ class UniversalProgressMonitor:
         table.add_row("🔗 Source:", f"{context.data_source}")
         table.add_row("📋 Table:", f"{context.table_name}")
         table.add_row("👤 Type:", f"{context.record_type}")
-        table.add_row("📈 Progress:", f"{processed}/{total_estimated or processed} ({progress_percent:.1f}%)")
+        table.add_row(
+            "📈 Progress:", f"{processed}/{total_estimated or processed} ({progress_percent:.1f}%)"
+        )
         table.add_row("⚡ Throughput:", f"{throughput:.1f} records/min")
         table.add_row("⏰ ETA:", eta_str)
         table.add_row("❌ Failed:", f"{failed}")
@@ -240,12 +335,15 @@ class UniversalProgressMonitor:
     def get_job_status(self, job_id: int) -> Optional[Dict]:
         """Get current status of a job"""
         cursor = self.db.cursor(cursor_factory=RealDictCursor)
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT id, job_name, data_source, table_name, record_type, status,
                    total_records, processed_records, failed_records,
                    throughput_per_minute, eta_timestamp, started_at, completed_at
             FROM ingestion_jobs WHERE id = %s
-        """, (job_id,))
+        """,
+            (job_id,),
+        )
 
         result = cursor.fetchone()
         return dict(result) if result else None

@@ -36,6 +36,37 @@ class GovInfoCLI:
         self.session = requests.Session()
         self.conn = None
 
+class GovInfoCLI:
+    """
+    GovInfo CLI Tool
+
+    A comprehensive command-line interface for ingesting GovInfo (Government Publishing Office)
+    data into a PostgreSQL database. This class provides ETL functionality for various
+    types of government documents and publications including:
+
+    - Collections (document collections)
+    - Packages (document packages)
+    - Granules (individual documents within packages)
+    - Committee information
+
+    The class handles API rate limiting, error handling, batch processing, and
+    database schema management automatically. GovInfo provides official government
+    documents including bills, laws, regulations, hearings, and more.
+
+    Attributes:
+        api_key (str): GovInfo API key for authentication
+        db_config (dict): PostgreSQL database connection configuration
+        batch_size (int): Number of records to process per batch (default: 50)
+        dry_run (bool): If True, simulates operations without making database changes
+        base_url (str): Base URL for GovInfo API
+        session (requests.Session): Configured HTTP session with authentication
+        conn (psycopg2.connection): Database connection object
+
+    Example:
+        List available collections:
+        >>> cli = GovInfoCLI(api_key="your_key", db_config=config)
+        >>> cli.ingest_collections()
+    """
     def transform_collection(self, collection_data: dict) -> tuple:
         """Transform GovInfo collection data into DB tuple.
         Returns: (code, name, package_count, granule_count, created_at)

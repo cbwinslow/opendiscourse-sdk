@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Optional, Dict, Any
 
 from pydantic import BaseModel, Field, validator, SecretStr
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Environment(str, Enum):
@@ -210,19 +210,20 @@ class Settings(BaseSettings):
     migrations_dir: Path = Field(default=Path("./migrations"), description="Migrations directory")
     data_dir: Path = Field(default=Path("./data"), description="Data directory")
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        env_nested_delimiter = "__"
-        case_sensitive = False
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        env_nested_delimiter="__",
+        case_sensitive=False,
+        extra="ignore"
+    )
 
-        # Allow loading from environment variables
-        @classmethod
-        def parse_env_var(cls, field_name: str, raw_val: str) -> Any:
-            # Handle nested config via __ delimiter
-            if '__' in field_name:
-                return raw_val
-            return cls.json_loads(raw_val) if raw_val else None
+    @classmethod
+    def parse_env_var(cls, field_name: str, raw_val: str) -> Any:
+        # Handle nested config via __ delimiter
+        if '__' in field_name:
+            return raw_val
+        return cls.json_loads(raw_val) if raw_val else None
 
     @classmethod
     def from_env(cls, env_file: Optional[Path] = None) -> "Settings":

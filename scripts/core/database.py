@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Optional, List
 import psycopg2
 from psycopg2 import sql
-from psycopg2.extensions import ISOL ATION_LEVEL_AUTOCOMMIT
+from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
 from scripts.core.config import Settings, get_settings
 

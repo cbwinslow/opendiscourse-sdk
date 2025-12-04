@@ -57,6 +57,45 @@ class MockConnection:
         pass
 
 class OpenStatesCLI:
+    """
+    OpenStates CLI Tool
+
+    A comprehensive command-line interface for ingesting OpenStates (state legislature)
+    data into a PostgreSQL database. This class provides ETL functionality for various
+    types of state legislative data including:
+
+    - People (legislators and officials)
+    - Jurisdictions (states, territories, districts)
+    - Bills and legislation
+    - Committees
+    - Events (hearings, meetings)
+    - Vote events
+    - Organizations
+    - Legislative sessions
+
+    The class handles API rate limiting, error handling, batch processing, and
+    database schema management automatically. It supports both individual state
+    ingestion and bulk ingestion for all states.
+
+    Attributes:
+        api_key (str): OpenStates API key for authentication
+        db_config (dict): PostgreSQL database connection configuration
+        batch_size (int): Number of records to process per batch (default: 20)
+        dry_run (bool): If True, simulates operations without making database changes
+        base_url (str): Base URL for OpenStates API
+        session (requests.Session): Configured HTTP session with authentication
+        manager (IngestionManager): Manages ingestion jobs and progress tracking
+        conn (psycopg2.connection): Database connection object
+
+    Example:
+        Ingest people for California:
+        >>> cli = OpenStatesCLI(api_key="your_key", db_config=config)
+        >>> cli.ingest_people("ca")
+
+        Ingest all states:
+        >>> cli.ingest_all_states()
+    """
+class OpenStatesCLI:
     def __init__(self, api_key: str, db_config: Dict, batch_size: int = 50, dry_run: bool = False):
         self.api_key = api_key
         self.db_config = db_config
@@ -77,6 +116,34 @@ class OpenStatesCLI:
 
     def close_db(self):
         """Close database connection"""
+    def transform_person(self, person_data: Dict) -> tuple:
+        """
+        Transform OpenStates person data from API format to database format.
+
+        Converts raw person data from the OpenStates API into a database-ready tuple
+        for insertion into the openstates.people table. Handles nested objects and
+        JSON serialization of sources data.
+
+        Args:
+            person_data: Raw person data dictionary from API response containing
+                        person information like name, party, role, etc.
+
+        Returns:
+            Tuple containing:
+            - id (str): Unique person identifier from OpenStates
+            - name (str): Full name of the person
+            - given_name (str): First/given name
+            - family_name (str): Last/family name
+            - party (str): Political party affiliation
+            - jurisdiction_id (str): ID of current jurisdiction
+            - sources (str): JSON string of source URLs/references
+            - created_at (datetime): Timestamp of record creation
+
+        Example:
+            >>> data = {'id': 'per001', 'name': 'Jane Doe', 'party': 'Democratic'}
+            >>> result = cli.transform_person(data)
+            >>> print(result[0])  # 'per001'
+        """
         self.manager.close()
 
     def get(self, endpoint: str, params: dict = None) -> Optional[Dict]:
@@ -140,6 +207,40 @@ class OpenStatesCLI:
             bill_data.get('session'),
             json.dumps(bill_data.get('actions', [])),
             datetime.now()
+    def ingest_people(self, jurisdiction: str):
+        """
+        Ingest OpenStates people data for a specific jurisdiction.
+
+        Fetches and processes people (legislators, officials) data from OpenStates API
+        for the specified jurisdiction and stores it in the database. Handles pagination,
+        rate limiting, and database operations automatically.
+
+        Args:
+            jurisdiction: Jurisdiction code (e.g., 'ca' for California, 'tx' for Texas)
+                         Can be state code, territory code, or other jurisdiction identifier
+
+        Process:
+        1. Connects to database
+        2. Starts ingestion job tracking
+        3. Fetches people data from OpenStates API with pagination
+        4. Transforms each person record using transform_person()
+        5. Batch inserts records into openstates.people table
+        6. Handles conflicts with UPSERT logic
+        7. Tracks progress and provides status updates
+
+        Note:
+            - Filters out records without valid IDs
+            - Uses rate limiting (0.1s delays between requests)
+            - Supports dry-run mode for testing
+            - Updates progress in job management system
+
+        Example:
+            >>> cli = OpenStatesCLI(api_key="key", db_config=config)
+            >>> cli.ingest_people("ca")  # Ingest California legislators
+            🚀 Starting OpenStates people ingestion for ca
+            ✅ Processed 120 people (page 1)
+            🎉 Completed: 120 OpenStates people
+        """
         )
 
     def transform_committee(self, comm_data: Dict) -> tuple:

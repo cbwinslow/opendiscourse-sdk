@@ -106,10 +106,8 @@ class Fingerprint(BaseModel):
     updated_at: datetime = Field(default_factory=datetime.now)
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
-    class Config:
-        json_encoders = {
-            datetime: lambda v: v.isoformat()
-        }
+    # Pydantic V2 handles datetime serialization automatically in model_dump_json
+    pass
 
 
 # ============================================================================
