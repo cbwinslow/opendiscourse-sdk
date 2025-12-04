@@ -18,6 +18,8 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
+import psycopg2
+
 # Import rate limiting utilities
 sys.path.append(str(Path(__file__).parent.parent))
 from rate_limiter import rate_limiter

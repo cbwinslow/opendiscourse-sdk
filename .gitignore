@@ -378,7 +378,6 @@ audit/
 # Files that might appear in external repos
 .git
 .gitattributes
-.gitignore
 .gitmodules
 
 # Mercurial
@@ -489,6 +488,7 @@ setup-vectordb.sh
 
 # Test files
 test_setup.sh
+!scripts/setup_env.sh
 
 # Requirements files
 requirements-vectordb.txt

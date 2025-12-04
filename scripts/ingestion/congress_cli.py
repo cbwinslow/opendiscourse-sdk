@@ -17,6 +17,14 @@ from pathlib import Path
 
 # Add project root to path
 sys.path.append(str(Path(__file__).parent.parent.parent))
+# Add script directory to path to allow importing rate_limiter
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from rate_limiter import rate_limiter
+try:
+    from utils import resource_manager
+except ImportError:
+    sys.path.append(os.path.join(os.path.dirname(__file__), '../utils'))
+    import resource_manager
 
 class CongressCLI:
     def __init__(self, api_key: str, db_config: Dict, batch_size: int = 50, dry_run: bool = False):
@@ -47,15 +55,41 @@ class CongressCLI:
             self.conn.close()
 
     def get(self, endpoint: str, params: dict = None) -> Optional[Dict]:
-        """Make GET request with error handling"""
+        """Make GET request with error handling and exponential backoff"""
         url = f"{self.base_url}{endpoint}"
-        try:
-            response = self.session.get(url, params=params)
-            response.raise_for_status()
-            return response.json()
-        except requests.exceptions.RequestException as e:
-            print(f"❌ API request failed: {e}")
-            return None
+        max_retries = 3
+        base_delay = 2.0
+
+        for attempt in range(max_retries + 1):
+            try:
+                # Rate limiting
+                rate_limiter.wait("congress.gov")
+                response = self.session.get(url, params=params)
+
+                if response.status_code == 429:
+                    if attempt < max_retries:
+                        delay = base_delay * (2 ** attempt)
+                        print(f"⏳ Rate limited (429), retry {attempt + 1}/{max_retries} after {delay}s...")
+                        time.sleep(delay)
+                        continue
+                    else:
+                        print(f"❌ Max retries exceeded for rate limit")
+                        return None
+
+                response.raise_for_status()
+                return response.json()
+
+            except requests.exceptions.RequestException as e:
+                if attempt < max_retries:
+                    delay = base_delay * (2 ** attempt)
+                    print(f"⚠️ API request failed (attempt {attempt + 1}/{max_retries}): {e}")
+                    print(f"⏳ Retrying in {delay}s...")
+                    time.sleep(delay)
+                else:
+                    print(f"❌ API request failed after {max_retries} retries: {e}")
+                    return None
+
+        return None
 
     def transform_member(self, member_data: Dict, congress: int) -> tuple:
         """Transform congress member data"""
@@ -1309,8 +1343,471 @@ class CongressCLI:
 
             time.sleep(0.1)
 
+    def ingest_committee_reports(self, congress: int):
+        """Ingest committee reports"""
+        print(f"🚀 Starting Congress {congress} committee reports ingestion")
+        if not self.connect_db(): return
+
+        offset = 0
+        total_processed = 0
+        while True:
+            params = {'congress': congress, 'limit': self.batch_size, 'offset': offset}
+            data = self.get("/committee-report", params)
+            if not data or not data.get('committeeReports'): break
+
+            reports = []
+            for item in data['committeeReports']:
+                reports.append((
+                    congress,
+                    item.get('chamber', '').lower(),
+                    item.get('committee', {}).get('systemCode'),
+                    item.get('type'),
+                    item.get('number'),
+                    item.get('title'),
+                    item.get('citation'),
+                    item.get('date'),
+                    item.get('text', {}).get('count') if isinstance(item.get('text'), dict) else None, # Placeholder for text content if available
+                    item.get('url'), # PDF URL often in format
+                    datetime.now()
+                ))
+
+            if reports:
+                query = """
+                INSERT INTO congress.committee_reports
+                (congress_number, chamber_code, committee_id, report_type, report_number, title, citation, date, text, pdf_url, created_at)
+                VALUES %s
+                ON CONFLICT (congress_number, report_type, report_number) DO UPDATE SET
+                    title = EXCLUDED.title,
+                    citation = EXCLUDED.citation,
+                    date = EXCLUDED.date,
+                    pdf_url = EXCLUDED.pdf_url,
+                    updated_at = now()
+                """
+                if self.dry_run:
+                    print(f"🔍 DRY RUN: {len(reports)} reports")
+                    total_processed += len(reports)
+                else:
+                    cursor = self.conn.cursor()
+                    try:
+                        from psycopg2.extras import execute_values
+                        execute_values(cursor, query, reports)
+                        self.conn.commit()
+                        total_processed += len(reports)
+                    except Exception as e:
+                        print(f"❌ Batch insert failed: {e}")
+                        self.conn.rollback()
+                    finally:
+                        cursor.close()
+
+            offset += self.batch_size
+            time.sleep(0.1)
+
         self.close_db()
-        print(f"🎉 Completed: {total_processed} committee members")
+        print(f"🎉 Completed: {total_processed} committee reports")
+
+    def ingest_committee_prints(self, congress: int):
+        """Ingest committee prints"""
+        print(f"🚀 Starting Congress {congress} committee prints ingestion")
+        if not self.connect_db(): return
+
+        offset = 0
+        total_processed = 0
+        while True:
+            params = {'congress': congress, 'limit': self.batch_size, 'offset': offset}
+            data = self.get("/committee-print", params)
+            if not data or not data.get('committeePrints'): break
+
+            prints = []
+            for item in data['committeePrints']:
+                prints.append((
+                    congress,
+                    item.get('chamber', '').lower(),
+                    item.get('committee', {}).get('systemCode'),
+                    item.get('number'),
+                    item.get('title'),
+                    item.get('date'),
+                    item.get('url'),
+                    datetime.now()
+                ))
+
+            if prints:
+                query = """
+                INSERT INTO congress.committee_prints
+                (congress_number, chamber_code, committee_id, print_number, title, date, pdf_url, created_at)
+                VALUES %s
+                ON CONFLICT (congress_number, chamber_code, print_number) DO UPDATE SET
+                    title = EXCLUDED.title,
+                    date = EXCLUDED.date,
+                    pdf_url = EXCLUDED.pdf_url,
+                    updated_at = now()
+                """
+                if self.dry_run:
+                    print(f"🔍 DRY RUN: {len(prints)} prints")
+                    total_processed += len(prints)
+                else:
+                    cursor = self.conn.cursor()
+                    try:
+                        from psycopg2.extras import execute_values
+                        execute_values(cursor, query, prints)
+                        self.conn.commit()
+                        total_processed += len(prints)
+                    except Exception as e:
+                        print(f"❌ Batch insert failed: {e}")
+                        self.conn.rollback()
+                    finally:
+                        cursor.close()
+
+            offset += self.batch_size
+            time.sleep(0.1)
+
+        self.close_db()
+        print(f"🎉 Completed: {total_processed} committee prints")
+
+    def ingest_hearings(self, congress: int):
+        """Ingest hearings"""
+        print(f"🚀 Starting Congress {congress} hearings ingestion")
+        if not self.connect_db(): return
+
+        offset = 0
+        total_processed = 0
+        while True:
+            params = {'congress': congress, 'limit': self.batch_size, 'offset': offset}
+            data = self.get("/hearing", params)
+            if not data or not data.get('hearings'): break
+
+            hearings = []
+            for item in data['hearings']:
+                hearings.append((
+                    congress,
+                    item.get('chamber', '').lower(),
+                    item.get('committee', {}).get('systemCode'),
+                    item.get('number'),
+                    item.get('title'),
+                    item.get('date'),
+                    item.get('url'),
+                    datetime.now()
+                ))
+
+            if hearings:
+                query = """
+                INSERT INTO congress.hearings
+                (congress_number, chamber_code, committee_id, hearing_number, title, date, pdf_url, created_at)
+                VALUES %s
+                ON CONFLICT (congress_number, chamber_code, hearing_number) DO UPDATE SET
+                    title = EXCLUDED.title,
+                    date = EXCLUDED.date,
+                    pdf_url = EXCLUDED.pdf_url,
+                    updated_at = now()
+                """
+                if self.dry_run:
+                    print(f"🔍 DRY RUN: {len(hearings)} hearings")
+                    total_processed += len(hearings)
+                else:
+                    cursor = self.conn.cursor()
+                    try:
+                        from psycopg2.extras import execute_values
+                        execute_values(cursor, query, hearings)
+                        self.conn.commit()
+                        total_processed += len(hearings)
+                    except Exception as e:
+                        print(f"❌ Batch insert failed: {e}")
+                        self.conn.rollback()
+                    finally:
+                        cursor.close()
+
+            offset += self.batch_size
+            time.sleep(0.1)
+
+        self.close_db()
+        print(f"🎉 Completed: {total_processed} hearings")
+
+    def ingest_congressional_record(self):
+        """Ingest daily congressional record"""
+        print(f"🚀 Starting Congressional Record ingestion")
+        if not self.connect_db(): return
+
+        # Note: API endpoint is /daily-congressional-record
+        offset = 0
+        total_processed = 0
+        while True:
+            params = {'limit': self.batch_size, 'offset': offset}
+            data = self.get("/daily-congressional-record", params)
+            if not data or not data.get('dailyCongressionalRecord'): break
+
+            records = []
+            for item in data['dailyCongressionalRecord']:
+                records.append((
+                    item.get('congress'),
+                    item.get('sessionNumber'),
+                    item.get('volumeNumber'),
+                    item.get('issueNumber'),
+                    item.get('issueDate'),
+                    item.get('fullText', {}).get('url'), # Assuming structure
+                    datetime.now()
+                ))
+
+            if records:
+                query = """
+                INSERT INTO congress.congressional_record
+                (congress_number, session_number, volume, issue, date, pdf_url, created_at)
+                VALUES %s
+                ON CONFLICT (volume, issue) DO UPDATE SET
+                    date = EXCLUDED.date,
+                    pdf_url = EXCLUDED.pdf_url,
+                    updated_at = now()
+                """
+                if self.dry_run:
+                    print(f"🔍 DRY RUN: {len(records)} records")
+                    total_processed += len(records)
+                else:
+                    cursor = self.conn.cursor()
+                    try:
+                        from psycopg2.extras import execute_values
+                        execute_values(cursor, query, records)
+                        self.conn.commit()
+                        total_processed += len(records)
+                    except Exception as e:
+                        print(f"❌ Batch insert failed: {e}")
+                        self.conn.rollback()
+                    finally:
+                        cursor.close()
+
+            offset += self.batch_size
+            time.sleep(0.1)
+
+        self.close_db()
+        print(f"🎉 Completed: {total_processed} congressional records")
+
+    def ingest_nominations(self, congress: int):
+        """Ingest nominations"""
+        print(f"🚀 Starting Congress {congress} nominations ingestion")
+        if not self.connect_db(): return
+
+        offset = 0
+        total_processed = 0
+        while True:
+            params = {'congress': congress, 'limit': self.batch_size, 'offset': offset}
+            data = self.get("/nomination", params)
+            if not data or not data.get('nominations'): break
+
+            nominations = []
+            for item in data['nominations']:
+                nominations.append((
+                    congress,
+                    item.get('number'),
+                    item.get('receivedDate'),
+                    item.get('description'),
+                    item.get('committee', {}).get('systemCode'), # Assuming structure
+                    item.get('latestAction', {}).get('actionDate'),
+                    item.get('latestAction', {}).get('text'),
+                    datetime.now()
+                ))
+
+            if nominations:
+                query = """
+                INSERT INTO congress.nominations
+                (congress_number, nomination_number, received_date, description, committee_id, latest_action_date, latest_action_text, created_at)
+                VALUES %s
+                ON CONFLICT (congress_number, nomination_number) DO UPDATE SET
+                    description = EXCLUDED.description,
+                    latest_action_date = EXCLUDED.latest_action_date,
+                    latest_action_text = EXCLUDED.latest_action_text,
+                    updated_at = now()
+                """
+                if self.dry_run:
+                    print(f"🔍 DRY RUN: {len(nominations)} nominations")
+                    total_processed += len(nominations)
+                else:
+                    cursor = self.conn.cursor()
+                    try:
+                        from psycopg2.extras import execute_values
+                        execute_values(cursor, query, nominations)
+                        self.conn.commit()
+                        total_processed += len(nominations)
+                    except Exception as e:
+                        print(f"❌ Batch insert failed: {e}")
+                        self.conn.rollback()
+                    finally:
+                        cursor.close()
+
+            offset += self.batch_size
+            time.sleep(0.1)
+
+        self.close_db()
+        print(f"🎉 Completed: {total_processed} nominations")
+
+    def ingest_treaties(self, congress: int):
+        """Ingest treaties"""
+        print(f"🚀 Starting Congress {congress} treaties ingestion")
+        if not self.connect_db(): return
+
+        offset = 0
+        total_processed = 0
+        while True:
+            params = {'congress': congress, 'limit': self.batch_size, 'offset': offset}
+            data = self.get("/treaty", params)
+            if not data or not data.get('treaties'): break
+
+            treaties = []
+            for item in data['treaties']:
+                treaties.append((
+                    congress,
+                    item.get('number'),
+                    item.get('receivedDate'), # Check API for field name
+                    item.get('topic'),
+                    datetime.now()
+                ))
+
+            if treaties:
+                query = """
+                INSERT INTO congress.treaties
+                (congress_number, treaty_number, received_date, topic, created_at)
+                VALUES %s
+                ON CONFLICT (congress_number, treaty_number) DO UPDATE SET
+                    topic = EXCLUDED.topic,
+                    updated_at = now()
+                """
+                if self.dry_run:
+                    print(f"🔍 DRY RUN: {len(treaties)} treaties")
+                    total_processed += len(treaties)
+                else:
+                    cursor = self.conn.cursor()
+                    try:
+                        from psycopg2.extras import execute_values
+                        execute_values(cursor, query, treaties)
+                        self.conn.commit()
+                        total_processed += len(treaties)
+                    except Exception as e:
+                        print(f"❌ Batch insert failed: {e}")
+                        self.conn.rollback()
+                    finally:
+                        cursor.close()
+
+            offset += self.batch_size
+            time.sleep(0.1)
+
+        self.close_db()
+        print(f"🎉 Completed: {total_processed} treaties")
+
+    def ingest_house_communications(self, congress: int):
+        """Ingest House communications"""
+        print(f"🚀 Starting Congress {congress} House communications ingestion")
+        if not self.connect_db(): return
+
+        offset = 0
+        total_processed = 0
+        while True:
+            params = {'congress': congress, 'limit': self.batch_size, 'offset': offset}
+            data = self.get("/house-communication", params)
+            if not data or not data.get('houseCommunications'): break
+
+            comms = []
+            for item in data['houseCommunications']:
+                comms.append((
+                    congress,
+                    item.get('number'),
+                    item.get('communicationType', {}).get('code'), # Assuming structure
+                    datetime.now()
+                ))
+
+            if comms:
+                query = """
+                INSERT INTO congress.house_communications
+                (congress_number, communication_number, description, created_at)
+                VALUES %s
+                ON CONFLICT (congress_number, communication_number) DO UPDATE SET
+                    description = EXCLUDED.description,
+                    updated_at = now()
+                """
+                # Note: Schema has description, but API might return type/code. Adjusting query to match schema.
+                # Re-mapping:
+                # item.get('communicationType', {}).get('name') -> description?
+
+                # Let's rebuild comms list with correct mapping
+                comms = []
+                for item in data['houseCommunications']:
+                     comms.append((
+                        congress,
+                        item.get('number'),
+                        item.get('communicationType', {}).get('name'),
+                        datetime.now()
+                    ))
+
+                if self.dry_run:
+                    print(f"🔍 DRY RUN: {len(comms)} communications")
+                    total_processed += len(comms)
+                else:
+                    cursor = self.conn.cursor()
+                    try:
+                        from psycopg2.extras import execute_values
+                        execute_values(cursor, query, comms)
+                        self.conn.commit()
+                        total_processed += len(comms)
+                    except Exception as e:
+                        print(f"❌ Batch insert failed: {e}")
+                        self.conn.rollback()
+                    finally:
+                        cursor.close()
+
+            offset += self.batch_size
+            time.sleep(0.1)
+
+        self.close_db()
+        print(f"🎉 Completed: {total_processed} House communications")
+
+    def ingest_senate_communications(self, congress: int):
+        """Ingest Senate communications"""
+        print(f"🚀 Starting Congress {congress} Senate communications ingestion")
+        if not self.connect_db(): return
+
+        offset = 0
+        total_processed = 0
+        while True:
+            params = {'congress': congress, 'limit': self.batch_size, 'offset': offset}
+            data = self.get("/senate-communication", params)
+            if not data or not data.get('senateCommunications'): break
+
+            comms = []
+            for item in data['senateCommunications']:
+                comms.append((
+                    congress,
+                    item.get('number'),
+                    item.get('communicationType', {}).get('name'),
+                    datetime.now()
+                ))
+
+            if comms:
+                query = """
+                INSERT INTO congress.senate_communications
+                (congress_number, communication_number, description, created_at)
+                VALUES %s
+                ON CONFLICT (congress_number, communication_number) DO UPDATE SET
+                    description = EXCLUDED.description,
+                    updated_at = now()
+                """
+                if self.dry_run:
+                    print(f"🔍 DRY RUN: {len(comms)} communications")
+                    total_processed += len(comms)
+                else:
+                    cursor = self.conn.cursor()
+                    try:
+                        from psycopg2.extras import execute_values
+                        execute_values(cursor, query, comms)
+                        self.conn.commit()
+                        total_processed += len(comms)
+                    except Exception as e:
+                        print(f"❌ Batch insert failed: {e}")
+                        self.conn.rollback()
+                    finally:
+                        cursor.close()
+
+            offset += self.batch_size
+            time.sleep(0.1)
+
+        self.close_db()
+        print(f"🎉 Completed: {total_processed} Senate communications")
+
+
 
     def status(self):
         """Show Congress data status"""
@@ -1418,6 +1915,37 @@ def main():
     comm_mem_parser = subparsers.add_parser('ingest-committee-members', help='Ingest committee members')
     comm_mem_parser.add_argument('congress', type=int, help='Congress number')
 
+    # Ingest Committee Reports
+    reports_parser = subparsers.add_parser('ingest-committee-reports', help='Ingest committee reports')
+    reports_parser.add_argument('congress', type=int, help='Congress number')
+
+    # Ingest Committee Prints
+    prints_parser = subparsers.add_parser('ingest-committee-prints', help='Ingest committee prints')
+    prints_parser.add_argument('congress', type=int, help='Congress number')
+
+    # Ingest Hearings
+    hearings_parser = subparsers.add_parser('ingest-hearings', help='Ingest hearings')
+    hearings_parser.add_argument('congress', type=int, help='Congress number')
+
+    # Ingest Congressional Record
+    subparsers.add_parser('ingest-congressional-record', help='Ingest congressional record')
+
+    # Ingest Nominations
+    nom_parser = subparsers.add_parser('ingest-nominations', help='Ingest nominations')
+    nom_parser.add_argument('congress', type=int, help='Congress number')
+
+    # Ingest Treaties
+    treaty_parser = subparsers.add_parser('ingest-treaties', help='Ingest treaties')
+    treaty_parser.add_argument('congress', type=int, help='Congress number')
+
+    # Ingest House Communications
+    hcomm_parser = subparsers.add_parser('ingest-house-communications', help='Ingest House communications')
+    hcomm_parser.add_argument('congress', type=int, help='Congress number')
+
+    # Ingest Senate Communications
+    scomm_parser = subparsers.add_parser('ingest-senate-communications', help='Ingest Senate communications')
+    scomm_parser.add_argument('congress', type=int, help='Congress number')
+
     # Status
     subparsers.add_parser('status', help='Show status')
 
@@ -1428,7 +1956,7 @@ def main():
 
     args = parser.parse_args()
 
-    api_key = os.getenv('CONGRESS_GOV_API_KEY') or os.getenv('CONGRESS_API_KEY')
+    api_key = resource_manager.CONGRESS_API_KEY
     if not api_key:
         print("❌ CONGRESS_GOV_API_KEY or CONGRESS_API_KEY environment variable required")
         return
@@ -1471,6 +1999,22 @@ def main():
         cli.ingest_bill_details(args.congress, 'related')
     elif args.command == 'ingest-committee-members':
         cli.ingest_committee_members(args.congress)
+    elif args.command == 'ingest-committee-reports':
+        cli.ingest_committee_reports(args.congress)
+    elif args.command == 'ingest-committee-prints':
+        cli.ingest_committee_prints(args.congress)
+    elif args.command == 'ingest-hearings':
+        cli.ingest_hearings(args.congress)
+    elif args.command == 'ingest-congressional-record':
+        cli.ingest_congressional_record()
+    elif args.command == 'ingest-nominations':
+        cli.ingest_nominations(args.congress)
+    elif args.command == 'ingest-treaties':
+        cli.ingest_treaties(args.congress)
+    elif args.command == 'ingest-house-communications':
+        cli.ingest_house_communications(args.congress)
+    elif args.command == 'ingest-senate-communications':
+        cli.ingest_senate_communications(args.congress)
     elif args.command == 'ingest-bill-details':
         cli.ingest_bill_details(args.congress, args.type)
     elif args.command == 'status':

@@ -17,6 +17,14 @@ from pathlib import Path
 
 # Add project root to path
 sys.path.append(str(Path(__file__).parent.parent.parent))
+# Add script directory to path to allow importing rate_limiter
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from rate_limiter import rate_limiter
+try:
+    from utils import resource_manager
+except ImportError:
+    sys.path.append(os.path.join(os.path.dirname(__file__), '../utils'))
+    import resource_manager
 
 class GovInfoCLI:
     def __init__(self, api_key: str, db_config: Dict, batch_size: int = 50, dry_run: bool = False):
@@ -110,19 +118,45 @@ class GovInfoCLI:
             self.conn.close()
 
     def get(self, endpoint: str, params: dict = None) -> Optional[Dict]:
-        """Make GET request with error handling"""
+        """Make GET request with error handling and exponential backoff"""
         url = f"{self.base_url}{endpoint}"
         if params is None:
             params = {}
         params['api_key'] = self.api_key
 
-        try:
-            response = self.session.get(url, params=params)
-            response.raise_for_status()
-            return response.json()
-        except requests.exceptions.RequestException as e:
-            print(f"❌ API request failed: {e}")
-            return None
+        max_retries = 3
+        base_delay = 2.0
+
+        for attempt in range(max_retries + 1):
+            try:
+                # Rate limiting
+                rate_limiter.wait("govinfo.gov")
+                response = self.session.get(url, params=params)
+
+                if response.status_code == 429:
+                    if attempt < max_retries:
+                        delay = base_delay * (2 ** attempt)
+                        print(f"⏳ Rate limited (429), retry {attempt + 1}/{max_retries} after {delay}s...")
+                        time.sleep(delay)
+                        continue
+                    else:
+                        print(f"❌ Max retries exceeded for rate limit")
+                        return None
+
+                response.raise_for_status()
+                return response.json()
+
+            except requests.exceptions.RequestException as e:
+                if attempt < max_retries:
+                    delay = base_delay * (2 ** attempt)
+                    print(f"⚠️ API request failed (attempt {attempt + 1}/{max_retries}): {e}")
+                    print(f"⏳ Retrying in {delay}s...")
+                    time.sleep(delay)
+                else:
+                    print(f"❌ API request failed after {max_retries} retries: {e}")
+                    return None
+
+        return None
 
     def ingest_collections(self):
         """Ingest available collections"""
@@ -399,12 +433,18 @@ def main():
     comm_parser.add_argument('start_date', help='Start date (YYYY-MM-DD)')
     comm_parser.add_argument('--end-date', help='End date (YYYY-MM-DD)')
 
+    # Ingest Collection (bulk packages)
+    coll_parser = subparsers.add_parser('ingest-collection', help='Ingest all packages from a collection')
+    coll_parser.add_argument('collection', help='Collection code (e.g., BILLS, FR)')
+    coll_parser.add_argument('--start-date', help='Start date (YYYY-MM-DD)', default='2005-01-01')
+    coll_parser.add_argument('--end-date', help='End date (YYYY-MM-DD)')
+
     # Status
     subparsers.add_parser('status', help='Show status')
 
     args = parser.parse_args()
 
-    api_key = os.getenv('GOVINFO_API_KEY')
+    api_key = resource_manager.GOVINFO_API_KEY
     if not api_key:
         print("❌ GOVINFO_API_KEY environment variable required")
         return
@@ -419,6 +459,8 @@ def main():
 
     if args.command == 'ingest-collections':
         cli.ingest_collections()
+    elif args.command == 'ingest-collection':
+        cli.ingest_packages(args.collection, args.start_date, args.end_date)
     elif args.command == 'ingest-packages':
         cli.ingest_packages(args.collection, args.start_date, args.end_date)
     elif args.command == 'ingest-granules':
@@ -426,6 +468,7 @@ def main():
     elif args.command == 'ingest-committees':
         cli.ingest_committees(args.start_date, args.end_date)
     elif args.command == 'status':
+        cli.status()
         cli.status()
 
 if __name__ == "__main__":

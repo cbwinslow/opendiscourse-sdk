@@ -28,6 +28,11 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 # Import rate limiting utilities
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from rate_limiter import rate_limiter
+try:
+    from utils import resource_manager
+except ImportError:
+    sys.path.append(os.path.join(os.path.dirname(__file__), '../utils'))
+    import resource_manager
 
 from ingestion_manager import IngestionManager
 
@@ -324,9 +329,10 @@ class OpenStatesCLI:
         self.manager.complete_job("completed", {"total_processed": len(jurisdictions) if 'jurisdictions' in locals() else 0})
         self.close_db()
 
-    def ingest_bills(self, jurisdiction: str):
+    def ingest_bills(self, jurisdiction: str, years_back: int = None):
         """Ingest OpenStates bills"""
-        print(f"🚀 Starting OpenStates bills ingestion for {jurisdiction}")
+        years_msg = f" ({years_back} years back)" if years_back else ""
+        print(f"🚀 Starting OpenStates bills ingestion for {jurisdiction}{years_msg}")
 
         if not self.connect_db():
             return
@@ -358,6 +364,11 @@ class OpenStatesCLI:
 
         while True:
             params = {'jurisdiction': jurisdiction, 'page': page, 'per_page': self.batch_size}
+            if years_back:
+                # Calculate created_since date
+                from datetime import timedelta
+                since_date = (datetime.now() - timedelta(days=years_back*365)).strftime('%Y-%m-%d')
+                params['created_since'] = since_date
             data = self.get("/bills", params)
 
             if not data or not data.get('results'):
@@ -949,6 +960,7 @@ def main():
     # Ingest Bills
     bills_parser = subparsers.add_parser('ingest-bills', help='Ingest bills')
     bills_parser.add_argument('jurisdiction', help='Jurisdiction code (e.g., ca, tx)')
+    bills_parser.add_argument('--years-back', type=int, help='Number of years of historical data to fetch')
 
     # Ingest Committees
     comm_parser = subparsers.add_parser('ingest-committees', help='Ingest committees')
@@ -978,7 +990,7 @@ def main():
 
     args = parser.parse_args()
 
-    api_key = os.getenv('OPENSTATES_API_KEY')
+    api_key = resource_manager.OPENSTATES_API_KEY
     if not api_key:
         print("❌ OPENSTATES_API_KEY environment variable required")
         return
@@ -996,7 +1008,7 @@ def main():
     elif args.command == 'ingest-jurisdictions':
         cli.ingest_jurisdictions()
     elif args.command == 'ingest-bills':
-        cli.ingest_bills(args.jurisdiction)
+        cli.ingest_bills(args.jurisdiction, getattr(args, 'years_back', None))
     elif args.command == 'ingest-committees':
         cli.ingest_committees(args.jurisdiction)
     elif args.command == 'ingest-events':

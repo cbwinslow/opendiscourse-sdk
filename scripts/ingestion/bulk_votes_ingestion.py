@@ -100,7 +100,20 @@ class BulkVotesIngestor:
     def connect_database(self):
         """Connect to PostgreSQL database"""
         try:
-            self.db_conn = psycopg2.connect(self.config.database_url)
+            # Parse database URL for connection parameters
+            if self.config.database_url.startswith("postgresql://"):
+                # Handle Unix socket connection format
+                if "/var/run/postgresql" in self.config.database_url:
+                    self.db_conn = psycopg2.connect(
+                        host="/var/run/postgresql",
+                        user="cbwinslow",
+                        database="opendiscourse",
+                    )
+                else:
+                    self.db_conn = psycopg2.connect(self.config.database_url)
+            else:
+                self.db_conn = psycopg2.connect(self.config.database_url)
+
             self.db_conn.autocommit = False
             logger.info("Database connection established")
         except Exception as e:
@@ -215,7 +228,7 @@ class BulkVotesIngestor:
 
             while True:
                 try:
-                    # Get votes list
+                    # Try Congress.gov API first
                     url = f"{base_url}/roll-call-votes/{congress}/{ch}"
                     params = {
                         "limit": min(self.config.batch_size, 250),  # API limit
@@ -228,47 +241,62 @@ class BulkVotesIngestor:
                         params=params,
                         timeout=self.config.request_timeout,
                     )
-                    response.raise_for_status()
 
-                    data = response.json()
-                    votes = data.get("rollCallVotes", [])
+                    if response.status_code == 200:
+                        data = response.json()
+                        votes = data.get("rollCallVotes", [])
 
-                    if not votes:
-                        break
+                        if not votes:
+                            break
 
-                    # Process votes in batch
-                    batch_data = []
-                    position_data = []
+                        # Process votes in batch
+                        batch_data = []
+                        position_data = []
 
-                    for vote in votes:
-                        vote_data, positions = self._process_congress_vote(
-                            vote, congress, ch
+                        for vote in votes:
+                            vote_data, positions = self._process_congress_vote(
+                                vote, congress, ch
+                            )
+                            if vote_data:
+                                batch_data.append(vote_data)
+                                position_data.extend(positions)
+
+                        # Insert batch
+                        if batch_data:
+                            self._insert_votes_batch(
+                                batch_data, position_data, "congress"
+                            )
+                            ingested_count += len(batch_data)
+                            logger.info(
+                                f"Congress.gov {ch}: Processed {ingested_count} votes"
+                            )
+
+                        # Check limits
+                        if limit and ingested_count >= limit:
+                            break
+
+                        # Check pagination
+                        pagination = data.get("pagination", {})
+                        if offset >= pagination.get("count", 0):
+                            break
+
+                        offset += len(votes)
+
+                        # Rate limiting
+                        time.sleep(0.1)
+
+                    elif response.status_code == 404:
+                        logger.warning(
+                            f"Congress.gov API endpoint not available for {ch} votes, trying House Clerk data"
                         )
-                        if vote_data:
-                            batch_data.append(vote_data)
-                            position_data.extend(positions)
-
-                    # Insert batch
-                    if batch_data:
-                        self._insert_votes_batch(batch_data, position_data, "congress")
-                        ingested_count += len(batch_data)
-                        logger.info(
-                            f"Congress.gov {ch}: Processed {ingested_count} votes"
-                        )
-
-                    # Check limits
-                    if limit and ingested_count >= limit:
+                        # Fall back to House Clerk data for House votes
+                        if ch == "house":
+                            ingested_count += self._ingest_house_clerk_votes(
+                                congress, limit - ingested_count if limit else None
+                            )
                         break
-
-                    # Check pagination
-                    pagination = data.get("pagination", {})
-                    if offset >= pagination.get("count", 0):
-                        break
-
-                    offset += len(votes)
-
-                    # Rate limiting
-                    time.sleep(0.1)
+                    else:
+                        response.raise_for_status()
 
                 except Exception as e:
                     logger.error(f"Error in Congress.gov {ch} votes ingestion: {e}")
@@ -276,6 +304,171 @@ class BulkVotesIngestor:
 
         self.stats["by_source"]["congress"] = ingested_count
         logger.info(f"Congress.gov votes ingestion completed: {ingested_count} votes")
+        return ingested_count
+
+    def ingest_house_clerk_votes(
+        self, congress: int, limit: Optional[int] = None
+    ) -> int:
+        """Ingest House roll call votes from House Clerk XML data"""
+        logger.info(f"Starting House Clerk votes ingestion for Congress {congress}")
+
+        ingested_count = 0
+        year = 2024  # Current session year
+
+        # Get recent roll call votes from House Clerk
+        base_url = "http://clerk.house.gov/cgi-bin/vote.asp"
+
+        # Start from most recent and work backwards
+        roll_number = 600  # Start with a high number and work down
+
+        while ingested_count < (limit or 1000) and roll_number > 0:
+            try:
+                url = f"{base_url}?year={year}&rollnumber={roll_number}"
+
+                response = self.session.get(url, timeout=self.config.request_timeout)
+                response.raise_for_status()
+
+                # Parse XML response
+                import xml.etree.ElementTree as ET
+
+                root = ET.fromstring(response.text)
+
+                # Extract vote metadata
+                vote_metadata = root.find("vote-metadata")
+                if vote_metadata is None:
+                    roll_number -= 1
+                    continue
+
+                congress_num = int(vote_metadata.find("congress").text)
+                if congress_num != congress:
+                    roll_number -= 1
+                    continue
+
+                chamber = vote_metadata.find("chamber").text
+                roll_call_num = int(vote_metadata.find("rollcall-num").text)
+                vote_question = vote_metadata.find("vote-question").text
+                vote_result = vote_metadata.find("vote-result").text
+                action_date = self._parse_date(vote_metadata.find("action-date").text)
+                action_time = self._parse_time(vote_metadata.find("action-time").text)
+                vote_desc = vote_metadata.find("vote-desc").text
+
+                # Extract vote totals
+                vote_totals = vote_metadata.find("vote-totals")
+                yeas = int(vote_totals.find("totals-by-vote/yea-total").text)
+                nays = int(vote_totals.find("totals-by-vote/nay-total").text)
+                present = int(vote_totals.find("totals-by-vote/present-total").text)
+                not_voting = int(
+                    vote_totals.find("totals-by-vote/not-voting-total").text
+                )
+
+                # Extract party positions
+                democratic_position = None
+                republican_position = None
+                for party_total in vote_totals.findall("totals-by-party"):
+                    party = party_total.find("party").text
+                    if party == "Democratic":
+                        democratic_position = (
+                            party_total.find("yea-total").text
+                            > party_total.find("nay-total").text
+                        )
+                    elif party == "Republican":
+                        republican_position = (
+                            party_total.find("yea-total").text
+                            > party_total.find("nay-total").text
+                        )
+
+                # Extract bill info
+                legis_num = vote_metadata.find("legis-num").text
+                if legis_num:
+                    # Parse bill number (e.g., "H R 10545" -> HR10545)
+                    parts = legis_num.split()
+                    if len(parts) >= 2:
+                        bill_type = parts[0]
+                        bill_number_str = parts[1]
+                        try:
+                            bill_number = int(bill_number_str)
+                        except ValueError:
+                            bill_number = None
+                    else:
+                        bill_type = None
+                        bill_number = None
+                else:
+                    bill_type = None
+                    bill_number = None
+
+                # Create vote data
+                vote_data = {
+                    "vote_id": f"{congress}-house-{roll_call_num}",
+                    "congress_number": congress,
+                    "session": None,  # House Clerk doesn't provide session
+                    "chamber": "House",
+                    "roll_call_number": roll_call_num,
+                    "vote_date": action_date,
+                    "vote_time": action_time,
+                    "vote_question": vote_question,
+                    "vote_description": vote_desc,
+                    "vote_type": "Roll Call Vote",
+                    "vote_result": vote_result,
+                    "yeas": yeas,
+                    "nays": nays,
+                    "present": present,
+                    "not_voting": not_voting,
+                    "democratic_position": "Yea" if democratic_position else "Nay",
+                    "republican_position": "Yea" if republican_position else "Nay",
+                    "bill_id": f"{bill_type}{bill_number}-{congress}"
+                    if bill_type and bill_number
+                    else None,
+                    "amendment_number": None,
+                    "nomination_number": None,
+                    "source": "house-clerk",
+                    "raw_data": response.text,
+                }
+
+                # Extract vote positions
+                position_data = []
+                vote_data_elem = root.find("vote-data")
+                if vote_data_elem is not None:
+                    for recorded_vote in vote_data_elem.findall("recorded-vote"):
+                        legislator_elem = recorded_vote.find("legislator")
+                        if legislator_elem is not None:
+                            name_id = legislator_elem.get("name-id")
+                            member_name = legislator_elem.get("unaccented-name")
+                            party = legislator_elem.get("party")
+                            state = legislator_elem.get("state")
+                            vote_position = recorded_vote.find("vote").text
+
+                            position_data.append(
+                                {
+                                    "vote_id": vote_data["vote_id"],
+                                    "member_bioguide_id": name_id,
+                                    "member_name": member_name,
+                                    "member_party": party,
+                                    "member_state": state,
+                                    "vote_position": vote_position,
+                                    "vote_reason": None,
+                                }
+                            )
+
+                # Insert batch
+                self._insert_votes_batch([vote_data], position_data, "house-clerk")
+                ingested_count += 1
+
+                logger.info(f"House Clerk: Processed roll call {roll_call_num}")
+
+                # Rate limiting
+                time.sleep(0.2)
+
+                roll_number -= 1
+
+            except Exception as e:
+                logger.error(
+                    f"Error processing House Clerk roll call {roll_number}: {e}"
+                )
+                roll_number -= 1
+                continue
+
+        self.stats["by_source"]["house-clerk"] = ingested_count
+        logger.info(f"House Clerk votes ingestion completed: {ingested_count} votes")
         return ingested_count
 
     def ingest_govinfo_votes(
@@ -297,10 +490,16 @@ class BulkVotesIngestor:
             current_year = datetime.now().year
             url = f"{base_url}/collections/{collection}/{current_year}"
 
-            params = {"pageSize": min(self.config.batch_size, 100), "offset": 0}
+            params = {
+                "pageSize": min(self.config.batch_size, 100),
+                "offset": ingested_count,
+            }
 
             response = self.session.get(
-                url, headers=headers, params=params, timeout=self.config.request_timeout
+                url,
+                headers=headers,
+                params=params,
+                timeout=self.config.request_timeout,
             )
             response.raise_for_status()
 

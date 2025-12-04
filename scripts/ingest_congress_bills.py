@@ -66,27 +66,19 @@ class CongressBillsIngestor:
         )
 
         # Database connection (env-driven with sensible defaults)
-        db_host = os.getenv("DB_HOST", "localhost")
-        db_port = os.getenv("DB_PORT", "5432")
-        db_name = os.getenv("DB_NAME", "cbwinslow")
+        db_host = os.getenv("DB_HOST", "/var/run/postgresql")
+        db_name = os.getenv("DB_NAME", "opendiscourse")
         db_user = os.getenv("DB_USER", "cbwinslow")
-        db_password = os.getenv("DB_PASSWORD", None)
         self.conn = psycopg2.connect(
             dbname=db_name,
             user=db_user,
-            password=db_password,
-            host=db_host,
-            port=db_port,
+            host=db_host
         )
         self.cursor = self.conn.cursor(cursor_factory=DictCursor)
 
-        # Progress monitoring
-        self.monitor = UniversalProgressMonitor(self.conn, display_mode="tui")
-
-        # Setup monitoring delegates
-        self.delegates = setup_all_delegates()
-        for delegate in self.delegates:
-            self.monitor.add_delegate(delegate)
+        # Progress monitoring (disabled for now)
+        self.monitor = None
+        self.delegates = []
 
     def __enter__(self):
         return self
@@ -100,8 +92,11 @@ class CongressBillsIngestor:
             self.cursor.close()
         if hasattr(self, "conn"):
             self.conn.close()
-        if hasattr(self, "monitor"):
-            self.monitor.stop()
+        if self.monitor:
+            try:
+                self.monitor.stop()
+            except:
+                pass
 
     @retry(
         stop=stop_after_attempt(3), wait=wait_exponential(multiplier=2, min=4, max=10)
@@ -472,7 +467,11 @@ class CongressBillsIngestor:
                 "batches_processed": batch_count,
             }
         finally:
-            self.monitor.stop()
+            if self.monitor:
+                try:
+                    self.monitor.stop()
+                except:
+                    pass
 
 
 def main():
