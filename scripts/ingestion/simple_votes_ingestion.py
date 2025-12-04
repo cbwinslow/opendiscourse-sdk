@@ -458,7 +458,7 @@ class SimpleVotesIngestor:
             logger.error(f"Error inserting vote batch from {source}: {e}")
             raise
 
-    def _parse_date(self, date_str: Optional[str]) -> Optional[datetime]:
+    def _parse_date(self, date_str):
         """Parse date string to datetime object"""
         if not date_str:
             return None
@@ -488,7 +488,7 @@ class SimpleVotesIngestor:
             logger.error(f"Error parsing date {date_str}: {e}")
             return None
 
-    def _parse_time(self, time_str: Optional[str]) -> Optional[datetime.time]:
+    def _parse_time(self, time_str):
         """Parse time string to time object"""
         if not time_str:
             return None
@@ -562,7 +562,7 @@ class SimpleVotesIngestor:
                     INSERT INTO congress.votes_ingestion_tracking (
                         source, ingestion_type, start_time, end_time,
                         total_records, successful_records, failed_records, status
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    ) VALUES (%s, %s, %s, %s, %s, %s)
                 """
 
                 cursor.execute(
