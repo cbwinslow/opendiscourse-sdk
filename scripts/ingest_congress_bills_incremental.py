@@ -30,11 +30,29 @@ class IncrementalCongressBillsIngestor:
         self.api_key = get_optional_env_var('CONGRESS_API_KEY')
         self.base_url = "https://api.congress.gov/v3"
         self.batch_size = 50
-        self.db_conn = psycopg2.connect(
-            database='opendiscourse',
-            user='cbwinslow',
-            host='/var/run/postgresql'
-        )
+        self.db_conn = self._connect_with_retry()
+
+    def _connect_with_retry(self, max_retries=3, retry_delay=2):
+        """Connect to database with retry logic"""
+        for attempt in range(max_retries):
+            try:
+                conn = psycopg2.connect(
+                    database='opendiscourse',
+                    user='cbwinslow',
+                    host='/var/run/postgresql',
+                    connect_timeout=10
+                )
+                return conn
+            except psycopg2.OperationalError as e:
+                if attempt == max_retries - 1:
+                    print(f"❌ Database connection failed after {max_retries} attempts: {e}")
+                    raise
+                else:
+                    print(f"⚠️ Database connection attempt {attempt + 1} failed, retrying...")
+                    time.sleep(retry_delay * (2 ** attempt))  # Exponential backoff
+            except Exception as e:
+                print(f"❌ Unexpected database connection error: {e}")
+                raise
 
     def start_ingestion_session(self, congress: int) -> str:
         """Start ingestion session for tracking"""
@@ -142,14 +160,61 @@ class IncrementalCongressBillsIngestor:
             adaptive_limiters['congress.gov'].handle_error(response.status_code)
 
             response.raise_for_status()
-            return response.json()
+
+            # Handle JSON parsing errors with fallback
+            try:
+                return response.json()
+            except json.JSONDecodeError as json_e:
+                print(f"⚠️ JSON parsing error, retrying: {json_e}")
+                # Retry once for JSON parsing errors
+                time.sleep(2)
+                response = requests.get(url, params=params, headers=headers, timeout=30)
+                response.raise_for_status()
+                return response.json()
 
         except requests.exceptions.RequestException as e:
-            # Handle rate limit errors
-            if hasattr(e, 'response') and e.response.status_code == 429:
-                adaptive_limiters['congress.gov'].handle_error(429)
-                print(f"⚠️ Rate limit hit, waiting and retrying...")
+            # Enhanced error handling with retry logic
+            if hasattr(e, 'response') and e.response:
+                status_code = e.response.status_code
+
+                if status_code == 429:
+                    # Handle rate limit errors with exponential backoff
+                    adaptive_limiters['congress.gov'].handle_error(429)
+                    print(f"⚠️ Rate limit hit, waiting and retrying...")
+                    time.sleep(10)
+                    response = requests.get(url, params=params, headers=headers, timeout=30)
+                    response.raise_for_status()
+                    return response.json()
+
+                elif status_code >= 500:
+                    # Handle server errors (HTTP 500+) with retries
+                    print(f"⚠️ Server error {status_code}, retrying...")
+                    for attempt in range(3):
+                        time.sleep(2 ** attempt)  # Exponential backoff
+                        try:
+                            response = requests.get(url, params=params, headers=headers, timeout=30)
+                            response.raise_for_status()
+                            return response.json()
+                        except requests.exceptions.RequestException:
+                            if attempt == 2:  # Last attempt
+                                print(f"❌ Server error persisted after 3 attempts")
+                                raise
+
+                elif status_code == 404:
+                    print(f"⚠️ Resource not found: {url}")
+                    return {"bills": [], "pagination": {"count": 0}}
+
+            elif isinstance(e, requests.exceptions.Timeout):
+                # Handle timeout errors with retry
+                print(f"⚠️ Request timeout, retrying...")
                 time.sleep(5)
+                response = requests.get(url, params=params, headers=headers, timeout=30)
+                response.raise_for_status()
+                return response.json()
+            elif isinstance(e, requests.exceptions.ConnectionError):
+                # Handle connection errors with retry
+                print(f"⚠️ Connection error, retrying...")
+                time.sleep(3)
                 response = requests.get(url, params=params, headers=headers, timeout=30)
                 response.raise_for_status()
                 return response.json()
@@ -167,12 +232,19 @@ class IncrementalCongressBillsIngestor:
             bill_type = bill.get('type', '')
             bill_number = bill.get('number', '')
 
-            # Parse bill_id to get components
+            # Parse bill_id to get components (Congress.gov format: type-number-congress)
             if '-' in bill_id:
-                congress_part, type_num = bill_id.split('-', 1)
-                if type_num:
-                    bill_type = type_num[0] if type_num[0].isalpha() else bill_type
-                    bill_number = type_num[1:] if type_num[0].isalpha() else type_num
+                parts = bill_id.split('-')
+                if len(parts) >= 2:
+                    # For format like "hr-1-118" -> bill_type="hr", bill_number="1"
+                    bill_type = parts[0].lower() if parts[0] else bill_type
+                    bill_number = parts[1] if parts[1] else bill_number
+                else:
+                    # Legacy format like "hr1" -> bill_type="hr", bill_number="1"
+                    congress_part, type_num = bill_id.split('-', 1)
+                    if type_num:
+                        bill_type = type_num[0] if type_num[0].isalpha() else bill_type
+                        bill_number = type_num[1:] if type_num[0].isalpha() else type_num
 
             # Get title and summary
             titles = bill.get('titles', [])
