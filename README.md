@@ -128,10 +128,14 @@ OPENROUTER_API_KEY=your_openrouter_key
 
 ## 📚 Documentation
 
-- [Political Analysis Guide](docs/POLITICAL_ANALYSIS_GUIDE.md)
-- [Embeddings Strategy](docs/EMBEDDINGS_ANALYSIS_STRATEGY.md)
-- [Implementation Summary](docs/IMPLEMENTATION_SUMMARY.md)
-- [Database Schema](docs/DATABASE_SCHEMA.md)
+### **📋 Documentation Index**
+- [Complete Documentation Index](docs/DOCUMENTATION_INDEX.md) - All documentation organized by category
+
+### **🔍 Key Documentation**
+- [Political Analysis Guide](docs/analysis/POLITICAL_ANALYSIS_GUIDE.md) - Political bias detection system
+- [Embeddings Strategy](docs/analysis/EMBEDDINGS_ANALYSIS_STRATEGY.md) - Vector embeddings and similarity
+- [Bulk Ingestion Quickstart](docs/ingestion/BULK_INGESTION_QUICKSTART.md) - Data ingestion guide
+- [Database Schema](docs/database/SCHEMA_CONSOLIDATION.md) - Database structure and monitoring
 
 ## 🤝 Contributing
 
