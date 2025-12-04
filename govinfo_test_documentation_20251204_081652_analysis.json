@@ -1,0 +1,247 @@
+{
+  "generated_at": "2025-12-04T08:16:52.384114",
+  "test_suite": "GovInfo Offset Handling Validation",
+  "version": "1.0.0",
+  "description": "Comprehensive test suite for validating GovInfo ingestion offset handling fixes",
+  "components": {},
+  "coverage_analysis": {
+    "summary": {
+      "total_test_files": 7,
+      "files_with_tests": 7,
+      "coverage_areas": [
+        "Offset Calculation Logic",
+        "API Pagination Handling",
+        "Checkpoint System",
+        "Rate Limiting",
+        "Data Integrity",
+        "Performance Characteristics",
+        "End-to-End Integration"
+      ]
+    },
+    "component_coverage": {
+      "Govinfo Offset Calculations": {
+        "test_file": "tests/test_govinfo_offset_calculations.py",
+        "test_count": 8,
+        "test_methods": [
+          "def test_offset_calculation_with_full_batches(self):",
+          "def test_offset_calculation_with_variable_batch_sizes(self):",
+          "def test_offset_calculation_resume_from_checkpoint(self):",
+          "def test_offset_calculation_no_data_stops_correctly(self):",
+          "def test_offset_calculation_different_data_types(self):",
+          "def test_stats_offset_tracking(self):",
+          "def test_edge_case_single_item_batches(self):",
+          "def test_offset_calculation_with_large_gaps(self):"
+        ],
+        "coverage_area": "Offset calculation and progression",
+        "complexity_score": 10
+      },
+      "Govinfo Pagination Logic": {
+        "test_file": "tests/test_govinfo_pagination_logic.py",
+        "test_count": 10,
+        "test_methods": [
+          "def test_pagination_handles_api_rate_limits(self):",
+          "def test_pagination_with_inconsistent_response_sizes(self):",
+          "def test_pagination_max_batch_size_limit(self):",
+          "def test_pagination_handles_api_errors(self):",
+          "def test_pagination_with_malformed_responses(self):",
+          "def test_pagination_session_tracking(self):",
+          "def test_pagination_generator_behavior(self):",
+          "def test_pagination_empty_response_stops_immediately(self):",
+          "def test_pagination_different_data_types_consistency(self):",
+          "def test_pagination_with_large_congress_numbers(self):"
+        ],
+        "coverage_area": "API pagination logic and response handling",
+        "complexity_score": 10
+      },
+      "Govinfo Checkpoint System ": {
+        "test_file": "tests/govinfo_checkpoint_system_tests.py",
+        "test_count": 6,
+        "test_methods": [
+          "def test_get_checkpoint_new_ingestion(self):",
+          "def test_get_checkpoint_existing_offset(self):",
+          "def test_get_checkpoint_completed_ingestion(self):",
+          "def test_get_checkpoint_disabled(self):",
+          "def test_ingestion_resume_from_checkpoint(self):",
+          "def test_ingestion_skips_completed_data(self):"
+        ],
+        "coverage_area": "Checkpoint system and resume functionality",
+        "complexity_score": 10
+      },
+      "Govinfo Rate Limiting ": {
+        "test_file": "tests/govinfo_rate_limiting_tests.py",
+        "test_count": 13,
+        "test_methods": [
+          "def test_api_request_rate_limiting_handling(self):",
+          "def test_api_request_retries_on_failure(self):",
+          "def test_api_request_max_retries_exhausted(self):",
+          "def test_api_request_timeout_handling(self):",
+          "def test_api_request_server_error_handling(self):",
+          "def test_pagination_with_rate_limiting_delays(self):",
+          "def test_pagination_no_delay_when_disabled(self):",
+          "def test_api_request_with_api_key(self):",
+          "def test_api_request_metadata_tracking(self):",
+          "def test_batch_insertion_with_connection_errors(self):",
+          "def test_batch_insertion_rollback_on_error(self):",
+          "def test_error_recovery_and_continuation(self):",
+          "def test_ingestion_session_error_tracking(self):"
+        ],
+        "coverage_area": "Rate limiting and error recovery",
+        "complexity_score": 10
+      },
+      "Govinfo Data Integrity ": {
+        "test_file": "tests/govinfo_data_integrity_tests.py",
+        "test_count": 11,
+        "test_methods": [
+          "def test_no_duplicate_bills_insertion(self):",
+          "def test_no_duplicate_votes_insertion(self):",
+          "def test_data_gap_detection_in_offset_sequence(self):",
+          "def test_data_continuity_across_checkpoints(self):",
+          "def test_bill_data_normalization_integrity(self):",
+          "def test_vote_data_normalization_integrity(self):",
+          "def test_member_data_normalization_integrity(self):",
+          "def test_invalid_data_handling(self):",
+          "def test_date_parsing_edge_cases(self):",
+          "def test_offset_progression_no_gaps(self):",
+          "def test_batch_insertion_consistency(self):"
+        ],
+        "coverage_area": "Data integrity and duplicate prevention",
+        "complexity_score": 10
+      },
+      "Govinfo Performance ": {
+        "test_file": "tests/govinfo_performance_tests.py",
+        "test_count": 11,
+        "test_methods": [
+          "def test_batch_processing_throughput(self):",
+          "def test_pagination_efficiency(self):",
+          "def test_concurrent_processing_performance(self):",
+          "def test_memory_efficient_batch_processing(self):",
+          "def test_api_response_time_impact(self):",
+          "def test_large_batch_handling(self):",
+          "def test_checkpoint_performance_impact(self):",
+          "def test_rate_limiting_performance_trade_off(self):",
+          "def test_error_recovery_performance(self):",
+          "def test_performance_with_realistic_data_sizes(self):",
+          "def test_throughput_benchmark(self):"
+        ],
+        "coverage_area": "Performance and throughput validation",
+        "complexity_score": 10
+      },
+      "Govinfo E2E Integration ": {
+        "test_file": "tests/govinfo_e2e_integration_tests.py",
+        "test_count": 11,
+        "test_methods": [
+          "def test_complete_bills_ingestion_flow(self):",
+          "def test_complete_votes_ingestion_flow(self):",
+          "def test_complete_members_ingestion_flow(self):",
+          "def test_ingestion_with_interruption_and_resume(self):",
+          "def test_ingestion_all_data_types_sequential(self):",
+          "def test_error_handling_during_ingestion(self):",
+          "def test_checkpoint_session_integration(self):",
+          "def test_multi_congress_ingestion(self):",
+          "def test_production_like_scenario(self):",
+          "def test_data_validation_during_flow(self):",
+          "def test_rate_limiting_integration(self):"
+        ],
+        "coverage_area": "End-to-end integration testing",
+        "complexity_score": 10
+      }
+    },
+    "test_categories": {
+      "unit_tests": {
+        "description": "Individual component testing",
+        "files": [
+          "test_govinfo_offset_calculations.py",
+          "test_govinfo_pagination_logic.py"
+        ],
+        "focus": "Single method/function validation",
+        "test_count": 18
+      },
+      "integration_tests": {
+        "description": "Component interaction testing",
+        "files": [
+          "govinfo_checkpoint_system_tests.py",
+          "govinfo_rate_limiting_tests.py",
+          "govinfo_data_integrity_tests.py"
+        ],
+        "focus": "Multi-component integration validation",
+        "test_count": 30
+      },
+      "performance_tests": {
+        "description": "Performance and efficiency validation",
+        "files": [
+          "govinfo_performance_tests.py"
+        ],
+        "focus": "Throughput and resource utilization",
+        "test_count": 11
+      },
+      "end_to_end_tests": {
+        "description": "Complete workflow validation",
+        "files": [
+          "govinfo_e2e_integration_tests.py"
+        ],
+        "focus": "Full ingestion pipeline testing",
+        "test_count": 11
+      }
+    },
+    "quality_gates": {
+      "code_coverage": {
+        "minimum_threshold": 90,
+        "target": 95,
+        "description": "Minimum percentage of code covered by tests"
+      },
+      "test_success_rate": {
+        "minimum_threshold": 95,
+        "target": 100,
+        "description": "Minimum percentage of tests that must pass"
+      },
+      "performance_thresholds": {
+        "batch_processing_rate": {
+          "minimum": 1000,
+          "unit": "items/second"
+        },
+        "offset_calculation_accuracy": {
+          "minimum": 99.9,
+          "unit": "percentage"
+        },
+        "memory_usage": {
+          "maximum": 100,
+          "unit": "MB for 10K items"
+        }
+      },
+      "error_handling": {
+        "rate_limiting_recovery": {
+          "required": true
+        },
+        "checkpoint_persistence": {
+          "required": true
+        },
+        "data_integrity_validation": {
+          "required": true
+        }
+      }
+    },
+    "execution_report": {
+      "execution_environment": {
+        "python_version": "3.12.3",
+        "platform": "linux",
+        "test_framework": "pytest",
+        "coverage_tool": "pytest-cov (if available)"
+      },
+      "test_runner": "govinfo_test_runner.py",
+      "execution_modes": {
+        "development": "Run all tests with verbose output",
+        "production": "Run subset with performance focus",
+        "ci_cd": "Run essential tests with fast execution"
+      },
+      "command_line_usage": {
+        "basic": "python tests/govinfo_test_runner.py",
+        "verbose": "python tests/govinfo_test_runner.py --verbose",
+        "production": "python tests/govinfo_test_runner.py --production",
+        "custom_report": "python tests/govinfo_test_runner.py --report-file custom_report.json"
+      }
+    }
+  },
+  "test_categories": {},
+  "performance_metrics": {},
+  "quality_gates": {}
+}

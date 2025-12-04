@@ -1,0 +1,110 @@
+{
+  "github_projects": [
+    {
+      "name": "OpenDiscourse Core Platform",
+      "description": "Main platform development for OpenDiscourse legislative data processing system",
+      "project_v2": false,
+      "status": "Active",
+      "columns": [
+        {
+          "name": "Backlog",
+          "position": 0,
+          "cards": [
+            {"issue_number": 1, "title": "Congress Bills ingestion fails due to chamber mapping foreign key constraint"},
+            {"issue_number": 5, "title": "Data validation and processing improvements"},
+            {"issue_number": 8, "title": "OpenStates scrapers have TODO comments needing attention"}
+          ]
+        },
+        {
+          "name": "To Do",
+          "position": 1,
+          "cards": [
+            {"issue_number": 2, "title": "Enhanced OpenStates ingestion - Missing implementation methods"},
+            {"issue_number": 4, "title": "Database connection standards violations"},
+            {"issue_number": 10, "title": "Expand test coverage for ingestion pipeline"}
+          ]
+        },
+        {
+          "name": "In Progress",
+          "position": 2,
+          "cards": [
+            {"issue_number": 3, "title": "Monitoring system issues - Delegate mismatch and error recovery"}
+          ]
+        },
+        {
+          "name": "Review",
+          "position": 3,
+          "cards": []
+        },
+        {
+          "name": "Done",
+          "position": 4,
+          "cards": []
+        }
+      ]
+    },
+    {
+      "name": "Project v2 - Semantic Search & AI",
+      "description": "Advanced features including PGVector integration, semantic search, and AI-powered insights",
+      "project_v2": true,
+      "status": "Planning",
+      "columns": [
+        {
+          "name": "Backlog",
+          "position": 0,
+          "cards": [
+            {"issue_number": 6, "title": "Complete PGVector integration for semantic search"},
+            {"issue_number": 7, "title": "Expand Congress data ingestion to include historical data"},
+            {"issue_number": 9, "title": "Improve GitHub integration automation"}
+          ]
+        },
+        {
+          "name": "Research & Planning",
+          "position": 1,
+          "cards": []
+        },
+        {
+          "name": "Development",
+          "position": 2,
+          "cards": []
+        },
+        {
+          "name": "Testing",
+          "position": 3,
+          "cards": []
+        },
+        {
+          "name": "Ready",
+          "position": 4,
+          "cards": []
+        }
+      ]
+    }
+  ],
+  "milestones": [
+    {
+      "title": "v1.2.0 - Critical Bug Fixes",
+      "description": "Fix critical issues blocking core functionality",
+      "due_on": "2025-12-31",
+      "issues": [1, 2],
+      "state": "open",
+      "priority": "Critical"
+    },
+    {
+      "title": "v1.3.0 - System Improvements",
+      "description": "Monitoring, database standards, and testing improvements",
+      "due_on": "2026-01-31",
+      "issues": [3, 4, 5, 10],
+      "state": "open",
+      "priority": "High"
+    },
+    {
+      "title": "v2.0.0 - Semantic Search & AI Features",
+      "description": "Major release with PGVector integration and historical data expansion",
+      "due_on": "2026-03-31",
+      "issues": [6, 7, 8, 9],
+      "state": "open",
+      "priority": "Enhancement"
+    }
+  ]
+}

@@ -63,6 +63,13 @@ class FixedGovInfoIngestor:
     """Fixed GovInfo ingestion with proper offset handling for all data types"""
 
     def __init__(self, db_connection_params: Dict[str, Any] = None):
+        # Setup logging first
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(levelname)s - %(message)s'
+        )
+        self.logger = logging.getLogger(__name__)
+
         # Validate API key
         api_keys = validate_api_keys()
         if not api_keys.get('govinfo.gov'):
@@ -74,7 +81,7 @@ class FixedGovInfoIngestor:
         # Default database connection parameters
         if db_connection_params is None:
             db_connection_params = {
-                'database': os.getenv('DB_NAME', 'cbwinslow'),
+                'database': os.getenv('DB_NAME', 'opendiscourse'),
                 'user': os.getenv('DB_USER', 'cbwinslow'),
                 'host': os.getenv('DB_HOST', '/var/run/postgresql')
             }
@@ -82,13 +89,6 @@ class FixedGovInfoIngestor:
         self.db_params = db_connection_params
         self.db_pool = None
         self._setup_database_pool()
-
-        # Setup logging
-        logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s - %(levelname)s - %(message)s'
-        )
-        self.logger = logging.getLogger(__name__)
 
     def _setup_database_pool(self):
         """Setup database connection pool"""
@@ -156,35 +156,10 @@ class FixedGovInfoIngestor:
         conn = self.get_db_connection()
         cursor = conn.cursor()
         try:
-            cursor.execute("""
-                INSERT INTO incremental.checkpoint_status (
-                    data_source, data_type, category, last_offset,
-                    is_completed, total_expected, progress_percentage,
-                    last_run, last_updated_at
-                ) VALUES (
-                    'govinfo.gov', %s, %s, %s, %s, %s, %s, %s, %s
-                )
-                ON CONFLICT (data_source, data_type, category)
-                DO UPDATE SET
-                    last_offset = EXCLUDED.last_offset,
-                    is_completed = EXCLUDED.is_completed,
-                    progress_percentage = EXCLUDED.progress_percentage,
-                    last_run = EXCLUDED.last_run,
-                    last_updated_at = EXCLUDED.last_updated_at
-            """, (
-                config.data_type.value,
-                str(config.congress),
-                offset,
-                is_completed,
-                None,  # total_expected
-                None,  # progress_percentage
-                datetime.now(),
-                datetime.now()
-            ))
-            conn.commit()
+            # Skip checkpoint updates for now - table is a view
+            self.logger.info(f"Checkpoint update skipped (view): {config.data_type.value} offset {offset}")
         except Exception as e:
             self.logger.warning(f"Could not update checkpoint: {e}")
-            conn.rollback()
         finally:
             cursor.close()
             self.return_db_connection(conn)
@@ -233,7 +208,6 @@ class FixedGovInfoIngestor:
                     status = %s,
                     completed_at = %s,
                     records_processed = %s,
-                    records_succeeded = %s,
                     records_failed = %s,
                     error_summary = %s
                 WHERE session_id = %s
@@ -241,7 +215,6 @@ class FixedGovInfoIngestor:
                 status,
                 datetime.now(),
                 stats.total_processed,
-                stats.total_inserted,
                 stats.total_failed,
                 error_message,
                 session_id
@@ -433,15 +406,22 @@ class FixedGovInfoIngestor:
 
             return {
                 'package_id': package_id,
-                'congress': congress,
+                'congress_number': congress,
                 'bill_type': bill_type,
                 'bill_number': bill_number,
-                'title': package_data.get('title', ''),
-                'date_issued': self._parse_date(package_data.get('dateIssued')),
-                'last_modified': self._parse_date(package_data.get('lastModified')),
-                'downloads': json.dumps(package_data.get('download', [])),
-                'created_at': datetime.now(),
-                'updated_at': datetime.now()
+                'introduced_date': self._parse_date(package_data.get('dateIssued')),
+                'latest_action_date': self._parse_date(package_data.get('lastModified')),
+                'latest_action_text': package_data.get('title', ''),
+                'status': 'active',
+                'subjects_primary': '',
+                'subjects_secondary': [],
+                'committees': [],
+                'sponsors': json.dumps({}),
+                'cosponsors': json.dumps({}),
+                'summaries': json.dumps({}),
+                'text_versions': json.dumps({}),
+                'related_packages': json.dumps({}),
+                'last_updated_at': datetime.now()
             }
         except Exception as e:
             self.logger.error(f"Error normalizing bill data: {e}")
@@ -464,16 +444,15 @@ class FixedGovInfoIngestor:
 
             return {
                 'roll_id': roll_id,
-                'congress': congress,
+                'congress_number': congress,
                 'date': date,
-                'chamber': vote_data.get('chamber', ''),
-                'session': vote_data.get('session', ''),
-                'roll_number': vote_data.get('rollNumber', ''),
-                'question': vote_data.get('question', ''),
-                'question_text': vote_data.get('questionText', ''),
-                'type': vote_data.get('type', ''),
+                'chamber_code': vote_data.get('chamber', ''),
+                'session_id': vote_data.get('session', ''),
+                'vote_number': vote_data.get('rollNumber', ''),
+                'vote_question': vote_data.get('question', ''),
+                'vote_type': vote_data.get('type', ''),
                 'subject': vote_data.get('subject', ''),
-                'by_member': json.dumps(vote_data.get('byMember', [])),
+                'metadata': json.dumps(vote_data.get('byMember', [])),
                 'created_at': datetime.now(),
                 'updated_at': datetime.now()
             }
@@ -504,32 +483,32 @@ class FixedGovInfoIngestor:
             death_date = self._parse_date(member_data.get('deathDate'))
 
             # Handle party and state
-            party_code = member_data.get('party', member_data.get('partyCode', ''))
-            state = member_data.get('state', member_data.get('stateCode', ''))
-            district = member_data.get('district', '')
+            party_code = member_info.get('party', member_info.get('partyCode', ''))
+            state = member_info.get('state', member_info.get('stateCode', ''))
+            district = member_info.get('district', '')
 
             return {
-                'member_id': member_id,
-                'bioguide_id': member_data.get('bioguideId', ''),
+                'member_id': member_info.get('memberId', member_info.get('id', '')),
+                'bioguide_id': member_info.get('bioguideId', ''),
                 'first_name': first_name,
                 'middle_name': middle_name,
                 'last_name': last_name,
                 'suffix': suffix,
                 'full_name': full_name,
-                'preferred_name': name_info.get('preferredName', ''),
+                'preferred_name': name_parts.get('preferredName', ''),
                 'birthday': birthday,
                 'death_date': death_date,
-                'gender': member_data.get('gender', ''),
+                'gender': member_info.get('gender', ''),
                 'party_code': party_code,
                 'state': state,
                 'district': str(district) if district else '',
-                'url': member_data.get('url', ''),
-                'twitter_handle': member_data.get('twitter', ''),
-                'youtube_handle': member_data.get('youtube', ''),
-                'facebook_handle': member_data.get('facebook', ''),
-                'biography_text': member_data.get('biography', member_data.get('bio', '')),
-                'photo_url': member_data.get('photoUrl', ''),
-                'congress': self.congress,
+                'url': member_info.get('url', ''),
+                'twitter_handle': member_info.get('twitter', ''),
+                'youtube_handle': member_info.get('youtube', ''),
+                'facebook_handle': member_info.get('facebook', ''),
+                'biography_text': member_info.get('biography', member_info.get('bio', '')),
+                'photo_url': member_info.get('photoUrl', ''),
+                'congress_number': self.congress,
                 'created_at': datetime.now(),
                 'updated_at': datetime.now()
             }
@@ -603,22 +582,38 @@ class FixedGovInfoIngestor:
 
         query = """
             INSERT INTO govinfo.bills (
-                package_id, congress, bill_type, bill_number, title,
-                date_issued, last_modified, downloads, created_at, updated_at
+                package_id, congress_number, bill_type, bill_number,
+                introduced_date, latest_action_date, latest_action_text,
+                status, subjects_primary, subjects_secondary, committees,
+                sponsors, cosponsors, summaries, text_versions, related_packages,
+                last_updated_at
             ) VALUES %s
             ON CONFLICT (package_id) DO UPDATE SET
-                title = EXCLUDED.title,
-                date_issued = EXCLUDED.date_issued,
-                last_modified = EXCLUDED.last_modified,
-                downloads = EXCLUDED.downloads,
-                updated_at = EXCLUDED.updated_at
+                congress_number = EXCLUDED.congress_number,
+                bill_type = EXCLUDED.bill_type,
+                bill_number = EXCLUDED.bill_number,
+                introduced_date = EXCLUDED.introduced_date,
+                latest_action_date = EXCLUDED.latest_action_date,
+                latest_action_text = EXCLUDED.latest_action_text,
+                status = EXCLUDED.status,
+                subjects_primary = EXCLUDED.subjects_primary,
+                subjects_secondary = EXCLUDED.subjects_secondary,
+                committees = EXCLUDED.committees,
+                sponsors = EXCLUDED.sponsors,
+                cosponsors = EXCLUDED.cosponsors,
+                summaries = EXCLUDED.summaries,
+                text_versions = EXCLUDED.text_versions,
+                related_packages = EXCLUDED.related_packages,
+                last_updated_at = EXCLUDED.last_updated_at
         """
 
         values = [
             (
-                b['package_id'], b['congress'], b['bill_type'], b['bill_number'],
-                b['title'], b['date_issued'], b['last_modified'], b['downloads'],
-                b['created_at'], b['updated_at']
+                b['package_id'], b['congress_number'], b['bill_type'], b['bill_number'],
+                b['introduced_date'], b['latest_action_date'], b['latest_action_text'],
+                b['status'], b['subjects_primary'], b['subjects_secondary'], b['committees'],
+                b['sponsors'], b['cosponsors'], b['summaries'], b['text_versions'], b['related_packages'],
+                b['last_updated_at']
             )
             for b in normalized_bills
         ]
@@ -643,24 +638,22 @@ class FixedGovInfoIngestor:
 
         query = """
             INSERT INTO govinfo.votes (
-                roll_id, congress, date, chamber, session, roll_number,
-                question, question_text, type, subject, by_member,
-                created_at, updated_at
+                vote_id, congress_number, session_id, chamber_code, vote_number,
+                vote_question, vote_type, vote_date, metadata, created_at, updated_at
             ) VALUES %s
-            ON CONFLICT (roll_id) DO UPDATE SET
-                date = EXCLUDED.date,
-                question = EXCLUDED.question,
-                question_text = EXCLUDED.question_text,
-                subject = EXCLUDED.subject,
-                by_member = EXCLUDED.by_member,
+            ON CONFLICT (vote_id) DO UPDATE SET
+                vote_question = EXCLUDED.vote_question,
+                vote_type = EXCLUDED.vote_type,
+                vote_date = EXCLUDED.vote_date,
+                metadata = EXCLUDED.metadata,
                 updated_at = EXCLUDED.updated_at
         """
 
         values = [
             (
-                v['roll_id'], v['congress'], v['date'], v['chamber'], v['session'],
-                v['roll_number'], v['question'], v['question_text'], v['type'],
-                v['subject'], v['by_member'], v['created_at'], v['updated_at']
+                v['roll_id'], v['congress_number'], v['session_id'], v['chamber_code'],
+                v['vote_number'], v['vote_question'], v['vote_type'], v['date'],
+                v['metadata'], v['created_at'], v['updated_at']
             )
             for v in normalized_votes
         ]
@@ -686,9 +679,9 @@ class FixedGovInfoIngestor:
         query = """
             INSERT INTO govinfo.members (
                 member_id, bioguide_id, first_name, middle_name, last_name, suffix,
-                full_name, preferred_name, birthday, death_date, gender, party_code,
+                full_name, preferred_name, birthday, gender, party_code,
                 state, district, url, twitter_handle, youtube_handle, facebook_handle,
-                biography_text, photo_url, congress, created_at, updated_at
+                biography_text, photo_url, created_at, updated_at
             ) VALUES %s
             ON CONFLICT (member_id) DO UPDATE SET
                 bioguide_id = EXCLUDED.bioguide_id,
@@ -705,10 +698,10 @@ class FixedGovInfoIngestor:
             (
                 m['member_id'], m['bioguide_id'], m['first_name'], m['middle_name'],
                 m['last_name'], m['suffix'], m['full_name'], m['preferred_name'],
-                m['birthday'], m['death_date'], m['gender'], m['party_code'],
+                m['birthday'], m['gender'], m['party_code'],
                 m['state'], m['district'], m['url'], m['twitter_handle'],
                 m['youtube_handle'], m['facebook_handle'], m['biography_text'],
-                m['photo_url'], m['congress'], m['created_at'], m['updated_at']
+                m['photo_url'], m['created_at'], m['updated_at']
             )
             for m in normalized_members
         ]

@@ -1,0 +1,671 @@
+{
+  "jira_projects": [
+    {
+      "key": "OD",
+      "name": "OpenDiscourse Legislative Data Platform",
+      "projectTypeKey": "software",
+      "lead": "cbwinslow",
+      "description": "Comprehensive legislative data processing and semantic search platform",
+      "url": "https://opendiscourse.atlassian.net/projects/OD",
+      "projectCategory": {
+        "name": "Core Platform",
+        "description": "Main platform development and maintenance"
+      },
+      "issueTypes": [
+        {
+          "name": "Bug",
+          "description": "A problem which impairs or prevents the functions of the product",
+          "iconUrl": "/secure/viewavatar?size=xsmall&avatarId=10303&avatarType=issuetype",
+          "subtask": false,
+          "avatarId": 10303
+        },
+        {
+          "name": "Story",
+          "description": "A new feature or enhancement request",
+          "iconUrl": "/secure/viewavatar?size=xsmall&avatarId=10315&avatarType=issuetype",
+          "subtask": false,
+          "avatarId": 10315
+        },
+        {
+          "name": "Task",
+          "description": "A unit of work that needs to be completed",
+          "iconUrl": "/secure/viewavatar?size=xsmall&avatarId=10318&avatarType=issuetype",
+          "subtask": false,
+          "avatarId": 10318
+        },
+        {
+          "name": "Epic",
+          "description": "A large feature or initiative that can be broken down into smaller stories",
+          "iconUrl": "/secure/viewavatar?size=xsmall&avatarId=10307&avatarType=issuetype",
+          "subtask": false,
+          "avatarId": 10307
+        },
+        {
+          "name": "Sub-task",
+          "description": "A piece of work that is part of a larger task",
+          "iconUrl": "/secure/viewavatar?size=xsmall&avatarId=10316&avatarType=issuetype",
+          "subtask": true,
+          "avatarId": 10316
+        }
+      ]
+    },
+    {
+      "key": "ODV2",
+      "name": "OpenDiscourse Project v2 - Semantic Search",
+      "projectTypeKey": "software",
+      "lead": "cbwinslow",
+      "description": "Advanced features including PGVector integration and AI-powered semantic search",
+      "url": "https://opendiscourse.atlassian.net/projects/ODV2",
+      "projectCategory": {
+        "name": "Innovation & AI",
+        "description": "Next-generation features and AI-powered capabilities"
+      },
+      "issueTypes": [
+        {
+          "name": "Epic",
+          "description": "Major initiatives for Project v2",
+          "iconUrl": "/secure/viewavatar?size=xsmall&avatarId=10307&avatarType=issuetype",
+          "subtask": false,
+          "avatarId": 10307
+        },
+        {
+          "name": "Story",
+          "description": "User stories for AI and semantic search features",
+          "iconUrl": "/secure/viewavatar?size=xsmall&avatarId=10315&avatarType=issuetype",
+          "subtask": false,
+          "avatarId": 10315
+        },
+        {
+          "name": "Technical Task",
+          "description": "Technical implementation tasks for v2 features",
+          "iconUrl": "/secure/viewavatar?size=xsmall&avatarId=10318&avatarType=issuetype",
+          "subtask": false,
+          "avatarId": 10318
+        },
+        {
+          "name": "Research",
+          "description": "Research and discovery tasks",
+          "iconUrl": "/secure/viewavatar?size=xsmall&avatarId=10311&avatarType=issuetype",
+          "subtask": false,
+          "avatarId": 10311
+        },
+        {
+          "name": "Sub-task",
+          "description": "Detailed implementation steps",
+          "iconUrl": "/secure/viewavatar?size=xsmall&avatarId=10316&avatarType=issuetype",
+          "subtask": true,
+          "avatarId": 10316
+        }
+      ]
+    }
+  ],
+  "boards": [
+    {
+      "id": "OD-SCRUM-1",
+      "name": "OpenDiscourse Core Platform - Scrum Board",
+      "type": "scrum",
+      "location": {
+        "projectIdOrKey": "OD",
+        "userId": "cbwinslow"
+      },
+      "filter": {
+        "id": "10001",
+        "name": "OpenDiscourse Core Issues",
+        "description": "Filter for all active issues in OpenDiscourse core platform"
+      },
+      "columnConfig": {
+        "columns": [
+          {
+            "name": "Backlog",
+            "statuses": [
+              {
+                "name": "Backlog",
+                "id": "10001"
+              },
+              {
+                "name": "Selected for Development",
+                "id": "10002"
+              }
+            ]
+          },
+          {
+            "name": "To Do",
+            "statuses": [
+              {
+                "name": "To Do",
+                "id": "10003"
+              }
+            ]
+          },
+          {
+            "name": "In Progress",
+            "statuses": [
+              {
+                "name": "In Progress",
+                "id": "10004"
+              },
+              {
+                "name": "In Review",
+                "id": "10005"
+              }
+            ]
+          },
+          {
+            "name": "Done",
+            "statuses": [
+              {
+                "name": "Done",
+                "id": "10006"
+              }
+            ]
+          }
+        ],
+        "constraintType": "none",
+        "subQuery": "",
+        "screen": {
+          "id": "10001",
+          "name": "Default Screen Scheme"
+        }
+      },
+      "ranking": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "ODV2-KANBAN-1",
+      "name": "Project v2 - Kanban Board",
+      "type": "kanban",
+      "location": {
+        "projectIdOrKey": "ODV2",
+        "userId": "cbwinslow"
+      },
+      "filter": {
+        "id": "10002",
+        "name": "Project v2 Issues",
+        "description": "Filter for all Project v2 development issues"
+      },
+      "columnConfig": {
+        "columns": [
+          {
+            "name": "Research & Planning",
+            "statuses": [
+              {
+                "name": "Backlog",
+                "id": "10011"
+              },
+              {
+                "name": "Research",
+                "id": "10012"
+              }
+            ]
+          },
+          {
+            "name": "Development",
+            "statuses": [
+              {
+                "name": "To Do",
+                "id": "10013"
+              },
+              {
+                "name": "In Progress",
+                "id": "10014"
+              }
+            ]
+          },
+          {
+            "name": "Testing",
+            "statuses": [
+              {
+                "name": "In Review",
+                "id": "10015"
+              },
+              {
+                "name": "Testing",
+                "id": "10016"
+              }
+            ]
+          },
+          {
+            "name": "Production",
+            "statuses": [
+              {
+                "name": "Done",
+                "id": "10017"
+              },
+              {
+                "name": "Released",
+                "id": "10018"
+              }
+            ]
+          }
+        ],
+        "constraintType": "issueCount",
+        "subQuery": "project = ODV2 AND issuetype in (Epic, Story, 'Technical Task')",
+        "screen": {
+          "id": "10002",
+          "name": "Project v2 Screen Scheme"
+        }
+      },
+      "ranking": {
+        "enabled": true
+      }
+    }
+  ],
+  "epics": [
+    {
+      "key": "OD-1",
+      "summary": "Congress Data Ingestion Crisis",
+      "description": "Critical breakdown in Congress bills ingestion system requiring immediate attention and comprehensive solution.\n\n**Business Impact:**\n- Congress bills ingestion completely broken (0 records vs 725 working members)\n- Blocking core functionality of the legislative data platform\n- Preventing users from accessing congressional bill information\n\n**Root Cause Analysis:**\n- Foreign key constraint violation in chamber mapping\n- Missing validation layer for data integrity\n- Insufficient error handling and recovery mechanisms\n\n**Success Criteria:**\n- [ ] Chamber mapping foreign key constraint resolved\n- [ ] Data validation layer implemented\n- [ ] Error recovery mechanisms deployed\n- [ ] Congress bills ingestion fully functional\n- [ ] Comprehensive monitoring and alerting in place\n\n**Epic Links:**\n- Blocks: All Congress-related feature development\n- Affects: Core platform functionality\n- Related to: GitHub issues #1, #2",
+      "status": "In Progress",
+      "priority": "Highest",
+      "labels": ["critical", "congress", "data-ingestion", "epic"],
+      "components": ["Congress", "Data Ingestion"],
+      "fixVersions": ["v1.2.0"],
+      "assignee": "cbwinslow",
+      "reporter": "cbwinslow",
+      "created": "2025-12-04T13:22:00.000Z",
+      "updated": "2025-12-04T13:22:00.000Z",
+      "duedate": "2025-12-15T00:00:00.000Z",
+      "customfield_10014": 40,
+      "customfield_10015": [
+        {
+          "value": "Architecture",
+          "label": "Architecture"
+        },
+        {
+          "value": "Data Engineering",
+          "label": "Data Engineering"
+        }
+      ]
+    },
+    {
+      "key": "OD-2",
+      "summary": "Enhanced OpenStates Implementation",
+      "description": "Complete implementation of sophisticated OpenStates ingestion framework with missing method implementations.\n\n**Business Value:**\n- Enable comprehensive state-level legislative data ingestion\n- Support advanced data processing and validation\n- Provide foundation for scalable state data expansion\n\n**Implementation Scope:**\n- Complete 5 missing method implementations\n- Add comprehensive error handling and logging\n- Implement rate limiting and parallel processing\n- Add monitoring and alerting integration\n\n**Success Criteria:**\n- [ ] All 5 missing methods fully implemented\n- [ ] Comprehensive error handling deployed\n- [ ] Rate limiting system operational\n- [ ] Parallel processing working effectively\n- [ ] Full monitoring integration complete\n\n**Epic Links:**\n- Depends on: OD-1 (Congress fixes)\n- Blocks: State data expansion capabilities\n- Related to: GitHub issue #3",
+      "status": "Selected for Development",
+      "priority": "High",
+      "labels": ["enhancement", "openstates", "data-ingestion", "epic"],
+      "components": ["OpenStates", "Data Processing"],
+      "fixVersions": ["v1.2.0", "v1.3.0"],
+      "assignee": "cbwinslow",
+      "reporter": "cbwinslow",
+      "created": "2025-12-04T13:22:30.000Z",
+      "updated": "2025-12-04T13:22:30.000Z",
+      "duedate": "2026-01-15T00:00:00.000Z",
+      "customfield_10014": 26,
+      "customfield_10015": [
+        {
+          "value": "Backend Development",
+          "label": "Backend Development"
+        },
+        {
+          "value": "Data Engineering",
+          "label": "Data Engineering"
+        }
+      ]
+    },
+    {
+      "key": "ODV2-1",
+      "summary": "PGVector Semantic Search Foundation",
+      "description": "Project v2 initiative to implement full PGVector integration for semantic search capabilities across legislative documents.\n\n**Business Vision:**\nEnable users to search legislative documents based on semantic meaning rather than exact keyword matching, revolutionizing how users discover related legislation and policy documents.\n\n**Technical Architecture:**\n- PGVector extension for PostgreSQL\n- Sentence-transformers for document embedding generation\n- Vector similarity search algorithms\n- High-performance indexing for fast search responses\n- Integration with existing API endpoints\n\n**Success Criteria:**\n- [ ] PGVector extension configured and operational\n- [ ] Document embedding generation pipeline deployed\n- [ ] Semantic search API endpoints live\n- [ ] Search result ranking algorithm implemented\n- [ ] Performance optimization with proper indexing\n- [ ] Comprehensive testing and validation complete\n\n**Epic Links:**\n- Foundation for: All semantic search features\n- Enables: AI-powered legislative research\n- Related to: GitHub issue #6, Linear epic #5",
+      "status": "Backlog",
+      "priority": "Highest",
+      "labels": ["project-v2", "pgvector", "semantic-search", "ai-ml", "epic"],
+      "components": ["Semantic Search", "AI/ML"],
+      "fixVersions": ["v2.0.0"],
+      "assignee": "cbwinslow",
+      "reporter": "cbwinslow",
+      "created": "2025-12-04T13:23:00.000Z",
+      "updated": "2025-12-04T13:23:00.000Z",
+      "duedate": "2026-03-01T00:00:00.000Z",
+      "customfield_10014": 50,
+      "customfield_10015": [
+        {
+          "value": "AI/ML",
+          "label": "AI/ML"
+        },
+        {
+          "value": "Architecture",
+          "label": "Architecture"
+        },
+        {
+          "value": "Backend Development",
+          "label": "Backend Development"
+        }
+      ]
+    },
+    {
+      "key": "ODV2-2",
+      "summary": "Historical Congress Data Archive",
+      "description": "Comprehensive historical data ingestion and archival system for complete legislative history.\n\n**Business Value:**\nProvide researchers, policymakers, and citizens access to complete historical legislative data, enabling longitudinal analysis and policy trend identification.\n\n**Implementation Scope:**\n- Historical bill data spanning multiple Congress sessions\n- Roll call vote data with full voting records\n- Committee historical membership and activity data\n- Amendment tracking across time periods\n- Data migration tools for existing information\n\n**Success Criteria:**\n- [ ] Historical data sources researched and documented\n- [ ] Extended database schema implemented\n- [ ] Roll call vote ingestion operational\n- [ ] Committee historical data integrated\n- [ ] Amendment tracking system functional\n- [ ] Migration tools developed and tested\n\n**Epic Links:**\n- Builds on: Existing Congress data infrastructure\n- Enables: Historical research and analysis\n- Related to: GitHub issue #7, Linear epic #6",
+      "status": "Backlog",
+      "priority": "High",
+      "labels": ["project-v2", "historical-data", "congress", "data-expansion", "epic"],
+      "components": ["Historical Data", "Congress"],
+      "fixVersions": ["v2.0.0"],
+      "assignee": "cbwinslow",
+      "reporter": "cbwinslow",
+      "created": "2025-12-04T13:23:30.000Z",
+      "updated": "2025-12-04T13:23:30.000Z",
+      "duedate": "2026-04-15T00:00:00.000Z",
+      "customfield_10014": 35,
+      "customfield_10015": [
+        {
+          "value": "Data Engineering",
+          "label": "Data Engineering"
+        },
+        {
+          "value": "Backend Development",
+          "label": "Backend Development"
+        }
+      ]
+    }
+  ],
+  "stories": [
+    {
+      "key": "OD-101",
+      "summary": "Fix Congress Bills chamber mapping foreign key constraint",
+      "description": "As a data engineer, I need to fix the foreign key constraint violation in Congress bills ingestion so that chamber data is properly mapped before insertion.\n\n**Acceptance Criteria:**\n- [ ] Chamber mapping data is validated before insertion\n- [ ] Foreign key constraint violations are prevented\n- [ ] Error messages clearly indicate missing chamber data\n- [ ] Data validation logging is comprehensive\n- [ ] Tests cover all chamber mapping scenarios\n\n**Technical Details:**\n- File: scripts/ingest_congress_bills_incremental.py (line 123)\n- Error: psycopg2.ForeignKeyViolation: INSERT INTO bills (chamber_id, ...) VALUES (NULL, ...) is not allowed\n- Solution: Add pre-insertion validation and mapping layer\n\n**Related Issues:**\n- Epic: OD-1 (Congress Data Ingestion Crisis)\n- GitHub: #1\n- Story Points: 8",
+      "status": "In Progress",
+      "priority": "Highest",
+      "labels": ["critical", "congress", "data-ingestion", "bug", "story"],
+      "components": ["Congress"],
+      "fixVersions": ["v1.2.0"],
+      "assignee": "senior-engineer",
+      "reporter": "cbwinslow",
+      "created": "2025-12-04T13:24:00.000Z",
+      "updated": "2025-12-04T13:24:00.000Z",
+      "duedate": "2025-12-08T00:00:00.000Z",
+      "customfield_10014": 8,
+      "customfield_10026": "business",
+      "customfield_10027": "1",
+      "epic": "OD-1",
+      "sprint": "Sprint 1 - Critical Bug Fixes"
+    },
+    {
+      "key": "OD-102",
+      "summary": "Implement process_state_bills method for OpenStates ingestion",
+      "description": "As a backend developer, I need to implement the process_state_bills method so that state-level bill data can be properly processed and ingested.\n\n**Acceptance Criteria:**\n- [ ] process_state_bills method fully implemented\n- [ ] Comprehensive error handling for invalid bill data\n- [ ] Rate limiting integration for API calls\n- [ ] Logging and monitoring integration\n- [ ] Unit tests covering all processing scenarios\n- [ ] Performance optimization for large bill datasets\n\n**Technical Implementation:**\n- File: scripts/enhanced_openstates_ingestion.py (line 819)\n- Framework: Existing sophisticated ingestion framework\n- Integration: Must work with existing rate limiting and monitoring\n- Data validation: Ensure data quality before database insertion\n\n**Related Issues:**\n- Epic: OD-2 (Enhanced OpenStates Implementation)\n- GitHub: #2\n- Story Points: 13\n- Blocked by: OD-101 (Congress fixes)",
+      "status": "Selected for Development",
+      "priority": "High",
+      "labels": ["openstates", "enhancement", "data-ingestion", "story"],
+      "components": ["OpenStates"],
+      "fixVersions": ["v1.2.0"],
+      "assignee": "backend-developer",
+      "reporter": "cbwinslow",
+      "created": "2025-12-04T13:24:30.000Z",
+      "updated": "2025-12-04T13:24:30.000Z",
+      "duedate": "2025-12-20T00:00:00.000Z",
+      "customfield_10014": 13,
+      "customfield_10026": "technical",
+      "customfield_10027": "3",
+      "epic": "OD-2",
+      "sprint": "Sprint 1 - Critical Bug Fixes"
+    },
+    {
+      "key": "ODV2-201",
+      "summary": "Research PGVector integration requirements and constraints",
+      "description": "As an AI specialist, I need to research and document PGVector integration requirements so that the semantic search implementation can be properly planned and executed.\n\n**Acceptance Criteria:**\n- [ ] Complete technical requirements analysis documented\n- [ ] Integration constraints and limitations identified\n- [ ] Performance benchmarks and scaling considerations documented\n- [ ] Security and compliance requirements analyzed\n- [ ] Migration strategy for existing data defined\n- [ ] Architecture recommendations with implementation roadmap\n\n**Research Scope:**\n- PGVector extension compatibility with PostgreSQL versions\n- Vector similarity search algorithms and their trade-offs\n- Embedding model selection criteria and performance\n- Indexing strategies for optimal search performance\n- Memory and storage requirements for vector data\n- Integration patterns with existing API architecture\n\n**Related Issues:**\n- Epic: ODV2-1 (PGVector Semantic Search Foundation)\n- GitHub: #6\n- Story Points: 8\n- Blocks: ODV2-202 (Vector schema design)",
+      "status": "Backlog",
+      "priority": "Highest",
+      "labels": ["project-v2", "pgvector", "research", "ai-ml", "story"],
+      "components": ["Semantic Search"],
+      "fixVersions": ["v2.0.0"],
+      "assignee": "ai-specialist",
+      "reporter": "cbwinslow",
+      "created": "2025-12-04T13:25:00.000Z",
+      "updated": "2025-12-04T13:25:00.000Z",
+      "duedate": "2026-01-10T00:00:00.000Z",
+      "customfield_10014": 8,
+      "customfield_10026": "research",
+      "customfield_10027": "1",
+      "epic": "ODV2-1",
+      "sprint": "Sprint 3 - PGVector Foundation"
+    },
+    {
+      "key": "OD-103",
+      "summary": "Fix monitoring system delegate registration issues",
+      "description": "As a backend developer, I need to fix the delegate registration issues in the monitoring system so that progress tracking and alerting work correctly.\n\n**Acceptance Criteria:**\n- [ ] Delegate registration logic corrected and tested\n- [ ] Delegate mismatch scenarios properly handled\n- [ ] Registration logging and debugging enhanced\n- [ ] Integration tests for delegate lifecycle\n- [ ] Monitoring alerts for registration failures\n- [ ] Documentation updated for delegate management\n\n**Technical Details:**\n- File: monitoring/delegates.py (line 45)\n- Issue: Delegate mismatch in registration process\n- Impact: Affects system observability and progress tracking\n- Solution: Improve registration algorithm and validation\n\n**Related Issues:**\n- Epic: OD-1 (Congress Data Ingestion Crisis)\n- GitHub: #3\n- Story Points: 5\n- Dependencies: OD-101 (Congress fixes)",
+      "status": "To Do",
+      "priority": "Medium",
+      "labels": ["monitoring", "bug", "observability", "story"],
+      "components": ["Monitoring"],
+      "fixVersions": ["v1.3.0"],
+      "assignee": "backend-developer",
+      "reporter": "cbwinslow",
+      "created": "2025-12-04T13:25:30.000Z",
+      "updated": "2025-12-04T13:25:30.000Z",
+      "duedate": "2025-12-18T00:00:00.000Z",
+      "customfield_10014": 5,
+      "customfield_10026": "business",
+      "customfield_10027": "2",
+      "epic": "OD-1",
+      "sprint": "Sprint 2 - System Stabilization"
+    }
+  ],
+  "sprints": [
+    {
+      "id": "101",
+      "name": "Sprint 1 - Critical Bug Fixes",
+      "state": "active",
+      "startDate": "2025-12-01T00:00:00.000Z",
+      "endDate": "2025-12-15T00:00:00.000Z",
+      "completeDate": null,
+      "sequence": 1,
+      "goal": "Fix critical blocking issues for core functionality",
+      "issues": [
+        {
+          "key": "OD-101",
+          "summary": "Fix Congress Bills chamber mapping foreign key constraint",
+          "status": "In Progress",
+          "storyPoints": 8,
+          "assignee": "senior-engineer"
+        },
+        {
+          "key": "OD-102",
+          "summary": "Implement process_state_bills method for OpenStates ingestion",
+          "status": "Selected for Development",
+          "storyPoints": 13,
+          "assignee": "backend-developer"
+        },
+        {
+          "key": "OD-103",
+          "summary": "Fix monitoring system delegate registration issues",
+          "status": "To Do",
+          "storyPoints": 5,
+          "assignee": "backend-developer"
+        }
+      ],
+      "capacity": {
+        "total": 40,
+        "committed": 26,
+        "completed": 0,
+        "remaining": 26
+      },
+      "velocity": {
+        "committed": 26,
+        "completed": 0,
+        "planned": 30,
+        "actual": 0
+      },
+      "boardId": "OD-SCRUM-1"
+    },
+    {
+      "id": "102",
+      "name": "Sprint 2 - System Stabilization",
+      "state": "future",
+      "startDate": "2025-12-16T00:00:00.000Z",
+      "endDate": "2025-12-30T00:00:00.000Z",
+      "completeDate": null,
+      "sequence": 2,
+      "goal": "Stabilize monitoring and improve system reliability",
+      "issues": [
+        {
+          "key": "OD-104",
+          "summary": "Standardize database connection management",
+          "status": "Backlog",
+          "storyPoints": 8,
+          "assignee": "database-admin"
+        },
+        {
+          "key": "OD-105",
+          "summary": "Add comprehensive rate limiting tests",
+          "status": "Backlog",
+          "storyPoints": 5,
+          "assignee": "qa-engineer"
+        }
+      ],
+      "capacity": {
+        "total": 35,
+        "committed": 13,
+        "completed": 0,
+        "remaining": 13
+      },
+      "boardId": "OD-SCRUM-1"
+    },
+    {
+      "id": "201",
+      "name": "Sprint 3 - PGVector Foundation",
+      "state": "future",
+      "startDate": "2026-01-01T00:00:00.000Z",
+      "endDate": "2026-01-15T00:00:00.000Z",
+      "completeDate": null,
+      "sequence": 3,
+      "goal": "Begin PGVector integration and semantic search implementation",
+      "issues": [
+        {
+          "key": "ODV2-201",
+          "summary": "Research PGVector integration requirements and constraints",
+          "status": "Backlog",
+          "storyPoints": 8,
+          "assignee": "ai-specialist"
+        },
+        {
+          "key": "ODV2-202",
+          "summary": "Design vector database schema and indexing strategy",
+          "status": "Backlog",
+          "storyPoints": 13,
+          "assignee": "database-admin"
+        }
+      ],
+      "capacity": {
+        "total": 45,
+        "committed": 21,
+        "completed": 0,
+        "remaining": 21
+      },
+      "boardId": "ODV2-KANBAN-1"
+    }
+  ],
+  "workflows": [
+    {
+      "id": "OD-DEFAULT-WORKFLOW",
+      "name": "OpenDiscourse Core Workflow",
+      "description": "Default workflow for OpenDiscourse core platform issues",
+      "statuses": [
+        {
+          "name": "Backlog",
+          "description": "Issue has been triaged and prioritized for future work",
+          "id": "1",
+          "category": "To Do"
+        },
+        {
+          "name": "Selected for Development",
+          "description": "Issue has been selected for the current sprint or release",
+          "id": "2",
+          "category": "To Do"
+        },
+        {
+          "name": "In Progress",
+          "description": "Issue is actively being worked on by a developer",
+          "id": "3",
+          "category": "In Progress"
+        },
+        {
+          "name": "In Review",
+          "description": "Issue work is complete and under review (code review, QA, etc.)",
+          "id": "4",
+          "category": "In Progress"
+        },
+        {
+          "name": "Testing",
+          "description": "Issue is being tested by QA or automated testing systems",
+          "id": "5",
+          "category": "In Progress"
+        },
+        {
+          "name": "Done",
+          "description": "Issue work is complete and accepted",
+          "id": "6",
+          "category": "Done"
+        },
+        {
+          "name": "Blocked",
+          "description": "Issue is blocked by dependencies or external factors",
+          "id": "7",
+          "category": "To Do"
+        }
+      ],
+      "transitions": [
+        {
+          "name": "To Do",
+          "from": ["Backlog", "Selected for Development"],
+          "to": "Selected for Development",
+          "conditions": []
+        },
+        {
+          "name": "In Progress",
+          "from": ["Selected for Development"],
+          "to": "In Progress",
+          "conditions": [
+            "assignee is not empty",
+            "sprint is not empty"
+          ]
+        },
+        {
+          "name": "Review",
+          "from": ["In Progress"],
+          "to": "In Review",
+          "conditions": [
+            "worklog > 0",
+            "development is not empty"
+          ]
+        },
+        {
+          "name": "Testing",
+          "from": ["In Review"],
+          "to": "Testing",
+          "conditions": [
+            "quality assurance is not empty",
+            "tests added = true"
+          ]
+        },
+        {
+          "name": "Done",
+          "from": ["In Review", "Testing"],
+          "to": "Done",
+          "conditions": [
+            "deployment complete = true",
+            "acceptance criteria met = true"
+          ]
+        },
+        {
+          "name": "Blocked",
+          "from": ["In Progress", "In Review", "Testing"],
+          "to": "Blocked",
+          "conditions": [
+            "blocker reason is not empty"
+          ]
+        },
+        {
+          "name": "Unblocked",
+          "from": ["Blocked"],
+          "to": "In Progress",
+          "conditions": [
+            "blocker resolved = true"
+          ]
+        }
+      ]
+    }
+  ]
+}

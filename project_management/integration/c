@@ -1,0 +1,1138 @@
+#!/usr/bin/env python3
+"""
+Cross-Platform Integration Scripts for OpenDiscourse
+Comprehensive synchronization across GitHub, Linear, GitLab, Bitbucket, Jira, and Confluence
+"""
+
+import asyncio
+import aiohttp
+import json
+import logging
+import os
+import time
+from typing import Dict, List, Optional, Tuple
+from datetime import datetime, timedelta
+from dataclasses import dataclass, asdict
+from abc import ABC, abstractmethod
+import hashlib
+import hmac
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+@dataclass
+class IssueMapping:
+    """Standard issue data structure for cross-platform mapping"""
+    platform_id: str
+    platform: str
+    title: str
+    description: str
+    status: str
+    priority: str
+    labels: List[str]
+    assignee: str
+    created_at: str
+    updated_at: str
+    url: str
+    epic_id: Optional[str] = None
+    estimate: Optional[int] = None
+    story_points: Optional[int] = None
+
+class PlatformAPI(ABC):
+    """Abstract base class for platform APIs"""
+
+    @abstractmethod
+    async def create_issue(self, issue_data: IssueMapping) -> Dict:
+        pass
+
+    @abstractmethod
+    async def update_issue(self, issue_id: str, issue_data: Dict) -> Dict:
+        pass
+
+    @abstractmethod
+    async def get_issue(self, issue_id: str) -> Dict:
+        pass
+
+    @abstractmethod
+    async def list_issues(self, filters: Dict = None) -> List[Dict]:
+        pass
+
+    @abstractmethod
+    async def sync_status(self, issue_id: str, new_status: str) -> bool:
+        pass
+
+class GitHubAPI(PlatformAPI):
+    """GitHub API implementation"""
+
+    def __init__(self):
+        self.token = os.getenv('GITHUB_TOKEN')
+        self.repo = "cbwinslow/opendiscourse"
+        self.base_url = "https://api.github.com"
+        self.headers = {
+            "Authorization": f"token {self.token}",
+            "Accept": "application/vnd.github.v3+json",
+            "Content-Type": "application/json"
+        }
+
+    async def create_issue(self, issue_data: IssueMapping) -> Dict:
+        """Create GitHub issue"""
+        data = {
+            "title": issue_data.title,
+            "body": issue_data.description,
+            "labels": issue_data.labels,
+            "assignees": [issue_data.assignee] if issue_data.assignee else []
+        }
+
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                f"{self.base_url}/repos/{self.repo}/issues",
+                headers=self.headers,
+                json=data
+            ) as response:
+                if response.status == 201:
+                    result = await response.json()
+                    logger.info(f"Created GitHub issue: {result['number']}")
+                    return result
+                else:
+                    error_text = await response.text()
+                    logger.error(f"Failed to create GitHub issue: {error_text}")
+                    raise Exception(f"GitHub API error: {response.status}")
+
+    async def update_issue(self, issue_id: str, issue_data: Dict) -> Dict:
+        """Update GitHub issue"""
+        async with aiohttp.ClientSession() as session:
+            async with session.patch(
+                f"{self.base_url}/repos/{self.repo}/issues/{issue_id}",
+                headers=self.headers,
+                json=issue_data
+            ) as response:
+                if response.status == 200:
+                    result = await response.json()
+                    logger.info(f"Updated GitHub issue: {issue_id}")
+                    return result
+                else:
+                    error_text = await response.text()
+                    logger.error(f"Failed to update GitHub issue: {error_text}")
+                    raise Exception(f"GitHub API error: {response.status}")
+
+    async def get_issue(self, issue_id: str) -> Dict:
+        """Get GitHub issue"""
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                f"{self.base_url}/repos/{self.repo}/issues/{issue_id}",
+                headers=self.headers
+            ) as response:
+                if response.status == 200:
+                    return await response.json()
+                else:
+                    logger.error(f"Failed to get GitHub issue {issue_id}: {response.status}")
+                    raise Exception(f"GitHub API error: {response.status}")
+
+    async def list_issues(self, filters: Dict = None) -> List[Dict]:
+        """List GitHub issues"""
+        params = filters or {}
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                f"{self.base_url}/repos/{self.repo}/issues",
+                headers=self.headers,
+                params=params
+            ) as response:
+                if response.status == 200:
+                    return await response.json()
+                else:
+                    logger.error(f"Failed to list GitHub issues: {response.status}")
+                    return []
+
+    async def sync_status(self, issue_id: str, new_status: str) -> bool:
+        """Sync issue status"""
+        # Map generic status to GitHub states
+        status_mapping = {
+            "open": "open",
+            "in_progress": "open",
+            "in_review": "open",
+            "testing": "open",
+            "done": "closed",
+            "blocked": "open"
+        }
+
+        gh_status = status_mapping.get(new_status.lower(), "open")
+        state_data = {"state": gh_status}
+
+        try:
+            await self.update_issue(issue_id, state_data)
+            return True
+        except Exception as e:
+            logger.error(f"Failed to sync status for issue {issue_id}: {e}")
+            return False
+
+class LinearAPI(PlatformAPI):
+    """Linear API implementation"""
+
+    def __init__(self):
+        self.token = os.getenv('LINEAR_API_KEY')
+        self.base_url = "https://api.linear.app/graphql"
+        self.headers = {
+            "Authorization": f"Bearer {self.token}",
+            "Content-Type": "application/json"
+        }
+
+    async def _execute_graphql(self, query: str, variables: Dict = None) -> Dict:
+        """Execute GraphQL query"""
+        payload = {
+            "query": query,
+            "variables": variables or {}
+        }
+
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                self.base_url,
+                headers=self.headers,
+                json=payload
+            ) as response:
+                if response.status == 200:
+                    result = await response.json()
+                    if result.get("errors"):
+                        logger.error(f"GraphQL errors: {result['errors']}")
+                        raise Exception(f"Linear GraphQL error: {result['errors']}")
+                    return result
+                else:
+                    error_text = await response.text()
+                    logger.error(f"Linear API error: {error_text}")
+                    raise Exception(f"Linear API error: {response.status}")
+
+    async def create_issue(self, issue_data: IssueMapping) -> Dict:
+        """Create Linear issue"""
+        mutation = """
+        mutation IssueCreate($input: IssueCreateInput!) {
+            issueCreate(input: $input) {
+                success
+                issue {
+                    id
+                    identifier
+                    title
+                    url
+                }
+            }
+        }
+        """
+
+        variables = {
+            "input": {
+                "title": issue_data.title,
+                "description": issue_data.description,
+                "teamId": "opendiscourse-core",  # Replace with actual team ID
+                "priority": self._map_priority(issue_data.priority)
+            }
+        }
+
+        result = await self._execute_graphql(mutation, variables)
+        issue_info = result["data"]["issueCreate"]["issue"]
+        logger.info(f"Created Linear issue: {issue_info['identifier']}")
+        return issue_info
+
+    async def update_issue(self, issue_id: str, issue_data: Dict) -> Dict:
+        """Update Linear issue"""
+        mutation = """
+        mutation IssueUpdate($id: String!, $input: IssueUpdateInput!) {
+            issueUpdate(id: $id, input: $input) {
+                success
+                issue {
+                    id
+                    title
+                    url
+                }
+            }
+        }
+        """
+
+        variables = {
+            "id": issue_id,
+            "input": issue_data
+        }
+
+        result = await self._execute_graphql(mutation, variables)
+        logger.info(f"Updated Linear issue: {issue_id}")
+        return result["data"]["issueUpdate"]["issue"]
+
+    async def get_issue(self, issue_id: str) -> Dict:
+        """Get Linear issue"""
+        query = """
+        query Issue($id: String!) {
+            issue(id: $id) {
+                id
+                identifier
+                title
+                description
+                state {
+                    name
+                }
+                priority
+                assignee {
+                    name
+                }
+                labels {
+                    nodes {
+                        name
+                    }
+                }
+                url
+            }
+        }
+        """
+
+        variables = {"id": issue_id}
+        result = await self._execute_graphql(query, variables)
+        return result["data"]["issue"]
+
+    async def list_issues(self, filters: Dict = None) -> List[Dict]:
+        """List Linear issues"""
+        query = """
+        query Issues($filter: IssueFilter) {
+            issues(filter: $filter) {
+                nodes {
+                    id
+                    identifier
+                    title
+                    state {
+                        name
+                    }
+                    priority
+                    assignee {
+                        name
+                    }
+                    labels {
+                        nodes {
+                            name
+                        }
+                    }
+                    url
+                }
+            }
+        }
+        """
+
+        variables = {"filter": filters or {}}
+        result = await self._execute_graphql(query, variables)
+        return result["data"]["issues"]["nodes"]
+
+    async def sync_status(self, issue_id: str, new_status: str) -> bool:
+        """Sync issue status"""
+        # Map generic status to Linear states
+        status_mapping = {
+            "open": "Todo",
+            "in_progress": "In Progress",
+            "in_review": "In Review",
+            "testing": "In Review",
+            "done": "Done",
+            "blocked": "Backlog"
+        }
+
+        linear_state = status_mapping.get(new_status.lower(), "Backlog")
+
+        mutation = """
+        mutation IssueUpdate($id: String!, $input: IssueUpdateInput!) {
+            issueUpdate(id: $id, input: $input) {
+                success
+            }
+        }
+        """
+
+        variables = {
+            "id": issue_id,
+            "input": {"state": linear_state}
+        }
+
+        try:
+            await self._execute_graphql(mutation, variables)
+            return True
+        except Exception as e:
+            logger.error(f"Failed to sync Linear status: {e}")
+            return False
+
+    def _map_priority(self, priority: str) -> int:
+        """Map priority string to Linear priority number"""
+        mapping = {
+            "low": 4,
+            "medium": 3,
+            "high": 2,
+            "critical": 1
+        }
+        return mapping.get(priority.lower(), 3)
+
+class GitLabAPI(PlatformAPI):
+    """GitLab API implementation"""
+
+    def __init__(self):
+        self.token = os.getenv('GITLAB_TOKEN')
+        self.project_id = "opendiscourse"
+        self.base_url = "https://gitlab.com/api/v4"
+        self.headers = {
+            "Private-Token": self.token,
+            "Content-Type": "application/json"
+        }
+
+    async def create_issue(self, issue_data: IssueMapping) -> Dict:
+        """Create GitLab issue"""
+        data = {
+            "title": issue_data.title,
+            "description": issue_data.description,
+            "labels": ",".join(issue_data.labels),
+            "assignee_id": await self._get_assignee_id(issue_data.assignee)
+        }
+
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                f"{self.base_url}/projects/{self.project_id}/issues",
+                headers=self.headers,
+                json=data
+            ) as response:
+                if response.status == 201:
+                    result = await response.json()
+                    logger.info(f"Created GitLab issue: {result['iid']}")
+                    return result
+                else:
+                    error_text = await response.text()
+                    logger.error(f"Failed to create GitLab issue: {error_text}")
+                    raise Exception(f"GitLab API error: {response.status}")
+
+    async def update_issue(self, issue_id: str, issue_data: Dict) -> Dict:
+        """Update GitLab issue"""
+        async with aiohttp.ClientSession() as session:
+            async with session.put(
+                f"{self.base_url}/projects/{self.project_id}/issues/{issue_id}",
+                headers=self.headers,
+                json=issue_data
+            ) as response:
+                if response.status == 200:
+                    result = await response.json()
+                    logger.info(f"Updated GitLab issue: {issue_id}")
+                    return result
+                else:
+                    error_text = await response.text()
+                    logger.error(f"Failed to update GitLab issue: {error_text}")
+                    raise Exception(f"GitLab API error: {response.status}")
+
+    async def get_issue(self, issue_id: str) -> Dict:
+        """Get GitLab issue"""
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                f"{self.base_url}/projects/{self.project_id}/issues/{issue_id}",
+                headers=self.headers
+            ) as response:
+                if response.status == 200:
+                    return await response.json()
+                else:
+                    logger.error(f"Failed to get GitLab issue {issue_id}: {response.status}")
+                    raise Exception(f"GitLab API error: {response.status}")
+
+    async def list_issues(self, filters: Dict = None) -> List[Dict]:
+        """List GitLab issues"""
+        params = filters or {}
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                f"{self.base_url}/projects/{self.project_id}/issues",
+                headers=self.headers,
+                params=params
+            ) as response:
+                if response.status == 200:
+                    return await response.json()
+                else:
+                    logger.error(f"Failed to list GitLab issues: {response.status}")
+                    return []
+
+    async def sync_status(self, issue_id: str, new_status: str) -> bool:
+        """Sync issue status"""
+        # Map generic status to GitLab states
+        status_mapping = {
+            "open": "opened",
+            "in_progress": "opened",
+            "in_review": "opened",
+            "testing": "opened",
+            "done": "closed",
+            "blocked": "opened"
+        }
+
+        gitlab_state = status_mapping.get(new_status.lower(), "opened")
+        state_data = {"state_event": gitlab_state}
+
+        try:
+            await self.update_issue(issue_id, state_data)
+            return True
+        except Exception as e:
+            logger.error(f"Failed to sync GitLab status: {e}")
+            return False
+
+    async def _get_assignee_id(self, assignee_name: str) -> Optional[int]:
+        """Get GitLab user ID from username"""
+        if not assignee_name:
+            return None
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                f"{self.base_url}/users?username={assignee_name}",
+                headers=self.headers
+            ) as response:
+                if response.status == 200:
+                    users = await response.json()
+                    if users:
+                        return users[0]["id"]
+        return None
+
+class BitbucketAPI(PlatformAPI):
+    """Bitbucket API implementation"""
+
+    def __init__(self):
+        self.username = os.getenv('BITBUCKET_USERNAME')
+        self.app_password = os.getenv('BITBUCKET_APP_PASSWORD')
+        self.workspace = "cbwinslow"
+        self.repo = "opendiscourse-core"
+        self.base_url = "https://api.bitbucket.org/2.0"
+        self.auth = aiohttp.BasicAuth(self.username, self.app_password)
+
+    async def create_issue(self, issue_data: IssueMapping) -> Dict:
+        """Create Bitbucket issue"""
+        data = {
+            "title": issue_data.title,
+            "content": {"raw": issue_data.description},
+            "kind": self._map_kind(issue_data.labels),
+            "priority": self._map_priority(issue_data.priority),
+            "assignee": {"username": issue_data.assignee} if issue_data.assignee else None
+        }
+
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                f"{self.base_url}/repositories/{self.workspace}/{self.repo}/issues",
+                auth=self.auth,
+                json=data
+            ) as response:
+                if response.status == 200 or response.status == 201:
+                    result = await response.json()
+                    logger.info(f"Created Bitbucket issue: {result['id']}")
+                    return result
+                else:
+                    error_text = await response.text()
+                    logger.error(f"Failed to create Bitbucket issue: {error_text}")
+                    raise Exception(f"Bitbucket API error: {response.status}")
+
+    async def update_issue(self, issue_id: str, issue_data: Dict) -> Dict:
+        """Update Bitbucket issue"""
+        async with aiohttp.ClientSession() as session:
+            async with session.put(
+                f"{self.base_url}/repositories/{self.workspace}/{self.repo}/issues/{issue_id}",
+                auth=self.auth,
+                json=issue_data
+            ) as response:
+                if response.status == 200:
+                    result = await response.json()
+                    logger.info(f"Updated Bitbucket issue: {issue_id}")
+                    return result
+                else:
+                    error_text = await response.text()
+                    logger.error(f"Failed to update Bitbucket issue: {error_text}")
+                    raise Exception(f"Bitbucket API error: {response.status}")
+
+    async def get_issue(self, issue_id: str) -> Dict:
+        """Get Bitbucket issue"""
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                f"{self.base_url}/repositories/{self.workspace}/{self.repo}/issues/{issue_id}",
+                auth=self.auth
+            ) as response:
+                if response.status == 200:
+                    return await response.json()
+                else:
+                    logger.error(f"Failed to get Bitbucket issue {issue_id}: {response.status}")
+                    raise Exception(f"Bitbucket API error: {response.status}")
+
+    async def list_issues(self, filters: Dict = None) -> List[Dict]:
+        """List Bitbucket issues"""
+        params = filters or {}
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                f"{self.base_url}/repositories/{self.workspace}/{self.repo}/issues",
+                auth=self.auth,
+                params=params
+            ) as response:
+                if response.status == 200:
+                    result = await response.json()
+                    return result.get("values", [])
+                else:
+                    logger.error(f"Failed to list Bitbucket issues: {response.status}")
+                    return []
+
+    async def sync_status(self, issue_id: str, new_status: str) -> bool:
+        """Sync issue status"""
+        # Map generic status to Bitbucket states
+        status_mapping = {
+            "open": "new",
+            "in_progress": "new",
+            "in_review": "resolved",
+            "testing": "resolved",
+            "done": "closed",
+            "blocked": "on_hold"
+        }
+
+        bb_state = status_mapping.get(new_status.lower(), "new")
+        state_data = {"state": bb_state}
+
+        try:
+            await self.update_issue(issue_id, state_data)
+            return True
+        except Exception as e:
+            logger.error(f"Failed to sync Bitbucket status: {e}")
+            return False
+
+    def _map_kind(self, labels: List[str]) -> str:
+        """Map labels to Bitbucket issue kind"""
+        if any(label in ["bug", "critical"] for label in labels):
+            return "bug"
+        elif any(label in ["enhancement", "feature"] for label in labels):
+            return "enhancement"
+        else:
+            return "task"
+
+    def _map_priority(self, priority: str) -> str:
+        """Map priority string to Bitbucket priority"""
+        mapping = {
+            "low": "trivial",
+            "medium": "minor",
+            "high": "major",
+            "critical": "critical"
+        }
+        return mapping.get(priority.lower(), "minor")
+
+class JiraAPI(PlatformAPI):
+    """Jira API implementation"""
+
+    def __init__(self):
+        self.url = os.getenv('JIRA_URL')
+        self.username = os.getenv('JIRA_USERNAME')
+        self.api_token = os.getenv('JIRA_API_TOKEN')
+        self.project_key = "OD"
+        self.base_url = f"{self.url}/rest/api/3"
+        self.auth = aiohttp.BasicAuth(self.username, self.api_token)
+        self.headers = {
+            "Accept": "application/json",
+            "Content-Type": "application/json"
+        }
+
+    async def create_issue(self, issue_data: IssueMapping) -> Dict:
+        """Create Jira issue"""
+        data = {
+            "fields": {
+                "project": {"key": self.project_key},
+                "summary": issue_data.title,
+                "description": {
+                    "type": "doc",
+                    "version": 1,
+                    "content": [
+                        {
+                            "type": "paragraph",
+                            "content": [
+                                {
+                                    "type": "text",
+                                    "text": issue_data.description
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "issuetype": {"name": self._map_issue_type(issue_data.labels)},
+                "priority": {"name": self._map_priority(issue_data.priority)},
+                "assignee": {"accountId": await self._get_assignee_id(issue_data.assignee)}
+            }
+        }
+
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                f"{self.base_url}/issue",
+                auth=self.auth,
+                headers=self.headers,
+                json=data
+            ) as response:
+                if response.status == 201:
+                    result = await response.json()
+                    logger.info(f"Created Jira issue: {result['key']}")
+                    return result
+                else:
+                    error_text = await response.text()
+                    logger.error(f"Failed to create Jira issue: {error_text}")
+                    raise Exception(f"Jira API error: {response.status}")
+
+    async def update_issue(self, issue_id: str, issue_data: Dict) -> Dict:
+        """Update Jira issue"""
+        async with aiohttp.ClientSession() as session:
+            async with session.put(
+                f"{self.base_url}/issue/{issue_id}",
+                auth=self.auth,
+                headers=self.headers,
+                json=issue_data
+            ) as response:
+                if response.status == 204:
+                    logger.info(f"Updated Jira issue: {issue_id}")
+                    return {"key": issue_id, "updated": True}
+                else:
+                    error_text = await response.text()
+                    logger.error(f"Failed to update Jira issue: {error_text}")
+                    raise Exception(f"Jira API error: {response.status}")
+
+    async def get_issue(self, issue_id: str) -> Dict:
+        """Get Jira issue"""
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                f"{self.base_url}/issue/{issue_id}",
+                auth=self.auth,
+                headers=self.headers
+            ) as response:
+                if response.status == 200:
+                    return await response.json()
+                else:
+                    logger.error(f"Failed to get Jira issue {issue_id}: {response.status}")
+                    raise Exception(f"Jira API error: {response.status}")
+
+    async def list_issues(self, filters: Dict = None) -> List[Dict]:
+        """List Jira issues"""
+        jql = filters.get('jql', f'project = {self.project_key} AND statusCategory != Done')
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                f"{self.base_url}/search",
+                auth=self.auth,
+                headers=self.headers,
+                params={"jql": jql}
+            ) as response:
+                if response.status == 200:
+                    result = await response.json()
+                    return result.get("issues", [])
+                else:
+                    logger.error(f"Failed to list Jira issues: {response.status}")
+                    return []
+
+    async def sync_status(self, issue_id: str, new_status: str) -> bool:
+        """Sync issue status"""
+        # This would require transitioning the issue through workflow states
+        # For simplicity, we'll update the status name field
+        status_data = {
+            "fields": {
+                "status": {"name": self._map_status(new_status)}
+            }
+        }
+
+        try:
+            await self.update_issue(issue_id, status_data)
+            return True
+        except Exception as e:
+            logger.error(f"Failed to sync Jira status: {e}")
+            return False
+
+    def _map_issue_type(self, labels: List[str]) -> str:
+        """Map labels to Jira issue type"""
+        if any(label in ["bug", "critical"] for label in labels):
+            return "Bug"
+        elif any(label in ["enhancement", "feature"] for label in labels):
+            return "Story"
+        elif "documentation" in labels:
+            return "Task"
+        else:
+            return "Task"
+
+    def _map_priority(self, priority: str) -> str:
+        """Map priority string to Jira priority"""
+        mapping = {
+            "low": "Low",
+            "medium": "Medium",
+            "high": "High",
+            "critical": "Highest"
+        }
+        return mapping.get(priority.lower(), "Medium")
+
+    def _map_status(self, status: str) -> str:
+        """Map generic status to Jira status"""
+        mapping = {
+            "open": "To Do",
+            "in_progress": "In Progress",
+            "in_review": "In Review",
+            "testing": "Testing",
+            "done": "Done",
+            "blocked": "Blocked"
+        }
+        return mapping.get(status.lower(), "To Do")
+
+    async def _get_assignee_id(self, assignee_name: str) -> Optional[str]:
+        """Get Jira user account ID from username"""
+        if not assignee_name:
+            return None
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                f"{self.base_url}/user/search?query={assignee_name}",
+                auth=self.auth,
+                headers=self.headers
+            ) as response:
+                if response.status == 200:
+                    users = await response.json()
+                    if users:
+                        return users[0]["accountId"]
+        return None
+
+class CrossPlatformSync:
+    """Main synchronization orchestrator"""
+
+    def __init__(self):
+        self.github = GitHubAPI()
+        self.linear = LinearAPI()
+        self.gitlab = GitLabAPI()
+        self.bitbucket = BitbucketAPI()
+        self.jira = JiraAPI()
+
+        # Standard status and priority mappings
+        self.status_mapping = {
+            "open": {"github": "open", "linear": "Backlog", "gitlab": "opened", "bitbucket": "new", "jira": "To Do"},
+            "in_progress": {"github": "open", "linear": "In Progress", "gitlab": "opened", "bitbucket": "new", "jira": "In Progress"},
+            "in_review": {"github": "open", "linear": "In Review", "gitlab": "opened", "bitbucket": "resolved", "jira": "In Review"},
+            "testing": {"github": "open", "linear": "In Review", "gitlab": "opened", "bitbucket": "resolved", "jira": "Testing"},
+            "done": {"github": "closed", "linear": "Done", "gitlab": "closed", "bitbucket": "closed", "jira": "Done"},
+            "blocked": {"github": "open", "linear": "Backlog", "gitlab": "opened", "bitbucket": "on_hold", "jira": "Blocked"}
+        }
+
+        self.priority_mapping = {
+            "low": {"github": "low", "linear": 4, "gitlab": "low", "bitbucket": "trivial", "jira": "Low"},
+            "medium": {"github": "medium", "linear": 3, "gitlab": "medium", "bitbucket": "minor", "jira": "Medium"},
+            "high": {"github": "high", "linear": 2, "gitlab": "high", "bitbucket": "major", "jira": "High"},
+            "critical": {"github": "critical", "linear": 1, "gitlab": "high", "bitbucket": "critical", "jira": "Highest"}
+        }
+
+    async def create_issue_across_platforms(self, issue_data: IssueMapping) -> Dict[str, str]:
+        """Create issue across all platforms"""
+        logger.info(f"Creating issue across platforms: {issue_data.title}")
+
+        results = {}
+        errors = {}
+
+        # Create on all platforms concurrently
+        tasks = [
+            (self.github.create_issue, issue_data, "github", results, errors),
+            (self.linear.create_issue, issue_data, "linear", results, errors),
+            (self.gitlab.create_issue, issue_data, "gitlab", results, errors),
+            (self.bitbucket.create_issue, issue_data, "bitbucket", results, errors),
+            (self.jira.create_issue, issue_data, "jira", results, errors)
+        ]
+
+        await asyncio.gather(*[
+            self._safe_execute(create_func, issue_data, platform, results, errors)
+            for create_func, issue_data, platform, results, errors in tasks
+        ])
+
+        logger.info(f"Issue creation completed. Success: {len(results)}, Errors: {len(errors)}")
+        return {"successful": results, "failed": errors}
+
+    async def sync_issue_status(self, platform: str, issue_id: str, new_status: str) -> Dict[str, bool]:
+        """Synchronize status across all platforms"""
+        logger.info(f"Syncing status {new_status} for {platform}:{issue_id}")
+
+        results = {}
+
+        if platform not in self.status_mapping:
+            logger.error(f"Unknown platform: {platform}")
+            return {"success": False}
+
+        status_mapping = self.status_mapping[new_status]
+
+        # Sync to all platforms
+        tasks = [
+            (self.github.sync_status, issue_id, status_mapping["github"], "github", results),
+            (self.linear.sync_status, issue_id, status_mapping["linear"], "linear", results),
+            (self.gitlab.sync_status, issue_id, status_mapping["gitlab"], "gitlab", results),
+            (self.bitbucket.sync_status, issue_id, status_mapping["bitbucket"], "bitbucket", results),
+            (self.jira.sync_status, issue_id, status_mapping["jira"], "jira", results)
+        ]
+
+        await asyncio.gather(*[
+            self._safe_status_sync(sync_func, issue_id, platform_status, platform_name, results)
+            for sync_func, issue_id, platform_status, platform_name, results in tasks
+        ])
+
+        return results
+
+    async def sync_all_platforms(self) -> Dict[str, int]:
+        """Synchronize all platforms - fetch, compare, and sync differences"""
+        logger.info("Starting comprehensive platform synchronization")
+
+        sync_stats = {"synced": 0, "created": 0, "updated": 0, "errors": 0}
+
+        try:
+            # Collect issues from all platforms
+            all_issues = await self._collect_all_issues()
+
+            # Identify conflicts and synchronization needs
+            sync_actions = await self._identify_sync_actions(all_issues)
+
+            # Execute synchronization actions
+            for action in sync_actions:
+                try:
+                    if action["type"] == "create":
+                        result = await self.create_issue_across_platforms(action["data"])
+                        sync_stats["created"] += len(result["successful"])
+                    elif action["type"] == "update":
+                        result = await self._update_issue_sync(action["platform"], action["issue_id"], action["data"])
+                        sync_stats["updated"] += 1
+
+                    sync_stats["synced"] += 1
+
+                except Exception as e:
+                    logger.error(f"Sync action failed: {e}")
+                    sync_stats["errors"] += 1
+
+        except Exception as e:
+            logger.error(f"Comprehensive sync failed: {e}")
+            sync_stats["errors"] += 1
+
+        logger.info(f"Sync completed. Stats: {sync_stats}")
+        return sync_stats
+
+    async def _safe_execute(self, func, *args, platform_key, results, errors):
+        """Safely execute platform API call"""
+        try:
+            result = await func(*args)
+            if isinstance(result, dict):
+                platform_id = result.get('number') or result.get('id') or result.get('iid') or result.get('key')
+                results[platform_key] = platform_id
+            else:
+                results[platform_key] = str(result)
+        except Exception as e:
+            logger.error(f"Failed to create issue on {platform_key}: {e}")
+            errors[platform_key] = str(e)
+
+    async def _safe_status_sync(self, func, *args, platform_key, results):
+        """Safely execute status sync"""
+        try:
+            success = await func(*args)
+            results[platform_key] = success
+        except Exception as e:
+            logger.error(f"Failed to sync status on {platform_key}: {e}")
+            results[platform_key] = False
+
+    async def _collect_all_issues(self) -> Dict[str, List[Dict]]:
+        """Collect issues from all platforms"""
+        issues = {}
+
+        platforms = [
+            ("github", self.github),
+            ("linear", self.linear),
+            ("gitlab", self.gitlab),
+            ("bitbucket", self.bitbucket),
+            ("jira", self.jira)
+        ]
+
+        for platform_name, api in platforms:
+            try:
+                platform_issues = await api.list_issues()
+                issues[platform_name] = platform_issues
+                logger.info(f"Collected {len(platform_issues)} issues from {platform_name}")
+            except Exception as e:
+                logger.error(f"Failed to collect issues from {platform_name}: {e}")
+                issues[platform_name] = []
+
+        return issues
+
+    async def _identify_sync_actions(self, all_issues: Dict[str, List[Dict]]) -> List[Dict]:
+        """Identify what synchronization actions are needed"""
+        # This is a simplified implementation
+        # In a real system, this would include:
+        # - Detecting duplicate issues across platforms
+        # - Identifying status inconsistencies
+        # - Finding missing issues that should be created
+        # - Mapping related issues
+
+        actions = []
+
+        # For demo purposes, we'll create some sample actions
+        # In practice, this would analyze the actual issue data
+
+        return actions
+
+    async def _update_issue_sync(self, platform: str, issue_id: str, update_data: Dict) -> bool:
+        """Update issue with sync data"""
+        apis = {
+            "github": self.github,
+            "linear": self.linear,
+            "gitlab": self.gitlab,
+            "bitbucket": self.bitbucket,
+            "jira": self.jira
+        }
+
+        if platform in apis:
+            try:
+                await apis[platform].update_issue(issue_id, update_data)
+                return True
+            except Exception as e:
+                logger.error(f"Failed to update {platform} issue {issue_id}: {e}")
+                return False
+
+        return False
+
+# Webhook handlers for real-time synchronization
+class WebhookHandler:
+    """Handle webhooks from various platforms"""
+
+    def __init__(self, sync_engine: CrossPlatformSync):
+        self.sync_engine = sync_engine
+        self.secret = os.getenv('WEBHOOK_SECRET', 'default-secret')
+
+    def verify_signature(self, payload: bytes, signature: str) -> bool:
+        """Verify webhook signature"""
+        expected_signature = hmac.new(
+            self.secret.encode('utf-8'),
+            payload,
+            hashlib.sha256
+        ).hexdigest()
+        return hmac.compare_digest(f"sha256={expected_signature}", signature)
+
+    async def handle_github_webhook(self, payload: Dict, signature: str) -> Dict[str, str]:
+        """Handle GitHub webhook"""
+        if not self.verify_signature(json.dumps(payload).encode(), signature):
+            raise ValueError("Invalid GitHub webhook signature")
+
+        action = payload.get('action')
+        issue = payload.get('issue')
+
+        if issue and action in ['opened', 'edited', 'closed']:
+            # Sync to other platforms
+            issue_mapping = IssueMapping(
+                platform_id=str(issue['number']),
+                platform='github',
+                title=issue['title'],
+                description=issue['body'] or '',
+                status=issue['state'],
+                priority='medium',  # Would extract from labels
+                labels=[label['name'] for label in issue['labels']],
+                assignee=issue['assignee']['login'] if issue.get('assignee') else '',
+                created_at=issue['created_at'],
+                updated_at=issue['updated_at'],
+                url=issue['html_url']
+            )
+
+            results = await self.sync_engine.create_issue_across_platforms(issue_mapping)
+            return results
+
+        return {"status": "ignored", "reason": "not_issue_event"}
+
+    async def handle_linear_webhook(self, payload: Dict) -> Dict[str, str]:
+        """Handle Linear webhook"""
+        # Similar implementation for Linear
+        action = payload.get('action')
+        issue = payload.get('data', {}).get('issue')
+
+        if issue and action in ['create', 'update']:
+            # Process Linear webhook and sync to other platforms
+            return {"status": "processed"}
+
+        return {"status": "ignored"}
+
+    async def handle_gitlab_webhook(self, payload: Dict) -> Dict[str, str]:
+        """Handle GitLab webhook"""
+        object_kind = payload.get('object_kind')
+
+        if object_kind == 'issue':
+            issue = payload.get('object_attributes', {})
+            action = issue.get('action')
+
+            if action in ['open', 'update', 'close']:
+                # Process GitLab webhook and sync to other platforms
+                return {"status": "processed"}
+
+        return {"status": "ignored"}
+
+# Health check and monitoring
+class IntegrationMonitor:
+    """Monitor integration health and performance"""
+
+    def __init__(self):
+        self.sync_engine = CrossPlatformSync()
+        self.health_file = "/tmp/integration_health.json"
+
+    async def health_check(self) -> Dict[str, any]:
+        """Perform comprehensive health check"""
+        health_status = {
+            "timestamp": datetime.now().isoformat(),
+            "overall_status": "healthy",
+            "platforms": {},
+            "last_sync": None,
+            "error_count": 0,
+            "sync_rate": 0.0
+        }
+
+        # Check each platform
+        platforms = [
+            ("github", self.sync_engine.github),
+            ("linear", self.sync_engine.linear),
+            ("gitlab", self.sync_engine.gitlab),
+            ("bitbucket", self.sync_engine.bitbucket),
+            ("jira", self.sync_engine.jira)
+        ]
+
+        for platform_name, api in platforms:
+            try:
+                # Simple connectivity check
+                await asyncio.wait_for(api.list_issues({"per_page": 1}), timeout=5)
+                health_status["platforms"][platform_name] = {"status": "healthy", "last_check": datetime.now().isoformat()}
+            except asyncio.TimeoutError:
+                health_status["platforms"][platform_name] = {"status": "timeout", "last_check": datetime.now().isoformat()}
+                health_status["overall_status"] = "degraded"
+            except Exception as e:
+                health_status["platforms"][platform_name] = {"status": "error", "error": str(e), "last_check": datetime.now().isoformat()}
+                health_status["overall_status"] = "unhealthy"
+                health_status["error_count"] += 1
+
+        # Load last sync information
+        if os.path.exists(self.health_file):
+            try:
+                with open(self.health_file, 'r') as f:
+                    last_health = json.load(f)
+                    health_status["last_sync"] = last_health.get("last_sync")
+                    health_status["sync_rate"] = last_health.get("sync_rate", 0.0)
+            except Exception as e:
+                logger.warning(f"Could not load health file: {e}")
+
+        # Save current health status
+        try:
+            with open(self.health_file, 'w') as f:
+                json.dump(health_status, f, indent=2)
+        except Exception as e:
+            logger.warning(f"Could not save health file: {e}")
+
+        return health_status
+
+# Main execution functions
+async def main():
+    """Main execution function"""
+    sync_engine = CrossPlatformSync()
+
+    # Perform comprehensive sync
+    stats = await sync_engine.sync_all_platforms()
+    print(f"Sync completed: {stats}")
+
+    # Health check
+    monitor = IntegrationMonitor()
+    health = await monitor.health_check()
+    print(f"Health check: {health['overall_status']}")
+
+    return {"sync_stats": stats, "health": health}
+
+if __name__ == "__main__":
+    # Set environment variables for testing
+    os.environ.setdefault('GITHUB_TOKEN', 'your_github_token_here')
+    os.environ.setdefault('LINEAR_API_KEY', 'your_linear_api_key_here')
+    os.environ.setdefault('GITLAB_TOKEN', 'your_gitlab_token_here')
+    os.environ.setdefault('BITBUCKET_USERNAME', 'your_bitbucket_username')
+    os.environ.setdefault('BITBUCKET_APP_PASSWORD', 'your_bitbucket_app_password')
+    os.environ.setdefault('JIRA_URL', 'https://your-domain.atlassian.net')
+    os.environ.setdefault('JIRA_USERNAME', 'your_email@domain.com')
+    os.environ.setdefault('JIRA_API_TOKEN', 'your_jira_api_token')
+
+    # Run the sync
+    asyncio.run(main())

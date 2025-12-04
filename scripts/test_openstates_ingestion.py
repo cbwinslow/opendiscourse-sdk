@@ -1,0 +1,86 @@
+#!/usr/bin/env python3
+"""
+Test ingestion script for OpenStates CLI.
+Tests basic functionality with small data samples.
+"""
+
+import sys
+import subprocess
+from pathlib import Path
+
+def run_command(cmd):
+    """Run command and return result."""
+    print(f"\n{'='*70}")
+    print(f"Running: {' '.join(cmd)}")
+    print('='*70)
+
+    result = subprocess.run(cmd, capture_output=True, text=True)
+
+    print(result.stdout)
+    if result.stderr:
+        print("STDERR:", result.stderr)
+
+    return result.returncode == 0
+
+def test_openstates_cli():
+    """Test OpenStates CLI ingestion."""
+    print("\n" + "="*70)
+    print("TESTING OPENSTATES CLI")
+    print("="*70)
+
+    tests_passed = 0
+    tests_failed = 0
+
+    # Test 1: Ingest 5 bills from California
+    print("\n[Test 1] Ingesting 5 bills from California...")
+    if run_command([
+        "python3", "scripts/ingestion/openstates_cli.py",
+        "ingest-bills",
+        "--jurisdiction", "ca",
+        "--limit", "5"
+    ]):
+        tests_passed += 1
+        print("✓ Bills ingestion succeeded")
+    else:
+        tests_failed += 1
+        print("✗ Bills ingestion failed")
+
+    # Test 2: Ingest people from California
+    print("\n[Test 2] Ingesting people from California...")
+    if run_command([
+        "python3", "scripts/ingestion/openstates_cli.py",
+        "ingest-people",
+        "--jurisdiction", "ca",
+        "--limit", "10"
+    ]):
+        tests_passed += 1
+        print("✓ People ingestion succeeded")
+    else:
+        tests_failed += 1
+        print("✗ People ingestion failed")
+
+    # Test 3: List jurisdictions
+    print("\n[Test 3] Listing jurisdictions...")
+    if run_command([
+        "python3", "scripts/ingestion/openstates_cli.py",
+        "list-jurisdictions"
+    ]):
+        tests_passed += 1
+        print("✓ Jurisdiction list succeeded")
+    else:
+        tests_failed += 1
+        print("✗ Jurisdiction list failed")
+
+    # Summary
+    print("\n" + "="*70)
+    print("OPENSTATES CLI TEST SUMMARY")
+    print("="*70)
+    print(f"Passed: {tests_passed}/3")
+    print(f"Failed: {tests_failed}/3")
+    print("="*70)
+
+    return tests_failed == 0
+
+if __name__ == "__main__":
+    success = test_openstates_cli()
+    sys.exit(0 if success else 1)

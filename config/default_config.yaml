@@ -1,0 +1,78 @@
+# OpenDiscourse Master Configuration
+# Location: config/default_config.yaml
+# This file can be copied to ~/.config/opendiscourse/config.yaml for user customization
+
+# Database Configuration
+database:
+  backend: postgresql  # postgresql, mysql, sqlite
+  postgresql:
+    host: localhost
+    port: 5432
+    database: opendiscourse
+    user: postgres
+    password: ""  # Use DB_PASSWORD env var
+    pool_size: 10
+    max_overflow: 20
+
+# API Keys (use environment variables)
+api_keys:
+  congress_api_key: ""  # CONGRESS_API_KEY
+  openstates_api_key: ""  # OPENSTATES_API_KEY
+  govinfo_api_key: ""  # GOVINFO_API_KEY
+
+# Feature Flags
+features:
+  deduplication: true
+  worker_pool: true
+  advanced_caching: true
+  csv_export: true
+  parquet_export: true
+
+# Deduplication Settings
+deduplication:
+  strategy: update  # skip, update, error, version
+  use_temp_tables: true  # Batch efficiency
+  batch_size: 1000
+  cache_size: 10000
+
+# Worker Pool
+workers:
+  default_workers: 4
+  max_workers: 16
+  queue_size: 10000
+  rate_limit: 10  # requests/second/worker
+  max_retries: 3
+
+# Ingestion
+ingestion:
+  batch_size: 100
+  bulk_insert_size: 500
+  parallel_fetching: true
+  validate_before_insert: true
+
+# Logging
+logging:
+  level: INFO
+  directory: logs/
+  max_file_size: 10485760  # 10MB
+
+# Directories
+directories:
+  data: data/
+  exports: exports/
+  logs: logs/
+  temp: temp/
+
+# CLI Defaults
+cli:
+  default_congress: 118
+  verbose: false
+  show_progress: true
+
+# Documentation URLs
+documentation:
+  api_docs: https://opendiscourse.cbwinslow.dev/api
+  sources:
+    congress: https://api.congress.gov/
+    openstates: https://docs.openstates.org/api-v3/
+    govinfo: https://api.govinfo.gov/docs/

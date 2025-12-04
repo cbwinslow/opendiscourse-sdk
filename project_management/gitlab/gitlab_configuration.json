@@ -1,0 +1,548 @@
+{
+  "gitlab_projects": [
+    {
+      "project_id": "opendiscourse-main",
+      "name": "OpenDiscourse Legislative Data Platform",
+      "description": "Comprehensive legislative data processing and semantic search platform",
+      "visibility": "private",
+      "namespace": "opendiscourse",
+      "default_branch": "main",
+      "issues_enabled": true,
+      "merge_requests_enabled": true,
+      "wiki_enabled": true,
+      "snippets_enabled": true,
+      "container_registry_enabled": true
+    },
+    {
+      "project_id": "opendiscourse-v2",
+      "name": "OpenDiscourse Project v2 - Semantic Search",
+      "description": "Advanced features including PGVector integration and AI-powered semantic search",
+      "visibility": "private",
+      "namespace": "opendiscourse-v2",
+      "default_branch": "main",
+      "issues_enabled": true,
+      "merge_requests_enabled": true,
+      "wiki_enabled": true,
+      "container_registry_enabled": true
+    }
+  ],
+  "milestones": [
+    {
+      "title": "v1.2.0 - Critical Bug Fixes",
+      "description": "Fix critical issues blocking core functionality",
+      "due_date": "2025-12-31",
+      "project_id": "opendiscourse-main",
+      "state": "active",
+      "issues": [1, 2]
+    },
+    {
+      "title": "v1.3.0 - System Improvements",
+      "description": "Monitoring, database standards, and testing improvements",
+      "due_date": "2026-01-31",
+      "project_id": "opendiscourse-main",
+      "state": "active",
+      "issues": [3, 4, 5, 10]
+    },
+    {
+      "title": "v2.0.0 - Semantic Search & AI",
+      "description": "Major release with PGVector integration and historical data expansion",
+      "due_date": "2026-03-31",
+      "project_id": "opendiscourse-v2",
+      "state": "active",
+      "issues": [6, 7, 8, 9]
+    }
+  ],
+  "epics": [
+    {
+      "title": "Congress Data Ingestion Crisis",
+      "description": "Critical breakdown in Congress bills ingestion system requiring immediate attention",
+      "start_date": "2025-12-01",
+      "end_date": "2025-12-15",
+      "state": "opened",
+      "project_id": "opendiscourse-main",
+      "weight": 10,
+      "children": [
+        {
+          "title": "Fix Foreign Key Constraint Violation",
+          "description": "Congress bills ingestion fails due to chamber mapping foreign key constraint",
+          "labels": ["bug", "critical", "congress", "data-ingestion"],
+          "assignee": "@senior-engineer",
+          "weight": 5,
+          "due_date": "2025-12-08"
+        },
+        {
+          "title": "Implement Data Validation Layer",
+          "description": "Add comprehensive data validation before database insertion",
+          "labels": ["enhancement", "data-quality", "validation"],
+          "assignee": "@backend-developer",
+          "weight": 3,
+          "due_date": "2025-12-12"
+        },
+        {
+          "title": "Add Error Recovery Mechanisms",
+          "description": "Implement robust error handling for failed ingestion attempts",
+          "labels": ["reliability", "error-handling"],
+          "assignee": "@devops-engineer",
+          "weight": 2,
+          "due_date": "2025-12-15"
+        }
+      ]
+    },
+    {
+      "title": "Enhanced OpenStates Implementation",
+      "description": "Complete implementation of sophisticated OpenStates ingestion framework",
+      "start_date": "2025-12-05",
+      "end_date": "2026-01-15",
+      "state": "opened",
+      "project_id": "opendiscourse-main",
+      "weight": 13,
+      "children": [
+        {
+          "title": "Implement State Bills Processing",
+          "description": "Complete process_state_bills method implementation",
+          "labels": ["enhancement", "openstates", "state-legislation"],
+          "assignee": "@senior-engineer",
+          "weight": 6,
+          "due_date": "2025-12-20"
+        },
+        {
+          "title": "Build Committee Data Extraction",
+          "description": "Implement extract_committee_data method for OpenStates API",
+          "labels": ["enhancement", "openstates", "committees"],
+          "assignee": "@backend-developer",
+          "weight": 4,
+          "due_date": "2026-01-05"
+        },
+        {
+          "title": "Create Session Data Validation",
+          "description": "Implement validate_session_data method for data quality assurance",
+          "labels": ["enhancement", "data-validation", "quality"],
+          "assignee": "@data-engineer",
+          "weight": 3,
+          "due_date": "2026-01-10"
+        },
+        {
+          "title": "Implement Rate Limiting System",
+          "description": "Build sophisticated rate limiting and backoff strategies",
+          "labels": ["performance", "rate-limiting", "api"],
+          "assignee": "@devops-engineer",
+          "weight": 5,
+          "due_date": "2025-12-25"
+        },
+        {
+          "title": "Build Parallel Processing Engine",
+          "description": "Add parallel processing capabilities for large-scale ingestion",
+          "labels": ["performance", "parallel-processing", "scalability"],
+          "assignee": "@senior-engineer",
+          "weight": 8,
+          "due_date": "2026-01-15"
+        }
+      ]
+    },
+    {
+      "title": "Monitoring System Overhaul",
+      "description": "Comprehensive improvement of monitoring and observability systems",
+      "start_date": "2025-12-10",
+      "end_date": "2026-01-20",
+      "state": "opened",
+      "project_id": "opendiscourse-main",
+      "weight": 8,
+      "children": [
+        {
+          "title": "Fix Delegate Registration Issues",
+          "description": "Resolve delegate mismatch in monitoring system registration",
+          "labels": ["bug", "monitoring", "registration"],
+          "assignee": "@backend-developer",
+          "weight": 3,
+          "due_date": "2025-12-18"
+        },
+        {
+          "title": "Enhance Error Recovery",
+          "description": "Improve error handling and recovery in monitoring pipeline",
+          "labels": ["enhancement", "monitoring", "reliability"],
+          "assignee": "@devops-engineer",
+          "weight": 4,
+          "due_date": "2026-01-05"
+        },
+        {
+          "title": "Fix Progress Calculation Logic",
+          "description": "Correct progress tracking calculations and reporting accuracy",
+          "labels": ["bug", "monitoring", "reporting"],
+          "assignee": "@data-engineer",
+          "weight": 2,
+          "due_date": "2025-12-22"
+        },
+        {
+          "title": "Integrate GovInfo Monitoring",
+          "description": "Add GovInfo data source monitoring to existing system",
+          "labels": ["enhancement", "monitoring", "govinfo"],
+          "assignee": "@integration-specialist",
+          "weight": 5,
+          "due_date": "2026-01-20"
+        }
+      ]
+    },
+    {
+      "title": "Database Standards Compliance",
+      "description": "Standardize database operations and optimize performance",
+      "start_date": "2025-12-15",
+      "end_date": "2026-01-25",
+      "state": "opened",
+      "project_id": "opendiscourse-main",
+      "weight": 9,
+      "children": [
+        {
+          "title": "Audit Connection Patterns",
+          "description": "Review all database connection usage across codebase",
+          "labels": ["audit", "database", "standards"],
+          "assignee": "@database-admin",
+          "weight": 2,
+          "due_date": "2025-12-22"
+        },
+        {
+          "title": "Standardize Connection Management",
+          "description": "Implement consistent connection pooling and lifecycle management",
+          "labels": ["enhancement", "database", "connection-pooling"],
+          "assignee": "@backend-developer",
+          "weight": 4,
+          "due_date": "2026-01-05"
+        },
+        {
+          "title": "Optimize Query Performance",
+          "description": "Review and optimize database queries for better performance",
+          "labels": ["optimization", "database", "performance"],
+          "assignee": "@database-admin",
+          "weight": 6,
+          "due_date": "2026-01-15"
+        },
+        {
+          "title": "Add Connection Monitoring",
+          "description": "Implement connection monitoring and alerting mechanisms",
+          "labels": ["monitoring", "database", "alerting"],
+          "assignee": "@devops-engineer",
+          "weight": 3,
+          "due_date": "2026-01-25"
+        }
+      ]
+    },
+    {
+      "title": "PGVector Semantic Search Foundation",
+      "description": "Complete implementation of PGVector for semantic search capabilities",
+      "start_date": "2026-01-01",
+      "end_date": "2026-03-01",
+      "state": "planned",
+      "project_id": "opendiscourse-v2",
+      "weight": 20,
+      "children": [
+        {
+          "title": "Research PGVector Integration",
+          "description": "Analyze technical requirements and constraints for PGVector",
+          "labels": ["research", "pgvector", "technical-design"],
+          "assignee": "@ai-specialist",
+          "weight": 8,
+          "due_date": "2026-01-10"
+        },
+        {
+          "title": "Design Vector Database Schema",
+          "description": "Create comprehensive schema for vector data storage and indexing",
+          "labels": ["design", "database", "schema", "vector-data"],
+          "assignee": "@database-admin",
+          "weight": 6,
+          "due_date": "2026-01-20"
+        },
+        {
+          "title": "Build Embedding Pipeline",
+          "description": "Implement pipeline for generating document embeddings",
+          "labels": ["ai", "embeddings", "pipeline", "nlp"],
+          "assignee": "@ai-specialist",
+          "weight": 12,
+          "due_date": "2026-02-10"
+        },
+        {
+          "title": "Create Search API",
+          "description": "Develop API endpoints for semantic similarity search",
+          "labels": ["api", "search", "semantic-search"],
+          "assignee": "@backend-developer",
+          "weight": 8,
+          "due_date": "2026-02-20"
+        },
+        {
+          "title": "Implement Result Ranking",
+          "description": "Build intelligent ranking algorithm for search results",
+          "labels": ["ranking", "algorithm", "relevance"],
+          "assignee": "@ai-specialist",
+          "weight": 6,
+          "due_date": "2026-02-28"
+        },
+        {
+          "title": "Optimize Search Performance",
+          "description": "Set up performance-optimized indexes for fast semantic search",
+          "labels": ["optimization", "performance", "indexing"],
+          "assignee": "@database-admin",
+          "weight": 4,
+          "due_date": "2026-03-01"
+        }
+      ]
+    },
+    {
+      "title": "Historical Congress Data Archive",
+      "description": "Comprehensive historical data ingestion and archival system",
+      "start_date": "2026-01-15",
+      "end_date": "2026-04-15",
+      "state": "planned",
+      "project_id": "opendiscourse-v2",
+      "weight": 18,
+      "children": [
+        {
+          "title": "Analyze Historical Data Sources",
+          "description": "Research and document availability of historical Congress data",
+          "labels": ["research", "historical-data", "congress"],
+          "assignee": "@data-engineer",
+          "weight": 4,
+          "due_date": "2026-01-30"
+        },
+        {
+          "title": "Design Historical Schema Extensions",
+          "description": "Create schema extensions for storing historical legislative data",
+          "labels": ["design", "database", "historical-data"],
+          "assignee": "@database-admin",
+          "weight": 6,
+          "due_date": "2026-02-15"
+        },
+        {
+          "title": "Build Roll Call Vote Ingestion",
+          "description": "Implement comprehensive roll call vote data ingestion",
+          "labels": ["enhancement", "congress", "votes", "roll-call"],
+          "assignee": "@senior-engineer",
+          "weight": 8,
+          "due_date": "2026-03-15"
+        },
+        {
+          "title": "Add Committee Historical Data",
+          "description": "Include historical committee membership and activity data",
+          "labels": ["enhancement", "committees", "historical-data"],
+          "assignee": "@backend-developer",
+          "weight": 6,
+          "due_date": "2026-03-30"
+        },
+        {
+          "title": "Implement Amendment Tracking",
+          "description": "Add support for tracking bill amendments across time",
+          "labels": ["enhancement", "amendments", "tracking"],
+          "assignee": "@data-engineer",
+          "weight": 5,
+          "due_date": "2026-04-10"
+        },
+        {
+          "title": "Create Data Migration Tools",
+          "description": "Build tools for migrating existing data to historical schema",
+          "labels": ["tools", "migration", "data-migration"],
+          "assignee": "@devops-engineer",
+          "weight": 4,
+          "due_date": "2026-04-15"
+        }
+      ]
+    },
+    {
+      "title": "Enhanced Automation & Integration",
+      "description": "Advanced automation and cross-platform integration capabilities",
+      "start_date": "2026-02-01",
+      "end_date": "2026-05-01",
+      "state": "planned",
+      "project_id": "opendiscourse-v2",
+      "weight": 15,
+      "children": [
+        {
+          "title": "Enhance Issue Creation Automation",
+          "description": "Improve automated issue creation based on monitoring and analysis",
+          "labels": ["automation", "issue-tracking", "monitoring"],
+          "assignee": "@devops-engineer",
+          "weight": 4,
+          "due_date": "2026-02-15"
+        },
+        {
+          "title": "Build Progress Tracking Automation",
+          "description": "Implement automated progress tracking across development milestones",
+          "labels": ["automation", "progress-tracking", "milestones"],
+          "assignee": "@backend-developer",
+          "weight": 6,
+          "due_date": "2026-03-01"
+        },
+        {
+          "title": "Create Milestone Management System",
+          "description": "Automated milestone creation and management based on code analysis",
+          "labels": ["automation", "milestones", "code-analysis"],
+          "assignee": "@integration-specialist",
+          "weight": 5,
+          "due_date": "2026-03-15"
+        },
+        {
+          "title": "Implement Cross-Platform Sync",
+          "description": "Sync issues and progress across GitHub, Linear, and other platforms",
+          "labels": ["integration", "cross-platform", "synchronization"],
+          "assignee": "@senior-engineer",
+          "weight": 8,
+          "due_date": "2026-04-15"
+        },
+        {
+          "title": "Add Automated Reporting",
+          "description": "Create automated project status and progress reporting",
+          "labels": ["automation", "reporting", "dashboard"],
+          "assignee": "@data-engineer",
+          "weight": 4,
+          "due_date": "2026-05-01"
+        }
+      ]
+    },
+    {
+      "title": "Comprehensive Testing Infrastructure",
+      "description": "Complete testing coverage for all platform components",
+      "start_date": "2026-02-15",
+      "end_date": "2026-06-15",
+      "state": "planned",
+      "project_id": "opendiscourse-main",
+      "weight": 16,
+      "children": [
+        {
+          "title": "Build Rate Limiting Test Suite",
+          "description": "Create comprehensive tests for rate limiting and throttling",
+          "labels": ["testing", "rate-limiting", "quality-assurance"],
+          "assignee": "@qa-engineer",
+          "weight": 4,
+          "due_date": "2026-03-01"
+        },
+        {
+          "title": "Implement Parallel Processing Tests",
+          "description": "Add tests for parallel processing reliability and correctness",
+          "labels": ["testing", "parallel-processing", "reliability"],
+          "assignee": "@qa-engineer",
+          "weight": 6,
+          "due_date": "2026-03-15"
+        },
+        {
+          "title": "Create Data Validation Test Suite",
+          "description": "Build comprehensive test suite for data validation and quality checks",
+          "labels": ["testing", "data-validation", "quality"],
+          "assignee": "@backend-developer",
+          "weight": 5,
+          "due_date": "2026-04-01"
+        },
+        {
+          "title": "Build Mock API Response Library",
+          "description": "Create comprehensive mock API response library for testing",
+          "labels": ["testing", "mocking", "api", "test-utilities"],
+          "assignee": "@qa-engineer",
+          "weight": 3,
+          "due_date": "2026-04-15"
+        },
+        {
+          "title": "Implement Recovery Testing",
+          "description": "Test failure recovery and resilience across all components",
+          "labels": ["testing", "recovery", "resilience", "failure-handling"],
+          "assignee": "@qa-engineer",
+          "weight": 4,
+          "due_date": "2026-05-01"
+        },
+        {
+          "title": "Create End-to-End Integration Tests",
+          "description": "Add full pipeline integration tests for complete workflow validation",
+          "labels": ["testing", "integration", "end-to-end", "workflow"],
+          "assignee": "@qa-engineer",
+          "weight": 8,
+          "due_date": "2026-06-15"
+        }
+      ]
+    }
+  ],
+  "labels": [
+    {
+      "name": "critical",
+      "color": "#d73a4a",
+      "description": "Critical issues requiring immediate attention"
+    },
+    {
+      "name": "bug",
+      "color": "#d73a4a",
+      "description": "Bug reports and issues"
+    },
+    {
+      "name": "enhancement",
+      "color": "#a2eeef",
+      "description": "Feature requests and enhancements"
+    },
+    {
+      "name": "documentation",
+      "color": "#0075ca",
+      "description": "Documentation improvements and updates"
+    },
+    {
+      "name": "testing",
+      "color": "#fbca04",
+      "description": "Testing infrastructure and test coverage"
+    },
+    {
+      "name": "congress",
+      "color": "#28a745",
+      "description": "Congress-related data and functionality"
+    },
+    {
+      "name": "openstates",
+      "color": "#6f42c1",
+      "description": "OpenStates data integration"
+    },
+    {
+      "name": "govinfo",
+      "color": "#fd8c73",
+      "description": "GovInfo data source integration"
+    },
+    {
+      "name": "monitoring",
+      "color": "#ff6b6b",
+      "description": "Monitoring and observability features"
+    },
+    {
+      "name": "project-v2",
+      "color": "#586069",
+      "description": "Project v2 development and features"
+    },
+    {
+      "name": "pgvector",
+      "color": "#e91e63",
+      "description": "PGVector and semantic search features"
+    },
+    {
+      "name": "ai-ml",
+      "color": "#9c27b0",
+      "description": "AI and machine learning components"
+    },
+    {
+      "name": "database",
+      "color": "#2196f3",
+      "description": "Database-related issues and improvements"
+    },
+    {
+      "name": "api",
+      "color": "#ff9800",
+      "description": "API development and integration"
+    },
+    {
+      "name": "performance",
+      "color": "#4caf50",
+      "description": "Performance optimization and improvements"
+    }
+  ],
+  "issue_templates": [
+    {
+      "name": "Bug Report",
+      "content": "## Bug Report\n\n### Description\nBrief description of the bug.\n\n### Steps to Reproduce\n1. Go to '...'\n2. Click on '....'\n3. Scroll down to '....'\n4. See error\n\n### Expected Behavior\nWhat you expected to happen.\n\n### Actual Behavior\nWhat actually happened.\n\n### Screenshots\nIf applicable, add screenshots.\n\n### Environment\n- Platform: [e.g. OpenDiscourse v1.1.0]\n- Browser: [e.g. Chrome, Firefox]\n- Database: [e.g. PostgreSQL 15]\n\n### Additional Context\nAdd any other context about the problem.\n\n### Labels\n- bug\n- needs-triage"
+    },
+    {
+      "name": "Feature Request",
+      "content": "## Feature Request\n\n### Problem Summary\nBrief description of the problem this feature would solve.\n\n### Proposed Solution\nDescription of what you want to happen.\n\n### Alternative Solutions\nDescription of any alternative solutions you've considered.\n\n### Use Cases\nList the use cases this feature would address.\n\n### Technical Requirements\n- Database changes: [Yes/No - describe]\n- API changes: [Yes/No - describe]\n- UI changes: [Yes/No - describe]\n\n### Priority\n- [ ] Low\n- [ ] Medium  \n- [ ] High\n- [ ] Critical\n\n### Labels\n- enhancement\n- needs-triage"
+    },
+    {
+      "name": "Data Ingestion Issue",
+      "content": "## Data Ingestion Issue\n\n### Data Source\n- [ ] Congress API\n- [ ] OpenStates API\n- [ ] GovInfo API\n- [ ] Other: _______\n\n### Issue Type\n- [ ] Data format inconsistency\n- [ ] API rate limiting\n- [ ] Authentication failure\n- [ ] Schema mismatch\n- [ ] Data quality issues\n\n### Affected Data\n- Bills: Yes/No\n- Members: Yes/No\n- Committees: Yes/No\n- Votes: Yes/No\n\n### Error Details\n```\nPaste error message here\n```\n\n### Investigation Results\n1. Root cause identified: Yes/No\n2. Data source status: Normal/Degraded/Down\n3. Workaround available: Yes/No\n\n### Priority\n- [ ] Critical (affecting production)\n- [ ] High (blocking users)\n- [ ] Medium (degraded functionality)\n- [ ] Low (minor issues)\n\n### Labels\n- bug\n- data-ingestion\n- [source-label]\n- [priority-label]"
+    }
+  ]
+}

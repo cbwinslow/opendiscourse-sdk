@@ -1,0 +1,582 @@
+{
+  "bitbucket_projects": [
+    {
+      "key": "OD",
+      "name": "OpenDiscourse Legislative Data Platform",
+      "description": "Comprehensive legislative data processing and semantic search platform",
+      "is_public": false,
+      "type": "NORMAL",
+      "owner": {
+        "type": "user",
+        "username": "cbwinslow",
+        "display_name": "Christopher Winslow"
+      }
+    },
+    {
+      "key": "ODV2",
+      "name": "OpenDiscourse Project v2 - Semantic Search & AI",
+      "description": "Advanced features including PGVector integration and AI-powered semantic search",
+      "is_public": false,
+      "type": "NORMAL",
+      "owner": {
+        "type": "user",
+        "username": "cbwinslow",
+        "display_name": "Christopher Winslow"
+      }
+    }
+  ],
+  "repositories": [
+    {
+      "name": "opendiscourse-core",
+      "description": "Main OpenDiscourse repository with core data ingestion and processing",
+      "project_key": "OD",
+      "fork_policy": "no_forks",
+      "language": "python",
+      "mainbranch": {
+        "name": "main",
+        "type": "BRANCH"
+      },
+      "links": {
+        "clone": {
+          "http": "https://bitbucket.org/cbwinslow/opendiscourse-core.git",
+          "ssh": "git@bitbucket.org:cbwinslow/opendiscourse-core.git"
+        }
+      }
+    },
+    {
+      "name": "opendiscourse-v2-semantic-search",
+      "description": "Project v2 repository for semantic search and AI features",
+      "project_key": "ODV2",
+      "fork_policy": "no_forks",
+      "language": "python",
+      "mainbranch": {
+        "name": "main",
+        "type": "BRANCH"
+      },
+      "links": {
+        "clone": {
+          "http": "https://bitbucket.org/cbwinslow/opendiscourse-v2-semantic-search.git",
+          "ssh": "git@bitbucket.org:cbwinslow/opendiscourse-v2-semantic-search.git"
+        }
+      }
+    },
+    {
+      "name": "opendiscourse-test-suite",
+      "description": "Comprehensive testing infrastructure and test cases",
+      "project_key": "OD",
+      "fork_policy": "no_forks",
+      "language": "python",
+      "mainbranch": {
+        "name": "main",
+        "type": "BRANCH"
+      },
+      "links": {
+        "clone": {
+          "http": "https://bitbucket.org/cbwinslow/opendiscourse-test-suite.git",
+          "ssh": "git@bitbucket.org:cbwinslow/opendiscourse-test-suite.git"
+        }
+      }
+    },
+    {
+      "name": "opendiscourse-ci-cd",
+      "description": "CI/CD pipelines and automation configurations",
+      "project_key": "OD",
+      "fork_policy": "no_forks",
+      "language": "yaml",
+      "mainbranch": {
+        "name": "main",
+        "type": "BRANCH"
+      },
+      "links": {
+        "clone": {
+          "http": "https://bitbucket.org/cbwinslow/opendiscourse-ci-cd.git",
+          "ssh": "git@bitbucket.org:cbwinslow/opendiscourse-ci-cd.git"
+        }
+      }
+    }
+  ],
+  "pipelines": [
+    {
+      "repository": "opendiscourse-core",
+      "pipelines": [
+        {
+          "name": "Continuous Integration",
+          "trigger": {
+            "type": "ON_PUSH",
+            "branches": {
+              "include": ["main", "develop"],
+              "exclude": ["staging", "production"]
+            }
+          },
+          "deployment": {
+            "name": "staging",
+            "environment": {
+              "type": "ATLASSIAN",
+              "memory": 1024,
+              "variables": []
+            }
+          },
+          "steps": [
+            {
+              "image": {
+                "name": "python:3.9"
+              },
+              "step": {
+                "name": "Setup Environment",
+                "script": [
+                  "python --version",
+                  "pip --version",
+                  "pip install -r requirements.txt",
+                  "pip install -r crewai_crew/requirements.txt"
+                ]
+              }
+            },
+            {
+              "image": {
+                "name": "python:3.9"
+              },
+              "step": {
+                "name": "Code Analysis",
+                "script": [
+                  "python crewai_crew/main_execution.py"
+                ],
+                "services": [
+                  {
+                    "name": "postgres",
+                    "image": {
+                      "name": "postgres:15"
+                    },
+                    "variables": {
+                      "POSTGRES_PASSWORD": "postgres",
+                      "POSTGRES_DB": "opendiscourse_test"
+                    }
+                  }
+                ],
+                "after-script": [
+                  "python -m pytest tests/ --cov=. --cov-report=xml"
+                ]
+              }
+            },
+            {
+              "image": {
+                "name": "node:18"
+              },
+              "step": {
+                "name": "Frontend Tests",
+                "script": [
+                  "cd tests && npm install",
+                  "npm run test:unit"
+                ]
+              }
+            },
+            {
+              "image": {
+                "name": "python:3.9"
+              },
+              "step": {
+                "name": "Security Scan",
+                "script": [
+                  "pip install bandit safety",
+                  "bandit -r . -f json -o bandit-report.json",
+                  "safety check --json --output safety-report.json"
+                ],
+                "artifacts": [
+                  {
+                    "path": "*.json"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Data Ingestion Pipeline Tests",
+          "trigger": {
+            "type": "MANUAL",
+            "refname": "main"
+          },
+          "deployment": {
+            "name": "staging",
+            "environment": {
+              "type": "ATLASSIAN",
+              "memory": 2048,
+              "variables": [
+                {
+                  "value": "staging",
+                  "key": "ENVIRONMENT"
+                }
+              ]
+            }
+          },
+          "steps": [
+            {
+              "image": {
+                "name": "python:3.9"
+              },
+              "step": {
+                "name": "Test Congress Data Ingestion",
+                "script": [
+                  "python -m pytest tests/test_congress_ingestion.py -v",
+                  "python scripts/test_congress_api.py"
+                ]
+              }
+            },
+            {
+              "image": {
+                "name": "python:3.9"
+              },
+              "step": {
+                "name": "Test OpenStates Data Ingestion",
+                "script": [
+                  "python -m pytest tests/test_openstates_ingestion.py -v",
+                  "python scripts/test_openstates_api.py"
+                ]
+              }
+            },
+            {
+              "image": {
+                "name": "python:3.9"
+              },
+              "step": {
+                "name": "Test GovInfo Data Ingestion",
+                "script": [
+                  "python -m pytest tests/test_govinfo_ingestion.py -v",
+                  "python scripts/test_govinfo_api.py"
+                ]
+              }
+            },
+            {
+              "image": {
+                "name": "python:3.9"
+              },
+              "step": {
+                "name": "Performance Benchmarks",
+                "script": [
+                  "python -m pytest tests/performance/ --benchmark-only --benchmark-sort=mean",
+                  "python scripts/benchmark_ingestion.py"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "repository": "opendiscourse-v2-semantic-search",
+      "pipelines": [
+        {
+          "name": "Project v2 Development",
+          "trigger": {
+            "type": "ON_PUSH",
+            "branches": {
+              "include": ["main", "feature/*", "semantic-search/*"],
+              "exclude": ["staging", "production"]
+            }
+          },
+          "deployment": {
+            "name": "staging",
+            "environment": {
+              "type": "ATLASSIAN",
+              "memory": 4096,
+              "variables": [
+                {
+                  "value": "staging",
+                  "key": "ENVIRONMENT"
+                },
+                {
+                  "value": "v2",
+                  "key": "PROJECT_VERSION"
+                }
+              ]
+            }
+          },
+          "steps": [
+            {
+              "image": {
+                "name": "python:3.10"
+              },
+              "step": {
+                "name": "Setup v2 Environment",
+                "script": [
+                  "python --version",
+                  "pip install -r requirements.txt",
+                  "pip install pgvector psycopg2-binary scikit-learn sentence-transformers"
+                ]
+              }
+            },
+            {
+              "image": {
+                "name": "python:3.10"
+              },
+              "step": {
+                "name": "PGVector Integration Tests",
+                "script": [
+                  "python -m pytest tests/test_pgvector_integration.py -v",
+                  "python scripts/test_vector_database.py"
+                ]
+              }
+            },
+            {
+              "image": {
+                "name": "python:3.10"
+              },
+              "step": {
+                "name": "Semantic Search Tests",
+                "script": [
+                  "python -m pytest tests/test_semantic_search.py -v",
+                  "python scripts/test_embedding_pipeline.py"
+                ]
+              }
+            },
+            {
+              "image": {
+                "name": "python:3.10"
+              },
+              "step": {
+                "name": "AI/ML Pipeline Tests",
+                "script": [
+                  "python -m pytest tests/test_ai_pipeline.py -v",
+                  "python scripts/test_model_inference.py"
+                ]
+              }
+            },
+            {
+              "image": {
+                "name": "python:3.10"
+              },
+              "step": {
+                "name": "Performance & Load Tests",
+                "script": [
+                  "python -m pytest tests/performance/test_semantic_search_load.py -v",
+                  "python scripts/performance_test_pgvector.py"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "repository": "opendiscourse-test-suite",
+      "pipelines": [
+        {
+          "name": "Test Infrastructure",
+          "trigger": {
+            "type": "ON_PUSH",
+            "branches": {
+              "include": ["main"]
+            }
+          },
+          "steps": [
+            {
+              "image": {
+                "name": "python:3.9"
+              },
+              "step": {
+                "name": "Validate Test Suite",
+                "script": [
+                  "python -m pytest tests/ --collect-only -q",
+                  "python scripts/validate_test_coverage.py",
+                  "python scripts/check_test_documentation.py"
+                ]
+              }
+            },
+            {
+              "image": {
+                "name": "node:18"
+              },
+              "step": {
+                "name": "Frontend Test Validation",
+                "script": [
+                  "cd web && npm test -- --coverage --ci",
+                  "npm run test:e2e"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "issues": [
+    {
+      "title": "🚨 Critical: Congress Bills ingestion fails due to chamber mapping foreign key constraint",
+      "description": "Current Status\\nThe Congress Bills ingestion is currently failing with a foreign key constraint violation. The system is trying to insert bills with chamber data that doesn't exist in the chambers table.\\n\\nError Details:\\n```\\npsycopg2.ForeignKeyViolation: INSERT INTO bills (chamber_id, ...) VALUES (NULL, ...) is not allowed\\n```\\n\\nAffected Files:\\n- test_minimal.py (line 45)\\n- scripts/ingest_congress_bills_incremental.py (line 123)\\n\\nExpected Fix:\\n1. Add proper chamber mapping in data transformation layer\\n2. Ensure chamber data is validated before insertion\\n3. Add error handling for missing chamber references\\n\\nBusiness Impact:\\nThis is blocking all Congress bills data ingestion, severely impacting the core functionality of the platform.\\n\\nPriority: HIGH\\nLabels: bug, critical, congress, data-ingestion",
+      "kind": "bug",
+      "priority": "high",
+      "assignee_account_id": "senior-engineer-account-id",
+      "components": ["congress", "data-ingestion"],
+      "version": "v1.2.0",
+      "milestone": "v1.2.0 - Critical Bug Fixes",
+      "labels": ["critical", "bug", "congress", "data-ingestion", "foreign-key"],
+      "created_date": "2025-12-04T13:20:00.000Z"
+    },
+    {
+      "title": "⚡ Enhanced OpenStates ingestion - Missing implementation methods",
+      "description": "The Enhanced OpenStates ingestion script has a sophisticated framework but is missing implementations for 5 key methods.\\n\\nMissing Methods:\\n1. process_state_bills() - Line 819\\n2. extract_committee_data() - Line 825\\n3. validate_session_data() - Line 831\\n4. handle_rate_limiting() - Line 836\\n5. parallel_processing() - Line 842\\n\\nCurrent Status:\\n- Framework exists and is sophisticated\\n- 5 methods are implemented as placeholders\\n- Each method needs full implementation\\n\\nExpected Implementation:\\n- Each method should follow the established patterns\\n- Include comprehensive error handling\\n- Add logging and monitoring integration\\n- Include unit tests for each method\\n\\nBusiness Impact:\\nThis is preventing the Enhanced OpenStates ingestion from being production-ready, blocking state-level data expansion.\\n\\nPriority: HIGH\\nLabels: enhancement, openstates, high-priority, missing-implementation",
+      "kind": "enhancement",
+      "priority": "high",
+      "assignee_account_id": "senior-engineer-account-id",
+      "components": ["openstates", "data-ingestion", "framework"],
+      "version": "v1.2.0",
+      "milestone": "v1.2.0 - Critical Bug Fixes",
+      "labels": ["enhancement", "openstates", "high-priority", "missing-implementation"],
+      "created_date": "2025-12-04T13:20:30.000Z"
+    },
+    {
+      "title": "📊 Monitoring system issues - Delegate mismatch and error recovery",
+      "description": "The monitoring system has several documented issues that need attention:\\n\\nIssues Identified:\\n1. **Delegate Registration Problem**: Delegate mismatch in registration process\\n2. **Error Recovery Gaps**: Insufficient error handling in monitoring pipeline\\n3. **Progress Calculation Issues**: Incorrect progress tracking and reporting\\n4. **GovInfo Integration**: Missing GovInfo monitoring integration\\n\\nAffected Components:\\n- monitoring/delegates.py (line 45, delegate registration)\\n- monitoring/progress_monitor.py (line 78, progress calculation)\\n- scripts/ingest_members_monitored.py (line 234, error recovery)\\n\\nExpected Fixes:\\n1. Fix delegate registration logic and matching algorithm\\n2. Implement comprehensive error recovery mechanisms\\n3. Correct progress calculation formulas and reporting\\n4. Add GovInfo data source monitoring to existing system\\n\\nBusiness Impact:\\nThese issues affect system reliability and observability, making it difficult to track ingestion progress and identify problems quickly.\\n\\nPriority: MEDIUM\\nLabels: monitoring, bug, system-reliability, observability",
+      "kind": "bug",
+      "priority": "medium",
+      "assignee_account_id": "backend-developer-account-id",
+      "components": ["monitoring", "observability"],
+      "version": "v1.3.0",
+      "milestone": "v1.3.0 - System Improvements",
+      "labels": ["monitoring", "bug", "system-reliability", "observability"],
+      "created_date": "2025-12-04T13:21:00.000Z"
+    },
+    {
+      "title": "🔧 Database connection standards violations",
+      "description": "Multiple files in the codebase are not following the established database connection standards documented in agents.md.\\n\\nStandards Violations Found:\\n1. **Inconsistent Connection Management**: Files using direct psycopg2.connect() instead of the standardized connection helper\\n2. **Missing Connection Pooling**: No connection pooling implementation in some ingestion scripts\\n3. **Resource Leak Potential**: Connections not properly closed in error scenarios\\n4. **Configuration Inconsistency**: Inconsistent use of database configuration from settings\\n\\nFiles Requiring Audit:\\n- scripts/ingest_congress_bills.py\\n- scripts/enhanced_openstates_ingestion.py\\n- monitoring/progress_monitor.py\\n- document_processing/document_ingestor.py\\n\\nExpected Fixes:\\n1. Audit all database connection patterns across codebase\\n2. Replace direct connections with standardized connection helper\\n3. Implement proper connection pooling where missing\\n4. Add context managers for automatic resource cleanup\\n5. Update configuration to use centralized settings\\n\\nBusiness Impact:\\nThese violations lead to connection leaks, poor performance, and make the system difficult to maintain and debug.\\n\\nPriority: MEDIUM\\nLabels: database, standards, optimization, maintainability",
+      "kind": "bug",
+      "priority": "medium",
+      "assignee_account_id": "database-admin-account-id",
+      "components": ["database", "standards"],
+      "version": "v1.3.0",
+      "milestone": "v1.3.0 - System Improvements",
+      "labels": ["database", "standards", "optimization", "maintainability"],
+      "created_date": "2025-12-04T13:21:30.000Z"
+    },
+    {
+      "title": "📚 Data validation and processing improvements needed",
+      "description": "Several data validation and processing improvements have been identified across the codebase:\\n\\nIssues Identified:\\n1. **Hardcoded State Mapping**: State abbreviation to full name mapping is hardcoded and should be configurable\\n2. **Redundant Date Parsing**: Multiple date parsing implementations that could be consolidated\\n3. **Throughput Calculation Edge Cases**: Throughput calculations don't handle edge cases properly\\n4. **Data Quality Validation**: Missing comprehensive data quality checks\\n\\nAffected Areas:\\n- State mapping in various ingestion scripts\\n- Date parsing across multiple components\\n- Performance monitoring calculations\\n- Data validation pipeline\\n\\nExpected Improvements:\\n1. Create configurable state mapping system\\n2. Implement centralized date parsing utilities\\n3. Add edge case handling for throughput calculations\\n4. Build comprehensive data validation framework\\n5. Add logging for validation failures\\n\\nBusiness Impact:\\nThese improvements will enhance data quality, reduce processing errors, and improve system reliability for data ingestion.\\n\\nPriority: MEDIUM\\nLabels: data-validation, enhancement, data-quality, processing",
+      "kind": "enhancement",
+      "priority": "medium",
+      "assignee_account_id": "data-engineer-account-id",
+      "components": ["data-processing", "validation"],
+      "version": "v1.3.0",
+      "milestone": "v1.3.0 - System Improvements",
+      "labels": ["data-validation", "enhancement", "data-quality", "processing"],
+      "created_date": "2025-12-04T13:22:00.000Z"
+    },
+    {
+      "title": "🛠️ Complete PGVector integration for semantic search",
+      "description": "Project v2 initiative to implement full PGVector integration for semantic search capabilities.\\n\\nScope:\\n1. **Vector Database Setup**: Configure PGVector extension and create vector storage schema\\n2. **Embedding Generation**: Build pipeline for generating document embeddings from legislative content\\n3. **Similarity Search API**: Create API endpoints for semantic similarity search\\n4. **Search Result Ranking**: Implement intelligent ranking algorithm for search results\\n5. **Performance Optimization**: Set up indexes and optimization for fast semantic search\\n\\nTechnical Requirements:\\n- PGVector extension for PostgreSQL\\n- Sentence-transformers for embedding generation\\n- Vector similarity search algorithms\\n- API integration with existing endpoints\\n- Performance monitoring for search queries\\n\\nBusiness Value:\\nThis enables semantic search across legislative documents, allowing users to find related content based on meaning rather than exact keywords.\\n\\nPriority: HIGH\\nLabels: project-v2, pgvector, semantic-search, ai-ml, high-priority",
+      "kind": "enhancement",
+      "priority": "high",
+      "assignee_account_id": "ai-specialist-account-id",
+      "components": ["semantic-search", "ai-ml", "pgvector"],
+      "version": "v2.0.0",
+      "milestone": "v2.0.0 - Semantic Search & AI",
+      "labels": ["project-v2", "pgvector", "semantic-search", "ai-ml", "high-priority"],
+      "created_date": "2025-12-04T13:22:30.000Z"
+    },
+    {
+      "title": "🏛️ Expand Congress data ingestion to include historical data",
+      "description": "Project v2 initiative to extend Congress data ingestion to include comprehensive historical data.\\n\\nScope:\\n1. **Historical Bills**: Add ingestion of historical bill data going back multiple Congress sessions\\n2. **Roll Call Votes**: Implement comprehensive roll call vote data ingestion\\n3. **Committee Historical Data**: Include historical committee membership and activity data\\n4. **Amendment Tracking**: Add support for tracking bill amendments across time\\n5. **Data Migration**: Create tools for migrating existing data to new historical schema\\n\\nTechnical Requirements:\\n- Extended database schema for historical data storage\\n- Enhanced API integration with Congress.gov historical endpoints\\n- Data migration tools and scripts\\n- Backward compatibility with existing data\\n- Performance optimization for large-scale historical queries\\n\\nBusiness Value:\\nThis enables comprehensive historical analysis of legislative activity, supporting research and policy analysis use cases.\\n\\nPriority: MEDIUM\\nLabels: project-v2, historical-data, congress, data-expansion, medium-priority",
+      "kind": "enhancement",
+      "priority": "medium",
+      "assignee_account_id": "senior-engineer-account-id",
+      "components": ["historical-data", "congress", "data-expansion"],
+      "version": "v2.0.0",
+      "milestone": "v2.0.0 - Semantic Search & AI",
+      "labels": ["project-v2", "historical-data", "congress", "data-expansion", "medium-priority"],
+      "created_date": "2025-12-04T13:23:00.000Z"
+    },
+    {
+      "title": "🧹 OpenStates scrapers have TODO comments needing attention",
+      "description": "Analysis revealed 144+ TODO/FIXME/BUG comments across OpenStates scrapers that need to be addressed.\\n\\nCategories of Issues:\\n1. **Session Date Handling**: 25 comments related to session date processing\\n2. **Vote Processing**: 18 comments about vote data extraction and validation\\n3. **Committee Data**: 15 comments on committee information processing\\n4. **Error Handling**: 22 comments about insufficient error handling\\n5. **Data Validation**: 19 comments about data quality and validation issues\\n6. **Performance**: 12 comments about performance optimization opportunities\\n7. **API Integration**: 8 comments about API integration improvements\\n8. **Documentation**: 25 comments about missing or outdated documentation\\n\\nAffected Files:\\n- openstates-scrapers/*.py (144+ TODO comments)\\n- Various state-specific scraper files\\n\\nExpected Actions:\\n1. Systematically review and address all TODO comments\\n2. Prioritize critical fixes and performance improvements\\n3. Add comprehensive error handling where missing\\n4. Improve data validation and quality checks\\n5. Update documentation for clarity and completeness\\n\\nBusiness Impact:\\nAddressing these issues will improve scraper reliability, data quality, and maintainability of the OpenStates integration.\\n\\nPriority: MEDIUM\\nLabels: openstates, cleanup, maintenance, medium-priority, todo-comments",
+      "kind": "task",
+      "priority": "medium",
+      "assignee_account_id": "maintainer-account-id",
+      "components": ["openstates", "maintenance", "cleanup"],
+      "version": "v2.0.0",
+      "milestone": "v2.0.0 - Semantic Search & AI",
+      "labels": ["openstates", "cleanup", "maintenance", "medium-priority", "todo-comments"],
+      "created_date": "2025-12-04T13:23:30.000Z"
+    },
+    {
+      "title": "🤖 Improve GitHub integration automation",
+      "description": "Enhance the existing GitHub integration automation to provide more comprehensive project management capabilities.\\n\\nCurrent Capabilities:\\n- Basic GitHub issue creation from monitoring\\n- Simple project board management\\n- Milestone tracking\\n\\nEnhancement Scope:\\n1. **Advanced Issue Creation**: Enhanced monitoring issue creation with better categorization\\n2. **Progress Tracking**: Automated progress tracking and reporting across milestones\\n3. **Milestone Management**: Automated milestone creation and management based on code analysis\\n4. **Cross-Platform Sync**: Sync issues and progress across GitHub, Linear, GitLab, and Jira\\n5. **Automated Reporting**: Create automated project status and progress reporting\\n6. **Integration Testing**: Add comprehensive testing for GitHub integration reliability\\n\\nTechnical Implementation:\\n- Enhanced CrewAI analysis for automated issue identification\\n- Improved webhook handling for real-time updates\\n- Cross-platform API integration\\n- Automated reporting dashboard generation\\n\\nBusiness Value:\\nThis automation reduces manual project management overhead and provides real-time insights into project progress and issues.\\n\\nPriority: MEDIUM\\nLabels: automation, github, integration, project-management, medium-priority",
+      "kind": "enhancement",
+      "priority": "medium",
+      "assignee_account_id": "devops-engineer-account-id",
+      "components": ["automation", "github", "integration"],
+      "version": "v2.0.0",
+      "milestone": "v2.0.0 - Semantic Search & AI",
+      "labels": ["automation", "github", "integration", "project-management", "medium-priority"],
+      "created_date": "2025-12-04T13:24:00.000Z"
+    },
+    {
+      "title": "🧪 Expand test coverage for ingestion pipeline",
+      "description": "Comprehensive expansion of test coverage for all ingestion pipeline components to ensure reliability and catch issues early.\\n\\nTest Coverage Areas:\\n1. **Rate Limiting Tests**: Comprehensive tests for rate limiting and throttling mechanisms\\n2. **Parallel Processing Tests**: Tests for parallel processing reliability and correctness\\n3. **Data Validation Tests**: Comprehensive test suite for data validation and quality checks\\n4. **Mock API Responses**: Create comprehensive mock API response library for testing\\n5. **Recovery Mechanism Tests**: Test failure recovery and resilience across all components\\n6. **End-to-End Integration Tests**: Full pipeline integration tests for complete workflow validation\\n\\nCurrent Test Infrastructure:\\n- Basic unittest framework\\n- Some pytest configurations\\n- Limited integration tests\\n- Missing comprehensive mock libraries\\n\\nExpected Implementation:\\n- Expand existing test suite with comprehensive coverage\\n- Create mock API response libraries for all data sources\\n- Add performance and load testing capabilities\\n- Implement automated test generation for new ingestion features\\n- Add test coverage reporting and quality gates\\n\\nBusiness Value:\\nComprehensive testing ensures system reliability, reduces production issues, and enables confident deployment of new features.\\n\\nPriority: MEDIUM\\nLabels: testing, quality-assurance, coverage, integration, medium-priority",
+      "kind": "enhancement",
+      "priority": "medium",
+      "assignee_account_id": "qa-engineer-account-id",
+      "components": ["testing", "quality-assurance"],
+      "version": "v1.3.0",
+      "milestone": "v1.3.0 - System Improvements",
+      "labels": ["testing", "quality-assurance", "coverage", "integration", "medium-priority"],
+      "created_date": "2025-12-04T13:24:30.000Z"
+    }
+  ],
+  "webhooks": [
+    {
+      "description": "Create Linear issues from Bitbucket issues",
+      "url": "https://api.linear.app/webhooks/bitbucket-integration",
+      "active": true,
+      "events": ["issue:created", "issue:updated"],
+      "secret": "${BITBUCKET_WEBHOOK_SECRET}"
+    },
+    {
+      "description": "Sync with GitHub issues",
+      "url": "https://api.github.com/webhooks/bitbucket-sync",
+      "active": true,
+      "events": ["issue:created", "issue:updated", "issue:resolved"],
+      "secret": "${GITHUB_WEBHOOK_SECRET}"
+    },
+    {
+      "description": "Update project status in Confluence",
+      "url": "https://api.atlassian.com/wiki/webhooks/bitbucket-updates",
+      "active": true,
+      "events": ["pipeline:passed", "pipeline:failed", "deployment:started", "deployment:finished"],
+      "secret": "${CONFLUENCE_WEBHOOK_SECRET}"
+    }
+  ],
+  "permissions": [
+    {
+      "type": "repository",
+      "users": [
+        {
+          "user": "cbwinslow",
+          "permission": "REPOSITORY_ADMIN"
+        },
+        {
+          "user": "senior-engineer",
+          "permission": "REPOSITORY_WRITE"
+        },
+        {
+          "user": "backend-developer",
+          "permission": "REPOSITORY_WRITE"
+        },
+        {
+          "user": "qa-engineer",
+          "permission": "REPOSITORY_READ"
+        },
+        {
+          "user": "devops-engineer",
+          "permission": "REPOSITORY_WRITE"
+        }
+      ]
+    },
+    {
+      "type": "project",
+      "users": [
+        {
+          "user": "cbwinslow",
+          "permission": "PROJECT_ADMIN"
+        }
+      ]
+    }
+  ]
+}

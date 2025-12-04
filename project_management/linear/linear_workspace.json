@@ -1,0 +1,216 @@
+{
+  "linear_workspace": {
+    "name": "OpenDiscourse Legislative Data Platform",
+    "description": "Comprehensive legislative data processing and semantic search platform",
+    "teams": [
+      {
+        "id": "opendiscourse-core",
+        "name": "Core Platform Team",
+        "description": "Main development team for OpenDiscourse core functionality",
+        "workflow_states": [
+          {"name": "Backlog", "type": "unstarted", "color": "#677887"},
+          {"name": "Ready", "type": "started", "color": "#f5f8f9"},
+          {"name": "In Progress", "type": "started", "color": "#e2b93b"},
+          {"name": "In Review", "type": "completed", "color": "#2f8de4"},
+          {"name": "Done", "type": "completed", "color": "#2bb673"},
+          {"name": "Blocked", "type": "cancelled", "color": "#d62d42"}
+        ]
+      },
+      {
+        "id": "project-v2",
+        "name": "Project v2 - AI & Semantic Search",
+        "description": "Team focused on semantic search, PGVector integration, and AI features",
+        "workflow_states": [
+          {"name": "Research", "type": "unstarted", "color": "#9b59b6"},
+          {"name": "Planning", "type": "unstarted", "color": "#3498db"},
+          {"name": "Development", "type": "started", "color": "#f39c12"},
+          {"name": "Testing", "type": "started", "color": "#e67e22"},
+          {"name": "Integration", "type": "completed", "color": "#16a085"},
+          {"name": "Production", "type": "completed", "color": "#27ae60"}
+        ]
+      }
+    ]
+  },
+  "epics": [
+    {
+      "title": "Congress Data Ingestion Stabilization",
+      "description": "Critical fixes for Congress bills ingestion and chamber mapping issues",
+      "priority": "high",
+      "assignee_id": "opendiscourse-core",
+      "labels": ["congress", "critical", "data-ingestion"],
+      "tasks": [
+        {"title": "Fix chamber mapping foreign key constraint", "description": "Congress bills ingestion fails due to chamber mapping constraint violation", "priority": "high", "estimate": 4, "assignee": "senior-engineer"},
+        {"title": "Implement data validation layer", "description": "Add comprehensive validation for Congress data before ingestion", "priority": "high", "estimate": 3, "assignee": "backend-developer"},
+        {"title": "Add error recovery mechanisms", "description": "Implement robust error handling and recovery for failed ingestions", "priority": "medium", "estimate": 2, "assignee": "devops-engineer"}
+      ]
+    },
+    {
+      "title": "Enhanced OpenStates Processing",
+      "description": "Complete implementation of Enhanced OpenStates ingestion with missing methods",
+      "priority": "high",
+      "assignee_id": "opendiscourse-core",
+      "labels": ["openstates", "enhancement", "data-ingestion"],
+      "tasks": [
+        {"title": "Implement missing method: process_state_bills", "description": "Complete implementation of method for processing state-level bills", "priority": "high", "estimate": 6, "assignee": "senior-engineer"},
+        {"title": "Implement missing method: extract_committee_data", "description": "Extract and process committee information from OpenStates API", "priority": "medium", "estimate": 4, "assignee": "backend-developer"},
+        {"title": "Implement missing method: validate_session_data", "description": "Add validation for legislative session data quality and completeness", "priority": "medium", "estimate": 3, "assignee": "data-engineer"},
+        {"title": "Implement missing method: handle_rate_limiting", "description": "Implement sophisticated rate limiting and backoff strategies", "priority": "high", "estimate": 5, "assignee": "devops-engineer"},
+        {"title": "Implement missing method: parallel_processing", "description": "Add parallel processing capabilities for large-scale data ingestion", "priority": "high", "estimate": 8, "assignee": "senior-engineer"}
+      ]
+    },
+    {
+      "title": "Monitoring System Enhancement",
+      "description": "Fix monitoring system issues and improve system observability",
+      "priority": "medium",
+      "assignee_id": "opendiscourse-core",
+      "labels": ["monitoring", "observability", "system"],
+      "tasks": [
+        {"title": "Fix delegate registration issues", "description": "Resolve delegate mismatch in monitoring system registration", "priority": "high", "estimate": 3, "assignee": "backend-developer"},
+        {"title": "Improve error recovery mechanisms", "description": "Enhance error handling and recovery in monitoring pipeline", "priority": "medium", "estimate": 4, "assignee": "devops-engineer"},
+        {"title": "Fix progress calculation logic", "description": "Correct progress tracking calculations and reporting accuracy", "priority": "medium", "estimate": 2, "assignee": "data-engineer"},
+        {"title": "Integrate GovInfo monitoring", "description": "Add GovInfo data source monitoring to existing system", "priority": "low", "estimate": 5, "assignee": "integration-specialist"}
+      ]
+    },
+    {
+      "title": "Database Standards & Optimization",
+      "description": "Standardize database connections and optimize query patterns",
+      "priority": "medium",
+      "assignee_id": "opendiscourse-core",
+      "labels": ["database", "optimization", "standards"],
+      "tasks": [
+        {"title": "Audit database connection patterns", "description": "Review and document all database connection usage across codebase", "priority": "high", "estimate": 2, "assignee": "database-admin"},
+        {"title": "Standardize connection management", "description": "Implement consistent connection pooling and lifecycle management", "priority": "high", "estimate": 4, "assignee": "backend-developer"},
+        {"title": "Optimize query patterns", "description": "Review and optimize database queries for performance", "priority": "medium", "estimate": 6, "assignee": "database-admin"},
+        {"title": "Add connection monitoring", "description": "Implement connection monitoring and alerting", "priority": "low", "estimate": 3, "assignee": "devops-engineer"}
+      ]
+    },
+    {
+      "title": "PGVector Integration for Semantic Search",
+      "description": "Complete implementation of PGVector for semantic search capabilities",
+      "priority": "high",
+      "assignee_id": "project-v2",
+      "labels": ["pgvector", "semantic-search", "project-v2", "ai"],
+      "tasks": [
+        {"title": "Research PGVector integration requirements", "description": "Analyze technical requirements and constraints for PGVector implementation", "priority": "high", "estimate": 8, "assignee": "ai-specialist"},
+        {"title": "Design vector database schema", "description": "Create comprehensive schema for vector data storage and indexing", "priority": "high", "estimate": 6, "assignee": "database-admin"},
+        {"title": "Implement embedding generation pipeline", "description": "Build pipeline for generating document embeddings from legislative content", "priority": "high", "estimate": 12, "assignee": "ai-specialist"},
+        {"title": "Create similarity search API", "description": "Develop API endpoints for semantic similarity search across documents", "priority": "high", "estimate": 8, "assignee": "backend-developer"},
+        {"title": "Build search result ranking system", "description": "Implement intelligent ranking algorithm for search results", "priority": "medium", "estimate": 6, "assignee": "ai-specialist"},
+        {"title": "Create search optimization index", "description": "Set up performance-optimized indexes for fast semantic search", "priority": "medium", "estimate": 4, "assignee": "database-admin"}
+      ]
+    },
+    {
+      "title": "Historical Congress Data Expansion",
+      "description": "Extend Congress data ingestion to include comprehensive historical data",
+      "priority": "medium",
+      "assignee_id": "project-v2",
+      "labels": ["historical-data", "congress", "project-v2", "data-expansion"],
+      "tasks": [
+        {"title": "Analyze historical data availability", "description": "Research and document availability of historical Congress data", "priority": "high", "estimate": 4, "assignee": "data-engineer"},
+        {"title": "Design historical data schema", "description": "Create schema extensions for storing historical legislative data", "priority": "medium", "estimate": 6, "assignee": "database-admin"},
+        {"title": "Implement roll call vote ingestion", "description": "Add comprehensive roll call vote data ingestion capability", "priority": "high", "estimate": 8, "assignee": "senior-engineer"},
+        {"title": "Add committee historical data", "description": "Include historical committee membership and activity data", "priority": "medium", "estimate": 6, "assignee": "backend-developer"},
+        {"title": "Implement amendment tracking", "description": "Add support for tracking bill amendments across time", "priority": "medium", "estimate": 5, "assignee": "data-engineer"},
+        {"title": "Create data migration tools", "description": "Build tools for migrating existing data to historical schema", "priority": "low", "estimate": 4, "assignee": "devops-engineer"}
+      ]
+    },
+    {
+      "title": "Enhanced Automation & Integration",
+      "description": "Improve GitHub integration and system automation capabilities",
+      "priority": "medium",
+      "assignee_id": "project-v2",
+      "labels": ["automation", "integration", "project-v2", "github"],
+      "tasks": [
+        {"title": "Enhance issue creation automation", "description": "Improve automated issue creation based on monitoring and analysis", "priority": "high", "estimate": 4, "assignee": "devops-engineer"},
+        {"title": "Build progress tracking automation", "description": "Implement automated progress tracking across development milestones", "priority": "medium", "estimate": 6, "assignee": "backend-developer"},
+        {"title": "Create milestone management system", "description": "Automated milestone creation and management based on code analysis", "priority": "medium", "estimate": 5, "assignee": "integration-specialist"},
+        {"title": "Implement cross-platform sync", "description": "Sync issues and progress across GitHub, Linear, and other platforms", "priority": "high", "estimate": 8, "assignee": "senior-engineer"},
+        {"title": "Add automated reporting", "description": "Create automated project status and progress reporting", "priority": "low", "estimate": 4, "assignee": "data-engineer"}
+      ]
+    },
+    {
+      "title": "Comprehensive Test Suite Expansion",
+      "description": "Expand test coverage for all ingestion pipeline components",
+      "priority": "medium",
+      "assignee_id": "opendiscourse-core",
+      "labels": ["testing", "quality-assurance", "automation"],
+      "tasks": [
+        {"title": "Add rate limiting tests", "description": "Create comprehensive tests for rate limiting and throttling mechanisms", "priority": "high", "estimate": 4, "assignee": "qa-engineer"},
+        {"title": "Implement parallel processing tests", "description": "Add tests for parallel processing reliability and correctness", "priority": "high", "estimate": 6, "assignee": "qa-engineer"},
+        {"title": "Create data validation tests", "description": "Build comprehensive test suite for data validation and quality checks", "priority": "medium", "estimate": 5, "assignee": "backend-developer"},
+        {"title": "Add mock API responses", "description": "Create comprehensive mock API response library for testing", "priority": "medium", "estimate": 3, "assignee": "qa-engineer"},
+        {"title": "Implement recovery mechanism tests", "description": "Test failure recovery and resilience across all components", "priority": "high", "estimate": 4, "assignee": "qa-engineer"},
+        {"title": "Create end-to-end integration tests", "description": "Add full pipeline integration tests for complete workflow validation", "priority": "medium", "estimate": 8, "assignee": "qa-engineer"}
+      ]
+    }
+  ],
+  "sprints": [
+    {
+      "name": "Sprint 1: Critical Bug Fixes",
+      "description": "Fix critical blocking issues for core functionality",
+      "start_date": "2025-12-01",
+      "end_date": "2025-12-15",
+      "capacity": 40,
+      "team_id": "opendiscourse-core",
+      "tasks": [
+        "Fix chamber mapping foreign key constraint",
+        "Implement missing method: handle_rate_limiting",
+        "Fix delegate registration issues",
+        "Audit database connection patterns"
+      ]
+    },
+    {
+      "name": "Sprint 2: System Stabilization",
+      "description": "Stabilize monitoring and improve system reliability",
+      "start_date": "2025-12-16",
+      "end_date": "2025-12-30",
+      "capacity": 35,
+      "team_id": "opendiscourse-core",
+      "tasks": [
+        "Implement missing method: parallel_processing",
+        "Improve error recovery mechanisms",
+        "Standardize connection management",
+        "Add rate limiting tests"
+      ]
+    },
+    {
+      "name": "Sprint 3: PGVector Foundation",
+      "description": "Begin PGVector integration and semantic search implementation",
+      "start_date": "2026-01-01",
+      "end_date": "2026-01-15",
+      "capacity": 45,
+      "team_id": "project-v2",
+      "tasks": [
+        "Research PGVector integration requirements",
+        "Design vector database schema",
+        "Analyze historical data availability"
+      ]
+    },
+    {
+      "name": "Sprint 4: Semantic Search Core",
+      "description": "Implement core semantic search capabilities",
+      "start_date": "2026-01-16",
+      "end_date": "2026-01-30",
+      "capacity": 50,
+      "team_id": "project-v2",
+      "tasks": [
+        "Implement embedding generation pipeline",
+        "Create similarity search API",
+        "Implement roll call vote ingestion"
+      ]
+    },
+    {
+      "name": "Sprint 5: Automation & Integration",
+      "description": "Enhance automation and cross-platform integration",
+      "start_date": "2026-02-01",
+      "end_date": "2026-02-15",
+      "capacity": 40,
+      "team_id": "project-v2",
+      "tasks": [
+        "Implement cross-platform sync",
+        "Build progress tracking automation",
+        "Enhance issue creation automation"
+      ]
+    }
+  ]
+}
