@@ -534,7 +534,13 @@ class IncrementalGovInfoBillsIngestor:
                     print(f"✅ Reached end of bill packages list")
                     break
 
-                offset += self.batch_size
+                # Check if we received fewer items than expected (pagination complete)
+                if len(packages) < self.batch_size:
+                    print(f"✅ Received fewer packages than batch size ({len(packages)} < {self.batch_size})")
+                    break
+
+                offset += len(packages)  # Use actual items received, not batch size
+                print(f"📍 Next offset: {offset}")
 
             # Mark checkpoint as completed
             self.update_checkpoint(congress, offset, 0)

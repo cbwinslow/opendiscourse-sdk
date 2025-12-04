@@ -278,7 +278,7 @@ class VoteIngestionAPI:
         print(f"✅ Completed Congress votes ingestion: {total_records} records")
         return total_records
 
-    def ingest_openstates_votes(self, jurisdiction: str, year: int, limit: int = 1000) -> int:
+    def ingest_openstates_votes(self, jurisdiction: str, year: int, offset: int = 0, limit: int = 1000) -> int:
         """Bulk ingest OpenStates votes for specific jurisdiction and year"""
         print(f"📊 Ingesting OpenStates votes: {jurisdiction.upper()}, Year {year}")
 
@@ -288,6 +288,7 @@ class VoteIngestionAPI:
         params = {
             "jurisdiction": jurisdiction,
             "year": year,
+            "offset": offset,
             "per_page": limit,
             "page": 1
         }
@@ -336,7 +337,7 @@ class VoteIngestionAPI:
         print(f"✅ Completed OpenStates votes ingestion: {total_records} records")
         return total_records
 
-    def ingest_govinfo_votes(self, collection: str, year: int, limit: int = 1000) -> int:
+    def ingest_govinfo_votes(self, collection: str, year: int, offset: int = 0, limit: int = 1000) -> int:
         """Bulk ingest GovInfo votes for specific collection and year"""
         print(f"📊 Ingesting GovInfo votes: {collection}, Year {year}")
 
@@ -346,7 +347,7 @@ class VoteIngestionAPI:
         params = {
             "year": year,
             "pageSize": limit,
-            "offset": 0
+            "offset": offset
         }
 
         all_votes = []
