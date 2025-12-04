@@ -27,15 +27,66 @@ except ImportError:
     import resource_manager
 
 class CongressCLI:
-    def __init__(self, api_key: str, db_config: Dict, batch_size: int = 50, dry_run: bool = False):
-        self.api_key = api_key
-        self.db_config = db_config
-        self.batch_size = batch_size
+    def __init__(self, api_key: str = None, db_config: Dict = None, batch_size: int = None, dry_run: bool = False):
+        """
+        Initialize Congress CLI.
+
+        Args:
+            api_key: API key (optional if using config system)
+            db_config: Database config (optional if using config system)
+            batch_size: Batch size (optional, uses config default)
+            dry_run: Dry run mode
+        """
+        # Try to load from configuration system
+        settings = None
+        try:
+            from scripts.core.config import get_settings
+            settings = get_settings()
+        except (ImportError, Exception):
+            pass
+
+        # API key: use provided or load from config
+        if api_key:
+            self.api_key = api_key
+        elif settings:
+            self.api_key = settings.congress_api.api_key.get_secret_value() if settings.congress_api.api_key else None
+        else:
+            self.api_key = resource_manager.CONGRESS_API_KEY
+
+        if not self.api_key:
+            print("❌ Congress API key not found. Set CONGRESS_API__API_KEY in .env")
+            sys.exit(1)
+
+        # Database config: use provided or load from config
+        if db_config:
+            self.db_config = db_config
+        elif settings:
+            self.db_config = {
+                'host': settings.database.host,
+                'port': settings.database.port,
+                'database': settings.database.name,
+                'user': settings.database.user,
+                'password': settings.database.password.get_secret_value() if settings.database.password else None,
+            }
+            # Remove None password
+            if self.db_config['password'] is None:
+                self.db_config.pop('password')
+        else:
+            self.db_config = resource_manager.get_database_config()
+
+        # Batch size: use provided or load from config
+        if batch_size is not None:
+            self.batch_size = batch_size
+        elif settings and hasattr(settings, 'ingestion'):
+            self.batch_size = settings.ingestion.batch_size
+        else:
+            self.batch_size = 50
+
         self.dry_run = dry_run
         self.base_url = "https://api.congress.gov/v3"
         self.session = requests.Session()
         self.session.headers.update({
-            'X-API-Key': api_key,
+            'X-API-Key': self.api_key,
             'Accept': 'application/json'
         })
         self.conn = None
@@ -1851,110 +1902,115 @@ class CongressCLI:
             self.close_db()
 
 def main():
-    parser = argparse.ArgumentParser(description="Congress.gov Ingestion CLI")
+    parser = argparse.ArgumentParser(description='Congress.gov Ingestion CLI')
     parser.add_argument('--dry-run', action='store_true', help='Run without making changes')
-    parser.add_argument('--batch-size', type=int, default=50, help='Batch size')
+    parser.add_argument('--batch-size', type=int, help='Batch size')
 
-    subparsers = parser.add_subparsers(dest='command', required=True)
+    subparsers = parser.add_subparsers(dest='command', help='Commands')
 
-    # Ingest Members
+    # Members
     members_parser = subparsers.add_parser('ingest-members', help='Ingest members')
     members_parser.add_argument('congress', type=int, help='Congress number')
 
-    # Ingest Bills
+    # Bills
     bills_parser = subparsers.add_parser('ingest-bills', help='Ingest bills')
     bills_parser.add_argument('congress', type=int, help='Congress number')
+    bills_parser.add_argument('--bill-type', help='Bill type filter')
 
-    # Ingest Amendments
-    amdt_parser = subparsers.add_parser('ingest-amendments', help='Ingest amendments')
-    amdt_parser.add_argument('congress', type=int, help='Congress number')
+    # Amendments
+    amendments_parser = subparsers.add_parser('ingest-amendments', help='Ingest amendments')
+    amendments_parser.add_argument('congress', type=int, help='Congress number')
 
-    # Ingest Summaries
-    sum_parser = subparsers.add_parser('ingest-summaries', help='Ingest bill summaries')
-    sum_parser.add_argument('congress', type=int, help='Congress number')
+    # Summaries
+    summaries_parser = subparsers.add_parser('ingest-summaries', help='Ingest bill summaries')
+    summaries_parser.add_argument('congress', type=int, help='Congress number')
 
-    # Ingest Text
+    # Text
     text_parser = subparsers.add_parser('ingest-text', help='Ingest bill text versions')
     text_parser.add_argument('congress', type=int, help='Congress number')
 
-    # Ingest Sessions
-    subparsers.add_parser('ingest-sessions', help='Ingest congress sessions')
+    # Sessions
+    sessions_parser = subparsers.add_parser('ingest-sessions', help='Ingest congress sessions')
 
-    # Ingest Chambers
-    subparsers.add_parser('ingest-chambers', help='Ingest congress chambers')
+    # Chambers
+    chambers_parser = subparsers.add_parser('ingest-chambers', help='Ingest congress chambers')
 
-    # Ingest Committees
-    comm_parser = subparsers.add_parser('ingest-committees', help='Ingest congress committees')
-    comm_parser.add_argument('congress', type=int, help='Congress number')
+    # Committees
+    committees_parser = subparsers.add_parser('ingest-committees', help='Ingest congress committees')
+    committees_parser.add_argument('congress', type=int, help='Congress number')
 
-    # Ingest Votes
-    vote_parser = subparsers.add_parser('ingest-votes', help='Ingest congress votes')
-    vote_parser.add_argument('congress', type=int, help='Congress number')
+    # Votes
+    votes_parser = subparsers.add_parser('ingest-votes', help='Ingest congress votes')
+    votes_parser.add_argument('congress', type=int, help='Congress number')
 
-    # Ingest Bill Actions
+    # Bill actions
     actions_parser = subparsers.add_parser('ingest-bill-actions', help='Ingest bill actions')
     actions_parser.add_argument('congress', type=int, help='Congress number')
 
-    # Ingest Bill Cosponsors
-    cosp_parser = subparsers.add_parser('ingest-bill-cosponsors', help='Ingest bill cosponsors')
-    cosp_parser.add_argument('congress', type=int, help='Congress number')
+    # Bill cosponsors
+    cosponsors_parser = subparsers.add_parser('ingest-bill-cosponsors', help='Ingest bill cosponsors')
+    cosponsors_parser.add_argument('congress', type=int, help='Congress number')
 
-    # Ingest Bill Subjects
-    subj_parser = subparsers.add_parser('ingest-bill-subjects', help='Ingest bill subjects')
-    subj_parser.add_argument('congress', type=int, help='Congress number')
+    # Bill subjects
+    subjects_parser = subparsers.add_parser('ingest-bill-subjects', help='Ingest bill subjects')
+    subjects_parser.add_argument('congress', type=int, help='Congress number')
 
-    # Ingest Bill Titles
+    # Bill titles
     titles_parser = subparsers.add_parser('ingest-bill-titles', help='Ingest bill titles')
     titles_parser.add_argument('congress', type=int, help='Congress number')
 
-    # Ingest Related Bills
+    # Related bills
     related_parser = subparsers.add_parser('ingest-related-bills', help='Ingest related bills')
     related_parser.add_argument('congress', type=int, help='Congress number')
 
-    # Ingest Committee Members
-    comm_mem_parser = subparsers.add_parser('ingest-committee-members', help='Ingest committee members')
-    comm_mem_parser.add_argument('congress', type=int, help='Congress number')
+    # Committee members
+    committee_members_parser = subparsers.add_parser('ingest-committee-members', help='Ingest committee members')
+    committee_members_parser.add_argument('congress', type=int, help='Congress number')
 
-    # Ingest Committee Reports
+    # Committee reports
     reports_parser = subparsers.add_parser('ingest-committee-reports', help='Ingest committee reports')
     reports_parser.add_argument('congress', type=int, help='Congress number')
 
-    # Ingest Committee Prints
+    # Committee prints
     prints_parser = subparsers.add_parser('ingest-committee-prints', help='Ingest committee prints')
     prints_parser.add_argument('congress', type=int, help='Congress number')
 
-    # Ingest Hearings
+    # Hearings
     hearings_parser = subparsers.add_parser('ingest-hearings', help='Ingest hearings')
     hearings_parser.add_argument('congress', type=int, help='Congress number')
 
-    # Ingest Congressional Record
-    subparsers.add_parser('ingest-congressional-record', help='Ingest congressional record')
+    # Congressional Record
+    record_parser = subparsers.add_parser('ingest-congressional-record', help='Ingest congressional record')
+    record_parser.add_argument('congress', type=int, help='Congress number')
 
-    # Ingest Nominations
-    nom_parser = subparsers.add_parser('ingest-nominations', help='Ingest nominations')
-    nom_parser.add_argument('congress', type=int, help='Congress number')
+    # Nominations
+    nominations_parser = subparsers.add_parser('ingest-nominations', help='Ingest nominations')
+    nominations_parser.add_argument('congress', type=int, help='Congress number')
 
-    # Ingest Treaties
-    treaty_parser = subparsers.add_parser('ingest-treaties', help='Ingest treaties')
-    treaty_parser.add_argument('congress', type=int, help='Congress number')
+    # Treaties
+    treaties_parser = subparsers.add_parser('ingest-treaties', help='Ingest treaties')
+    treaties_parser.add_argument('congress', type=int, help='Congress number')
 
-    # Ingest House Communications
-    hcomm_parser = subparsers.add_parser('ingest-house-communications', help='Ingest House communications')
-    hcomm_parser.add_argument('congress', type=int, help='Congress number')
+    # House communications
+    house_parser = subparsers.add_parser('ingest-house-communications', help='Ingest House communications')
+    house_parser.add_argument('congress', type=int, help='Congress number')
 
-    # Ingest Senate Communications
-    scomm_parser = subparsers.add_parser('ingest-senate-communications', help='Ingest Senate communications')
-    scomm_parser.add_argument('congress', type=int, help='Congress number')
+    # Senate communications
+    senate_parser = subparsers.add_parser('ingest-senate-communications', help='Ingest Senate communications')
+    senate_parser.add_argument('congress', type=int, help='Congress number')
 
     # Status
-    subparsers.add_parser('status', help='Show status')
+    status_parser = subparsers.add_parser('status', help='Show status')
 
-    # Ingest Bill Details
+    # Bill details (composite)
     details_parser = subparsers.add_parser('ingest-bill-details', help='Ingest bill details (actions, cosponsors, etc)')
     details_parser.add_argument('congress', type=int, help='Congress number')
-    details_parser.add_argument('type', choices=['actions', 'cosponsors', 'subjects', 'titles', 'related'], help='Type of detail to ingest')
 
     args = parser.parse_args()
+
+    if not args.command:
+        parser.print_help()
+        return
 
     api_key = resource_manager.CONGRESS_API_KEY
     if not api_key:
@@ -1967,7 +2023,14 @@ def main():
         'host': '/var/run/postgresql'
     }
 
-    cli = CongressCLI(api_key, db_config, args.batch_size, args.dry_run)
+    # Create CLI instance with optional parameters from args or config
+    # API key and db_config will be loaded from configuration system automatically
+    cli = CongressCLI(
+        api_key,
+        db_config,
+        batch_size=args.batch_size,  # None if not provided
+        dry_run=args.dry_run
+    )
 
     if args.command == 'ingest-members':
         cli.ingest_members(args.congress)

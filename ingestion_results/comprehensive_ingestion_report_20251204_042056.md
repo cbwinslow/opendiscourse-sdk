@@ -1,0 +1,267 @@
+
+# Comprehensive Bulk Ingestion Report
+
+## Execution Summary
+- **Start Time**: 2025-12-04 04:20:38
+- **End Time**: 2025-12-04 04:20:56
+- **Total Duration**: 0:00:18.180814
+- **Total Jobs**: 131
+- **Completed Jobs**: 0
+- **Failed Jobs**: 131
+- **Success Rate**: 0.0%
+
+## Records Processed
+- **Total Records**: 901,184
+- **Successful Records**: 0
+- **Failed Records**: 901,184
+
+## Source Breakdown
+
+### Congress.gov
+- **Jobs**: 63
+- **Records**: 848,624
+- **Success Rate**: 0.0%
+
+### OpenStates
+- **Jobs**: 60
+- **Records**: 52,560
+- **Success Rate**: 0.0%
+
+### GovInfo
+- **Jobs**: 8
+- **Records**: 0
+- **Success Rate**: 0.0%
+
+## Failed Jobs Details
+
+### congress_members_113
+- **Source**: congress
+- **Error**: Process exited with code 1:   File "/home/cbwinslow/Videos/opendiscourse/scripts/data_ingestion/congress_api_ingest.py", line 58
+    else:
+    ^^^^
+SyntaxError: expected 'except' or 'finally' block
+
+- **Started**: 2025-12-04 04:20:38.900892
+- **Completed**: 2025-12-04 04:20:40.905660
+
+### congress_bills_113_hr
+- **Source**: congress
+- **Error**: Process exited with code 1:   File "/home/cbwinslow/Videos/opendiscourse/scripts/data_ingestion/congress_api_ingest.py", line 58
+    else:
+    ^^^^
+SyntaxError: expected 'except' or 'finally' block
+
+- **Started**: 2025-12-04 04:20:38.901398
+- **Completed**: 2025-12-04 04:20:40.917936
+
+### congress_bills_113_s
+- **Source**: congress
+- **Error**: Process exited with code 1:   File "/home/cbwinslow/Videos/opendiscourse/scripts/data_ingestion/congress_api_ingest.py", line 58
+    else:
+    ^^^^
+SyntaxError: expected 'except' or 'finally' block
+
+- **Started**: 2025-12-04 04:20:38.901944
+- **Completed**: 2025-12-04 04:20:40.917667
+
+### congress_bills_113_hjres
+- **Source**: congress
+- **Error**: Process exited with code 1:   File "/home/cbwinslow/Videos/opendiscourse/scripts/data_ingestion/congress_api_ingest.py", line 58
+    else:
+    ^^^^
+SyntaxError: expected 'except' or 'finally' block
+
+- **Started**: 2025-12-04 04:20:38.902376
+- **Completed**: 2025-12-04 04:20:40.918874
+
+### congress_bills_113_sjres
+- **Source**: congress
+- **Error**: Process exited with code 1:   File "/home/cbwinslow/Videos/opendiscourse/scripts/data_ingestion/congress_api_ingest.py", line 58
+    else:
+    ^^^^
+SyntaxError: expected 'except' or 'finally' block
+
+- **Started**: 2025-12-04 04:20:38.903756
+- **Completed**: 2025-12-04 04:20:40.922371
+
+### congress_bills_113_hconres
+- **Source**: congress
+- **Error**: Process exited with code 1:   File "/home/cbwinslow/Videos/opendiscourse/scripts/data_ingestion/congress_api_ingest.py", line 58
+    else:
+    ^^^^
+SyntaxError: expected 'except' or 'finally' block
+
+- **Started**: 2025-12-04 04:20:38.904470
+- **Completed**: 2025-12-04 04:20:40.922590
+
+### congress_bills_113_sconres
+- **Source**: congress
+- **Error**: Process exited with code 1:   File "/home/cbwinslow/Videos/opendiscourse/scripts/data_ingestion/congress_api_ingest.py", line 58
+    else:
+    ^^^^
+SyntaxError: expected 'except' or 'finally' block
+
+- **Started**: 2025-12-04 04:20:38.906376
+- **Completed**: 2025-12-04 04:20:40.922784
+
+### congress_bills_113_hres
+- **Source**: congress
+- **Error**: Process exited with code 1:   File "/home/cbwinslow/Videos/opendiscourse/scripts/data_ingestion/congress_api_ingest.py", line 58
+    else:
+    ^^^^
+SyntaxError: expected 'except' or 'finally' block
+
+- **Started**: 2025-12-04 04:20:38.907698
+- **Completed**: 2025-12-04 04:20:40.923902
+
+### congress_bills_113_sres
+- **Source**: congress
+- **Error**: Process exited with code 1:   File "/home/cbwinslow/Videos/opendiscourse/scripts/data_ingestion/congress_api_ingest.py", line 58
+    else:
+    ^^^^
+SyntaxError: expected 'except' or 'finally' block
+
+- **Started**: 2025-12-04 04:20:38.908865
+- **Completed**: 2025-12-04 04:20:40.926598
+
+### congress_members_114
+- **Source**: congress
+- **Error**: Process exited with code 1:   File "/home/cbwinslow/Videos/opendiscourse/scripts/data_ingestion/congress_api_ingest.py", line 58
+    else:
+    ^^^^
+SyntaxError: expected 'except' or 'finally' block
+
+- **Started**: 2025-12-04 04:20:38.910660
+- **Completed**: 2025-12-04 04:20:40.923528
+
+### congress_bills_114_hr
+- **Source**: congress
+- **Error**: Process exited with code 1:   File "/home/cbwinslow/Videos/opendiscourse/scripts/data_ingestion/congress_api_ingest.py", line 58
+    else:
+    ^^^^
+SyntaxError: expected 'except' or 'finally' block
+
+- **Started**: 2025-12-04 04:20:38.911145
+- **Completed**: 2025-12-04 04:20:40.927632
+
+### congress_bills_114_s
+- **Source**: congress
+- **Error**: Process exited with code 1:   File "/home/cbwinslow/Videos/opendiscourse/scripts/data_ingestion/congress_api_ingest.py", line 58
+    else:
+    ^^^^
+SyntaxError: expected 'except' or 'finally' block
+
+- **Started**: 2025-12-04 04:20:38.911534
+- **Completed**: 2025-12-04 04:20:40.924262
+
+### congress_bills_114_hjres
+- **Source**: congress
+- **Error**: Process exited with code 1:   File "/home/cbwinslow/Videos/opendiscourse/scripts/data_ingestion/congress_api_ingest.py", line 58
+    else:
+    ^^^^
+SyntaxError: expected 'except' or 'finally' block
+
+- **Started**: 2025-12-04 04:20:38.912184
+- **Completed**: 2025-12-04 04:20:40.925930
+
+### congress_bills_114_sjres
+- **Source**: congress
+- **Error**: Process exited with code 1:   File "/home/cbwinslow/Videos/opendiscourse/scripts/data_ingestion/congress_api_ingest.py", line 58
+    else:
+    ^^^^
+SyntaxError: expected 'except' or 'finally' block
+
+- **Started**: 2025-12-04 04:20:38.912803
+- **Completed**: 2025-12-04 04:20:40.926531
+
+### congress_bills_114_hconres
+- **Source**: congress
+- **Error**: Process exited with code 1:   File "/home/cbwinslow/Videos/opendiscourse/scripts/data_ingestion/congress_api_ingest.py", line 58
+    else:
+    ^^^^
+SyntaxError: expected 'except' or 'finally' block
+
+- **Started**: 2025-12-04 04:20:38.914208
+- **Completed**: 2025-12-04 04:20:40.926133
+
+### congress_bills_114_sconres
+- **Source**: congress
+- **Error**: Process exited with code 1:   File "/home/cbwinslow/Videos/opendiscourse/scripts/data_ingestion/congress_api_ingest.py", line 58
+    else:
+    ^^^^
+SyntaxError: expected 'except' or 'finally' block
+
+- **Started**: 2025-12-04 04:20:40.906044
+- **Completed**: 2025-12-04 04:20:42.909957
+
+### congress_bills_114_hres
+- **Source**: congress
+- **Error**: Process exited with code 1:   File "/home/cbwinslow/Videos/opendiscourse/scripts/data_ingestion/congress_api_ingest.py", line 58
+    else:
+    ^^^^
+SyntaxError: expected 'except' or 'finally' block
+
+- **Started**: 2025-12-04 04:20:40.918213
+- **Completed**: 2025-12-04 04:20:42.921916
+
+### congress_bills_114_sres
+- **Source**: congress
+- **Error**: Process exited with code 1:   File "/home/cbwinslow/Videos/opendiscourse/scripts/data_ingestion/congress_api_ingest.py", line 58
+    else:
+    ^^^^
+SyntaxError: expected 'except' or 'finally' block
+
+- **Started**: 2025-12-04 04:20:40.918396
+- **Completed**: 2025-12-04 04:20:42.922400
+
+### congress_members_115
+- **Source**: congress
+- **Error**: Process exited with code 1:   File "/home/cbwinslow/Videos/opendiscourse/scripts/data_ingestion/congress_api_ingest.py", line 58
+    else:
+    ^^^^
+SyntaxError: expected 'except' or 'finally' block
+
+- **Started**: 2025-12-04 04:20:40.919640
+- **Completed**: 2025-12-04 04:20:42.922115
+
+### congress_bills_115_hr
+- **Source**: congress
+- **Error**: Process exited with code 1:   File "/home/cbwinslow/Videos/opendiscourse/scripts/data_ingestion/congress_api_ingest.py", line 58
+    else:
+    ^^^^
+SyntaxError: expected 'except' or 'finally' block
+
+- **Started**: 2025-12-04 04:20:40.923000
+- **Completed**: 2025-12-04 04:20:42.927932
+
+
+## Performance Metrics
+- **Average Records per Second**: 49567.86
+- **Average Job Duration**: 0:00:00.138785
+- **Peak Parallel Jobs**: 15
+- **Database Pool Size**: 20 connections
+
+## Database Statistics
+
+Error getting final database stats: column "tablename" does not exist
+LINE 2:                     SELECT schemaname, tablename,
+                                               ^
+
+
+## Recommendations
+
+1. **Review Failed Jobs**: Check error messages above for failed jobs
+2. **Monitor Database Growth**: Track database size growth over time
+3. **Optimize Parallel Processing**: Adjust worker count based on system performance
+4. **Schedule Regular Ingestion**: Set up automated incremental updates
+
+## Next Steps
+
+1. **Verify Data Quality**: Run data validation queries
+2. **Update Analytics**: Refresh any analytics dashboards
+3. **Archive Logs**: Archive ingestion logs for future reference
+4. **Plan Incremental Updates**: Set up daily/weekly incremental ingestion
+
+---
+**Report Generated**: 2025-12-04 04:20:56
+**Script Location**: /home/cbwinslow/Videos/opendiscourse/scripts/comprehensive_bulk_ingestion.py

@@ -15,6 +15,7 @@ import json
 import time
 import requests
 import psycopg2
+import psycopg2.pool
 from datetime import datetime
 from typing import Dict, List, Any, Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -171,24 +172,14 @@ class VoteIngestionAPI:
             for record in data:
                 if table == "congress_votes":
                     cursor.execute("""
-                        INSERT INTO congress_votes (
-                            vote_id, congress, session, bill_type, bill_number,
-                            vote_date, vote_type, result, democratic_yes, democratic_no,
-                            democratic_present, republican_yes, republican_no, republican_present,
-                            independent_yes, independent_no, independent_present,
-                            total_yes, total_no, total_present, raw_data
-                        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        ON CONFLICT (vote_id) DO NOTHING
+                        INSERT INTO congress.votes (
+                            congress_number, session_number, roll_call_number, question,
+                            result, date, positions
+                        ) VALUES (%s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (congress_number, session_number, roll_call_number) DO NOTHING
                     """, (
-                        record.get('vote_id'), record.get('congress'), record.get('session'),
-                        record.get('bill_type'), record.get('bill_number'),
-                        record.get('vote_date'), record.get('vote_type'), record.get('result'),
-                        record.get('democratic_yes'), record.get('democratic_no'),
-                        record.get('democratic_present'), record.get('republican_yes'),
-                        record.get('republican_no'), record.get('republican_present'),
-                        record.get('independent_yes'), record.get('independent_no'),
-                        record.get('independent_present'), record.get('total_yes'),
-                        record.get('total_no'), record.get('total_present'),
+                        record.get('congress'), record.get('session'), record.get('roll_call_number'),
+                        record.get('question'), record.get('result'), record.get('date'),
                         json.dumps(record)
                     ))
 
@@ -268,27 +259,12 @@ class VoteIngestionAPI:
         # Process votes
         for vote in votes:
             processed_vote = {
-                'vote_id': vote.get('rollCallNumber'),
                 'congress': congress,
                 'session': vote.get('congress', congress),
-                'chamber': 'house',
-                'bill_type': vote.get('bill', {}).get('type'),
-                'bill_number': vote.get('bill', {}).get('number'),
-                'vote_date': vote.get('date'),
-                'vote_type': vote.get('voteType'),
+                'roll_call_number': vote.get('rollCallNumber'),
+                'question': vote.get('description') or vote.get('voteType'),
                 'result': vote.get('result'),
-                'democratic_yes': vote.get('democratic', {}).get('yes'),
-                'democratic_no': vote.get('democratic', {}).get('no'),
-                'democratic_present': vote.get('democratic', {}).get('present'),
-                'republican_yes': vote.get('republican', {}).get('yes'),
-                'republican_no': vote.get('republican', {}).get('no'),
-                'republican_present': vote.get('republican', {}).get('present'),
-                'independent_yes': vote.get('independent', {}).get('yes'),
-                'independent_no': vote.get('independent', {}).get('no'),
-                'independent_present': vote.get('independent', {}).get('present'),
-                'total_yes': vote.get('total', {}).get('yes'),
-                'total_no': vote.get('total', {}).get('no'),
-                'total_present': vote.get('total', {}).get('present')
+                'date': vote.get('date')
             }
             all_votes.append(processed_vote)
 

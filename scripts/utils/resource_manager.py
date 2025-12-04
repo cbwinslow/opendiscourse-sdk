@@ -1,103 +1,181 @@
 """
-Resource Manager for OpenDiscourse
-Handles database connections, environment variables, and cleanup.
+Enhanced Resource Manager using Pydantic Configuration.
+
+Provides backward compatibility with existing code while leveraging
+the new configuration system.
 """
 
 import os
-import sys
 import atexit
-import logging
-from typing import Optional
+from typing import Optional, Dict, Any
 from pathlib import Path
 
-# Load environment variables
+import psycopg2
+from psycopg2 import pool
 from dotenv import load_dotenv
 
-# Add project root to path
-PROJECT_ROOT = Path(__file__).parent.parent.parent
-sys.path.append(str(PROJECT_ROOT))
 
-# Load .env file
-load_dotenv(PROJECT_ROOT / ".env")
+# Load environment variables
+env_file = Path(__file__).parent.parent.parent / '.env'
+if env_file.exists():
+    load_dotenv(env_file)
 
-# Configure logging
-logging.basicConfig(
-    level=getattr(logging, os.getenv("LOG_LEVEL", "INFO")),
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger("ResourceManager")
 
-# Global Database Connection
-DB_CONNECTION = None
+# Try to import new config system
+try:
+    from scripts.core.config import get_settings
+    _HAS_PYDANTIC = True
+except ImportError:
+    _HAS_PYDANTIC = False
+    get_settings = None
 
-def get_db_connection():
+
+# Global connection pool
+_connection_pool: Optional[pool.SimpleConnectionPool] = None
+
+
+def get_api_key(service: str) -> Optional[str]:
     """
-    Get or create a database connection.
-    Returns a psycopg2 connection object.
+    Get API key for a service.
+
+    Args:
+        service: Service name (congress, openstates, govinfo)
+
+    Returns:
+        API key or None
     """
-    global DB_CONNECTION
+    if _HAS_PYDANTIC and get_settings:
+        settings = get_settings()
+        if service.lower() == 'congress':
+            api_config = settings.congress_api
+        elif service.lower() == 'openstates':
+            api_config = settings.openstates_api
+        elif service.lower() == 'govinfo':
+            api_config = settings.govinfo_api
+        else:
+            return None
 
-    if DB_CONNECTION is not None and not DB_CONNECTION.closed:
-        return DB_CONNECTION
+        if api_config.api_key:
+            return api_config.api_key.get_secret_value()
 
-    try:
-        import psycopg2
-
-        db_config = {
-            'dbname': os.getenv('DB_NAME', 'opendiscourse'),
-            'user': os.getenv('DB_USER', 'cbwinslow'),
-            'host': os.getenv('DB_HOST', '/var/run/postgresql'),
-            'port': os.getenv('DB_PORT', '5432')
-        }
-
-        # Add password if present
-        if os.getenv('DB_PASSWORD'):
-            db_config['password'] = os.getenv('DB_PASSWORD')
-
-        logger.info(f"Connecting to database: {db_config['dbname']} as {db_config['user']}")
-        DB_CONNECTION = psycopg2.connect(**db_config)
-        return DB_CONNECTION
-
-    except ImportError:
-        logger.error("psycopg2 not installed. Please run 'pip install psycopg2-binary'")
-        sys.exit(1)
-    except Exception as e:
-        logger.error(f"Failed to connect to database: {e}")
-        sys.exit(1)
-
-def close_db_connection():
-    """Close the database connection if it exists."""
-    global DB_CONNECTION
-    if DB_CONNECTION is not None and not DB_CONNECTION.closed:
-        logger.info("Closing database connection...")
-        DB_CONNECTION.close()
-        DB_CONNECTION = None
-
-def cleanup():
-    """Perform all cleanup tasks."""
-    close_db_connection()
-
-# Register cleanup on exit
-atexit.register(cleanup)
-
-# Export API Keys for easy access
-CONGRESS_API_KEY = os.getenv("CONGRESS_API_KEY")
-OPENSTATES_API_KEY = os.getenv("OPENSTATES_API_KEY")
-GOVINFO_API_KEY = os.getenv("GOVINFO_API_KEY")
-
-if __name__ == "__main__":
-    # Test connection
-    conn = get_db_connection()
-    print("✅ Database connection established successfully.")
-
-    # Check API keys
-    keys = {
-        "Congress": CONGRESS_API_KEY,
-        "OpenStates": OPENSTATES_API_KEY,
-        "GovInfo": GOVINFO_API_KEY
+    # Fallback to environment variables
+    key_map = {
+        'congress': ['CONGRESS_API_KEY', 'CONGRESS_GOV_API_KEY'],
+        'openstates': ['OPENSTATES_API_KEY'],
+        'govinfo': ['GOVINFO_API_KEY'],
     }
 
-    print("\n🔑 API Keys Status:")
-    for name, key in keys.items():
-        status = "✅ Set" if key else "❌ Missing"
-        print(f"  {name}: {status}")
+    for env_var in key_map.get(service.lower(), []):
+        key = os.getenv(env_var)
+        if key:
+            return key
+
+    return None
+
+
+def get_database_config() -> Dict[str, Any]:
+    """
+    Get database configuration.
+
+    Returns:
+        Database configuration dictionary
+    """
+    if _HAS_PYDANTIC and get_settings:
+        settings = get_settings()
+        return {
+            'host': settings.database.host,
+            'port': settings.database.port,
+            'database': settings.database.name,
+            'user': settings.database.user,
+            'password': settings.database.password.get_secret_value() if settings.database.password else None,
+        }
+
+    # Fallback to environment variables
+    return {
+        'host': os.getenv('DB_HOST', 'localhost'),
+        'port': int(os.getenv('DB_PORT', '5432')),
+        'database': os.getenv('DB_NAME', 'opendiscourse'),
+        'user': os.getenv('DB_USER', 'postgres'),
+        'password': os.getenv('DB_PASSWORD'),
+    }
+
+
+def get_connection_pool(min_conn: int = 1, max_conn: int = 10) -> pool.SimpleConnectionPool:
+    """
+    Get or create connection pool.
+
+    Args:
+        min_conn: Minimum connections
+        max_conn: Maximum connections
+
+    Returns:
+        Connection pool
+    """
+    global _connection_pool
+
+    if _connection_pool is None:
+        db_config = get_database_config()
+
+        # Remove None password
+        if db_config.get('password') is None:
+            db_config.pop('password', None)
+
+        _connection_pool = pool.SimpleConnectionPool(
+            min_conn,
+            max_conn,
+            **db_config
+        )
+
+        # Register cleanup
+        atexit.register(cleanup_pool)
+
+    return _connection_pool
+
+
+def get_connection():
+    """
+    Get a database connection from the pool.
+
+    Returns:
+        Database connection
+    """
+    connection_pool = get_connection_pool()
+    return connection_pool.getconn()
+
+
+def return_connection(conn):
+    """
+    Return a connection to the pool.
+
+    Args:
+        conn: Database connection to return
+    """
+    if _connection_pool:
+        _connection_pool.putconn(conn)
+
+
+def cleanup_pool():
+    """Close all connections in the pool."""
+    global _connection_pool
+    if _connection_pool:
+        _connection_pool.closeall()
+        _connection_pool = None
+
+
+# Backward compatibility - expose API keys as module variables
+CONGRESS_API_KEY = get_api_key('congress')
+OPENSTATES_API_KEY = get_api_key('openstates')
+GOVINFO_API_KEY = get_api_key('govinfo')
+
+
+__all__ = [
+    'get_api_key',
+    'get_database_config',
+    'get_connection_pool',
+    'get_connection',
+    'return_connection',
+    'cleanup_pool',
+    'CONGRESS_API_KEY',
+    'OPENSTATES_API_KEY',
+    'GOVINFO_API_KEY',
+]

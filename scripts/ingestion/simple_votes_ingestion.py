@@ -205,12 +205,26 @@ class SimpleVotesIngestor:
         # Get recent roll call votes from House Clerk
         base_url = "http://clerk.house.gov/cgi-bin/vote.asp"
 
-        # Start from most recent and work backwards
-        roll_number = 600  # Start with a high number and work down
+        # Calculate year range for the Congress
+        congress_years = {
+            113: (2013, 2014),
+            114: (2015, 2016),
+            115: (2017, 2018),
+            116: (2019, 2020),
+            117: (2021, 2022),
+            118: (2023, 2024)
+        }
+        
+        years = congress_years.get(congress, (2024, 2024))
+        
+        # Process each year in the Congress
+        for year in years:
+            # Start from most recent and work backwards
+            roll_number = 600  # Start with a high number and work down
 
-        while ingested_count < (limit or 1000) and roll_number > 0:
-            try:
-                url = f"{base_url}?year={year}&rollnumber={roll_number}"
+            while ingested_count < (limit or 1000) and roll_number > 0:
+                try:
+                    url = f"{base_url}?year={year}&rollnumber={roll_number}"
 
                 response = self.session.get(url, timeout=self.config.request_timeout)
                 response.raise_for_status()
