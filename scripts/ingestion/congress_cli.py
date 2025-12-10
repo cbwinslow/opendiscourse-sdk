@@ -17,366 +17,20 @@ from pathlib import Path
 
 # Add project root to path
 sys.path.append(str(Path(__file__).parent.parent.parent))
-# Add script directory to path to allow importing rate_limiter
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from rate_limiter import rate_limiter
-try:
-    from utils import resource_manager
-except ImportError:
-    sys.path.append(os.path.join(os.path.dirname(__file__), '../utils'))
-    import resource_manager
-"""
-    Congress.gov CLI Tool
 
-    A comprehensive command-line interface for ingesting Congressional data from the
-    Congress.gov API into a PostgreSQL database. This class provides ETL (Extract,
-    Transform, Load) functionality for various types of Congressional data including:
-
-    - Members (current and historical)
-    - Bills and legislation
-    - Amendments
-    - Committee information
-    - Vote records
-    - Congressional Record entries
-    - Nominations and treaties
-
-    The class handles API rate limiting, error handling, batch processing, and
-    database schema management automatically.
-
-    Attributes:
-        api_key (str): Congress.gov API key for authentication
-        db_config (dict): PostgreSQL database connection configuration
-        batch_size (int): Number of records to process per batch (default: 50)
-        dry_run (bool): If True, simulates operations without making database changes
-        base_url (str): Base URL for Congress.gov API
-        session (requests.Session): Configured HTTP session with authentication
-        conn (psycopg2.connection): Database connection object
-
-    Example:
-        Initialize and ingest members:
-        >>> cli = CongressCLI(api_key="your_key", db_config=config)
-        >>> cli.ingest_members(118)  # Ingest 118th Congress members
-    """
-
-    def __init__(self, api_key: str = None, db_config: Dict = None, batch_size: int = None, dry_run: bool = False):
-        """
-        Initialize Congress CLI.
-
-        Sets up the CLI with API credentials, database configuration, and processing
-        parameters. Automatically loads configuration from environment if not provided.
-
-        Args:
-            api_key: Congress.gov API key. If None, attempts to load from environment
-                    variables or configuration system
-            db_config: Database configuration dictionary. If None, loads from config system
-            batch_size: Number of records to process per batch. Default is 50 if not specified
-            dry_run: If True, simulates operations without making database changes.
-                    Useful for testing and validation
-
-        Raises:
-            SystemExit: If required API key cannot be found
-        """
-        # Try to load from configuration system
-        settings = None
-        try:
-            from scripts.core.config import get_settings
-            settings = get_settings()
-        except (ImportError, Exception):
-            pass
-
-        # API key: use provided or load from config
-        if api_key:
-            self.api_key = api_key
-        elif settings:
-            self.api_key = settings.congress_api.api_key.get_secret_value() if settings.congress_api.api_key else None
-        else:
-            self.api_key = resource_manager.CONGRESS_API_KEY
-
-        if not self.api_key:
-            print("❌ Congress API key not found. Set CONGRESS_API__API_KEY in .env")
-            sys.exit(1)
-
-        # Database config: use provided or load from config
-        if db_config:
-            self.db_config = db_config
-        elif settings:
-            self.db_config = {
-                'host': settings.database.host,
-                'port': settings.database.port,
-                'database': settings.database.name,
-                'user': settings.database.user,
-                'password': settings.database.password.get_secret_value() if settings.database.password else None,
-            }
-            # Remove None password
-            if self.db_config['password'] is None:
-                self.db_config.pop('password')
-        else:
-            self.db_config = resource_manager.get_database_config()
-
-        # Batch size: use provided or load from config
-        if batch_size is not None:
-            self.batch_size = batch_size
-        elif settings and hasattr(settings, 'ingestion'):
-            self.batch_size = settings.ingestion.batch_size
-        else:
-            self.batch_size = 50
-
+class CongressCLI:
+    def __init__(self, api_key: str, db_config: Dict, batch_size: int = 50, dry_run: bool = False):
+        self.api_key = api_key
+        self.db_config = db_config
+        self.batch_size = batch_size
         self.dry_run = dry_run
         self.base_url = "https://api.congress.gov/v3"
         self.session = requests.Session()
         self.session.headers.update({
-            'X-API-Key': self.api_key,
+            'X-API-Key': api_key,
             'Accept': 'application/json'
         })
         self.conn = None
-class CongressCLI:
-    """
-    Congress.gov CLI Tool
-
-    A comprehensive command-line interface for ingesting Congressional data from the
-    Congress.gov API into a PostgreSQL database. This class provides ETL (Extract,
-    Transform, Load) functionality for various types of Congressional data including:
-
-    - Members (current and historical)
-    - Bills and legislation
-    - Amendments
-    - Committee information
-    - Vote records
-    def transform_member(self, member_data: Dict, congress: int) -> tuple:
-        """
-        Transform Congress member data from API format to database format.
-
-        Converts raw member data from the Congress.gov API into a database-ready tuple
-        for insertion into the congress.members table. Handles nested member objects
-        and applies business logic for data normalization.
-
-        Args:
-            member_data: Raw member data dictionary from API response. Can be either
-                        a direct member object or wrapped in a 'member' key
-            congress: Congress number for context (e.g., 118 for current Congress)
-
-        Returns:
-            Tuple containing:
-            - bioguide_id (str): Unique member identifier
-            - full_name (str): Member's full name
-            - first_name (str): Member's first name
-            - last_name (str): Member's last name
-            - party (str): Political party affiliation
-            - state (str): State or territory represented
-            - district (str): District number (None for Senators)
-            - congress_number (int): Congress number
-            - active (bool): Whether member is currently active
-            - created_at (datetime): Timestamp of record creation
-
-        Example:
-            >>> data = {'member': {'bioguideId': 'A000001', 'fullName': 'John Smith'}}
-            >>> result = cli.transform_member(data, 118)
-            >>> print(result[0])  # 'A000001'
-        """
-        member = member_data.get('member', member_data)
-        return (
-            member.get('bioguideId'),
-            member.get('fullName'),
-    def transform_bill(self, bill_data: Dict, congress: int) -> tuple:
-        """
-        Transform Congress bill data from API format to database format.
-
-        Converts raw bill data from the Congress.gov API into a database-ready tuple
-        for insertion into the congress.bills table. Handles chamber code mapping
-        and data normalization for proper database storage.
-
-        Args:
-            bill_data: Raw bill data dictionary from API response. Can be either
-                      a direct bill object or wrapped in a 'bill' key
-            congress: Congress number for context (e.g., 118 for current Congress)
-
-        Returns:
-            Tuple containing:
-            - congress_number (int): Congress number
-            - bill_type (str): Type of bill (hr, s, hjres, etc.)
-            - bill_number (int): Bill number
-            - origin_chamber (str): Origin chamber (house, senate, joint)
-            - introduced_date (str): Date bill was introduced
-            - latest_action_date (str): Date of latest action
-            - latest_action_text (str): Text of latest action
-            - policy_area (str): Policy area classification
-            - official_title (str): Official title of bill
-            - sponsor_bioguide_id (str): Bioguide ID of primary sponsor
-            - created_at (datetime): Timestamp of record creation
-
-        Note:
-            Chamber codes are mapped: 'House' -> 'house', 'Senate' -> 'senate',
-    def transform_amendment(self, amendment_data: Dict, congress: int) -> tuple:
-        """
-        Transform Congress amendment data from API format to database format.
-
-        Converts raw amendment data from the Congress.gov API into a database-ready tuple
-        for insertion into the congress.amendments table.
-
-        Args:
-            amendment_data: Raw amendment data dictionary from API response
-            congress: Congress number for context (e.g., 118 for current Congress)
-
-        Returns:
-            Tuple containing:
-            - congress_number (int): Congress number
-            - amendment_type (str): Type of amendment
-            - amendment_number (int): Amendment number
-            - description (str): Description of amendment
-            - purpose (str): Purpose of amendment
-            - latest_action_date (str): Date of latest action
-            - latest_action_text (str): Text of latest action
-            - submitted_date (str): Date amendment was submitted
-            - created_at (datetime): Timestamp of record creation
-
-        Example:
-            >>> data = {'type': 'hamdt', 'number': 1, 'description': 'Test amendment'}
-            >>> result = cli.transform_amendment(data, 118)
-        """
-            'Joint' -> 'joint' to maintain database consistency.
-        """
-        bill = bill_data.get('bill', bill_data)
-
-        # Map chamber codes
-        chamber_mapping = {
-            'House': 'house',
-            'Senate': 'senate',
-            'Joint': 'joint'
-        }
-        origin_chamber = chamber_mapping.get(bill.get('originChamber', ''), bill.get('originChamber', '').lower())
-
-        return (
-            congress,
-            bill.get('type', ''),
-            int(bill.get('number', 0)),
-            origin_chamber,
-            bill.get('introducedDate'),
-            bill.get('latestAction', {}).get('actionDate'),
-            bill.get('latestAction', {}).get('text'),
-            bill.get('policyArea', {}).get('name') if bill.get('policyArea') else '',
-            bill.get('title', ''),
-            bill.get('sponsor', {}).get('bioguideId'),
-            datetime.now()
-        )
-            member.get('firstName'),
-            member.get('lastName'),
-            member.get('party'),
-            member.get('state'),
-            member.get('district'),
-            congress,
-            member.get('active'),
-            datetime.now()
-        )
-    - Congressional Record entries
-    - Nominations and treaties
-
-    The class handles API rate limiting, error handling, batch processing, and
-    database schema management automatically.
-
-    Attributes:
-        api_key (str): Congress.gov API key for authentication
-        db_config (dict): PostgreSQL database connection configuration
-        batch_size (int): Number of records to process per batch (default: 50)
-        dry_run (bool): If True, simulates operations without making database changes
-        base_url (str): Base URL for Congress.gov API
-        session (requests.Session): Configured HTTP session with authentication
-        conn (psycopg2.connection): Database connection object
-
-    Example:
-        Initialize and ingest members:
-        >>> cli = CongressCLI(api_key="your_key", db_config=config)
-        >>> cli.ingest_members(118)  # Ingest 118th Congress members
-    """
-
-# Import core components
-try:
-    from scripts.core.worker_pool import WorkerPool, Job
-    from scripts.core.deduplication import DeduplicationEngine, DeduplicationStrategy
-except ImportError:
-    # Fallback for direct execution
-    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from core.worker_pool import WorkerPool, Job
-    from core.deduplication import DeduplicationEngine, DeduplicationStrategy
-
-class CongressCLI:
-    def __init__(self, api_key: str = None, db_config: Dict = None, batch_size: int = None, dry_run: bool = False):
-        """
-        Initialize Congress CLI.
-
-        Args:
-            api_key: API key (optional if using config system)
-            db_config: Database config (optional if using config system)
-            batch_size: Batch size (optional, uses config default)
-            dry_run: Dry run mode
-        """
-        # Try to load from configuration system
-        settings = None
-        try:
-            from scripts.core.config import get_settings
-            settings = get_settings()
-        except (ImportError, Exception):
-            pass
-
-        # API key: use provided or load from config
-        if api_key:
-            self.api_key = api_key
-        elif settings:
-            self.api_key = settings.congress_api.api_key.get_secret_value() if settings.congress_api.api_key else None
-        else:
-            self.api_key = resource_manager.CONGRESS_API_KEY
-
-        if not self.api_key:
-            print("❌ Congress API key not found. Set CONGRESS_API__API_KEY in .env")
-            sys.exit(1)
-
-        # Database config: use provided or load from config
-        if db_config:
-            self.db_config = db_config
-        elif settings:
-            self.db_config = {
-                'host': settings.database.host,
-                'port': settings.database.port,
-                'database': settings.database.name,
-                'user': settings.database.user,
-                'password': settings.database.password.get_secret_value() if settings.database.password else None,
-            }
-            # Remove None password
-            if self.db_config['password'] is None:
-                self.db_config.pop('password')
-        else:
-            self.db_config = resource_manager.get_database_config()
-
-        # Batch size: use provided or load from config
-        if batch_size is not None:
-            self.batch_size = batch_size
-        elif settings and hasattr(settings, 'ingestion'):
-            self.batch_size = settings.ingestion.batch_size
-        else:
-            self.batch_size = 50
-
-        self.dry_run = dry_run
-        self.base_url = "https://api.congress.gov/v3"
-        self.session = requests.Session()
-        self.session.headers.update({
-            'X-API-Key': self.api_key,
-            'Accept': 'application/json'
-        })
-        self.conn = None
-
-        # Initialize Deduplication Engine
-        self.deduplication = DeduplicationEngine(
-            strategy=DeduplicationStrategy.UPDATE,
-            cache_size=10000
-        )
-
-        # Initialize Worker Pool (default configuration, can be tuned)
-        # Rate limit is per worker. Congress.gov limit is 5000/hour ≈ 1.4/sec total.
-        # With 4 workers, we should be conservative: 0.3 req/s per worker = 1.2 req/s total.
-        self.worker_pool = WorkerPool(
-            num_workers=4,
-            rate_limit=0.3,
-            queue_size=1000
-        )
 
     def connect_db(self):
         """Establish database connection"""
@@ -393,41 +47,15 @@ class CongressCLI:
             self.conn.close()
 
     def get(self, endpoint: str, params: dict = None) -> Optional[Dict]:
-        """Make GET request with error handling and exponential backoff"""
+        """Make GET request with error handling"""
         url = f"{self.base_url}{endpoint}"
-        max_retries = 3
-        base_delay = 2.0
-
-        for attempt in range(max_retries + 1):
-            try:
-                # Rate limiting
-                rate_limiter.wait("congress.gov")
-                response = self.session.get(url, params=params)
-
-                if response.status_code == 429:
-                    if attempt < max_retries:
-                        delay = base_delay * (2 ** attempt)
-                        print(f"⏳ Rate limited (429), retry {attempt + 1}/{max_retries} after {delay}s...")
-                        time.sleep(delay)
-                        continue
-                    else:
-                        print(f"❌ Max retries exceeded for rate limit")
-                        return None
-
-                response.raise_for_status()
-                return response.json()
-
-            except requests.exceptions.RequestException as e:
-                if attempt < max_retries:
-                    delay = base_delay * (2 ** attempt)
-                    print(f"⚠️ API request failed (attempt {attempt + 1}/{max_retries}): {e}")
-                    print(f"⏳ Retrying in {delay}s...")
-                    time.sleep(delay)
-                else:
-                    print(f"❌ API request failed after {max_retries} retries: {e}")
-                    return None
-
-        return None
+        try:
+            response = self.session.get(url, params=params)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            print(f"❌ API request failed: {e}")
+            return None
 
     def transform_member(self, member_data: Dict, congress: int) -> tuple:
         """Transform congress member data"""
@@ -1416,41 +1044,6 @@ class CongressCLI:
         self.close_db()
         print(f"🎉 Completed Congress votes")
 
-    def _process_bill_detail_job(self, job: Job) -> List[tuple]:
-        """
-        Worker job to fetch and transform bill details.
-        """
-        congress = job.data['congress']
-        bill_type = job.data['bill_type']
-        bill_number = job.data['bill_number']
-        endpoint_suffix = job.data['endpoint_suffix']
-        data_key = job.data['data_key']
-        transform_name = job.data['transform_name']
-
-        # Get transform method by name
-        transform_func = getattr(self, transform_name)
-
-        url = f"/bill/{congress}/{bill_type.lower()}/{bill_number}/{endpoint_suffix}"
-        # Use existing get method which handles rate limiting (though WorkerPool also has rate limiting)
-        # We might want to disable rate limiting in get() if WorkerPool handles it,
-        # but double safety is fine as long as it doesn't slow down too much.
-        # WorkerPool rate limit is per worker. get() rate limit is global via rate_limiter.
-        # This might cause contention.
-        # For now, let's rely on get() for the actual request.
-        data = self.get(url)
-
-        items = []
-        if data and data.get(data_key):
-            for item in data[data_key]:
-                # Handle special case for subjects
-                if data_key == 'subjects' and 'legislativeSubjects' in item:
-                     for sub in item['legislativeSubjects']:
-                         items.append(transform_func(sub, congress, bill_type, bill_number))
-                else:
-                    items.append(transform_func(item, congress, bill_type, bill_number))
-
-        return items
-
     def ingest_bill_details(self, congress: int, detail_type: str):
         """
         Generic ingestor for bill details (actions, cosponsors, subjects, titles, related bills).
@@ -1558,6 +1151,13 @@ class CongressCLI:
             print(f"❌ Unknown detail type: {detail_type}")
             return
 
+        offset = 0
+        total_processed = 0
+
+        # Iterate over bills to fetch details
+        # This is inefficient but necessary if no bulk endpoint exists.
+        # We can optimize by fetching bills from DB first to get the list.
+
         # Fetch bills from DB to iterate
         cursor = self.conn.cursor()
         cursor.execute("SELECT bill_type, bill_number FROM congress.bills WHERE congress_number = %s", (congress,))
@@ -1566,64 +1166,53 @@ class CongressCLI:
 
         print(f"  Found {len(bills_to_process)} bills to process for {detail_type}")
 
-        # Process in batches to manage memory and queue size
-        # WorkerPool queue size is 1000, so we process in chunks of 500 to be safe
-        chunk_size = 500
-        total_processed = 0
+        for bill_type, bill_number in bills_to_process:
+            url = f"/bill/{congress}/{bill_type.lower()}/{bill_number}/{cfg['endpoint_suffix']}"
+            data = self.get(url)
 
-        for i in range(0, len(bills_to_process), chunk_size):
-            batch = bills_to_process[i:i+chunk_size]
-            jobs = []
+            if data and data.get(cfg['data_key']):
+                items = []
+                for item in data[cfg['data_key']]:
+                    # Pass extra args if needed by transform
+                    if detail_type == 'actions':
+                        items.append(cfg['transform'](item, congress, bill_type, bill_number))
+                    elif detail_type == 'cosponsors':
+                        items.append(cfg['transform'](item, congress, bill_type, bill_number))
+                    elif detail_type == 'subjects':
+                         # API returns 'subjects': {'legislativeSubjects': [...], 'policyArea': ...}
+                         # or just list? Check API.
+                         # Assuming list for now based on transform.
+                         # If nested, we need to adjust.
+                         # transform_bill_subject expects item.
+                         if 'legislativeSubjects' in item: # Handle nested structure if present
+                             for sub in item['legislativeSubjects']:
+                                 items.append(cfg['transform'](sub, congress, bill_type, bill_number))
+                         else:
+                             items.append(cfg['transform'](item, congress, bill_type, bill_number))
+                    elif detail_type == 'titles':
+                        items.append(cfg['transform'](item, congress, bill_type, bill_number))
+                    elif detail_type == 'related':
+                        items.append(cfg['transform'](item, congress, bill_type, bill_number))
 
-            print(f"🔄 Processing batch {i//chunk_size + 1}/{(len(bills_to_process)-1)//chunk_size + 1} ({len(batch)} bills)...")
+                if items:
+                    if self.dry_run:
+                        print(f"🔍 DRY RUN: Would insert {len(items)} {detail_type} for {bill_type}{bill_number}")
+                        total_processed += len(items)
+                    else:
+                        cursor = self.conn.cursor()
+                        try:
+                            from psycopg2.extras import execute_values
+                            execute_values(cursor, cfg['insert_query'], items)
+                            self.conn.commit()
+                            total_processed += len(items)
+                            # print(f"✅ Processed {len(items)} {detail_type} for {bill_type}{bill_number}")
+                        except Exception as e:
+                            print(f"❌ Batch insert failed for {bill_type}{bill_number}: {e}")
+                            self.conn.rollback()
+                        finally:
+                            cursor.close()
 
-            for bill_type, bill_number in batch:
-                job = Job(
-                    task_func=self._process_bill_detail_job,
-                    data={
-                        'congress': congress,
-                        'bill_type': bill_type,
-                        'bill_number': bill_number,
-                        'endpoint_suffix': cfg['endpoint_suffix'],
-                        'data_key': cfg['data_key'],
-                        'transform_name': cfg['transform'].__name__
-                    }
-                )
-                jobs.append(job)
-
-            # Submit and run batch
-            self.worker_pool.submit_batch(jobs)
-            results = self.worker_pool.run()
-
-            # Collect results
-            batch_items = []
-            for res in results:
-                if res.success and res.result:
-                    batch_items.extend(res.result)
-                elif not res.success:
-                    print(f"⚠️ Job failed: {res.error}")
-
-            # Batch insert
-            if batch_items:
-                if self.dry_run:
-                    print(f"🔍 DRY RUN: Would insert {len(batch_items)} {detail_type} items")
-                    total_processed += len(batch_items)
-                else:
-                    cursor = self.conn.cursor()
-                    try:
-                        from psycopg2.extras import execute_values
-                        execute_values(cursor, cfg['insert_query'], batch_items)
-                        self.conn.commit()
-                        total_processed += len(batch_items)
-                        # print(f"✅ Processed {len(batch_items)} items in batch")
-                    except Exception as e:
-                        print(f"❌ Batch insert failed: {e}")
-                        self.conn.rollback()
-                    finally:
-                        cursor.close()
-
-            # Clear queue for next batch (though run() should have drained it)
-            self.worker_pool.clear_queue()
+            time.sleep(0.1) # Rate limit
 
         self.close_db()
         print(f"🎉 Completed: {total_processed} Congress {detail_type}")
@@ -1720,471 +1309,8 @@ class CongressCLI:
 
             time.sleep(0.1)
 
-    def ingest_committee_reports(self, congress: int):
-        """Ingest committee reports"""
-        print(f"🚀 Starting Congress {congress} committee reports ingestion")
-        if not self.connect_db(): return
-
-        offset = 0
-        total_processed = 0
-        while True:
-            params = {'congress': congress, 'limit': self.batch_size, 'offset': offset}
-            data = self.get("/committee-report", params)
-            if not data or not data.get('committeeReports'): break
-
-            reports = []
-            for item in data['committeeReports']:
-                reports.append((
-                    congress,
-                    item.get('chamber', '').lower(),
-                    item.get('committee', {}).get('systemCode'),
-                    item.get('type'),
-                    item.get('number'),
-                    item.get('title'),
-                    item.get('citation'),
-                    item.get('date'),
-                    item.get('text', {}).get('count') if isinstance(item.get('text'), dict) else None, # Placeholder for text content if available
-                    item.get('url'), # PDF URL often in format
-                    datetime.now()
-                ))
-
-            if reports:
-                query = """
-                INSERT INTO congress.committee_reports
-                (congress_number, chamber_code, committee_id, report_type, report_number, title, citation, date, text, pdf_url, created_at)
-                VALUES %s
-                ON CONFLICT (congress_number, report_type, report_number) DO UPDATE SET
-                    title = EXCLUDED.title,
-                    citation = EXCLUDED.citation,
-                    date = EXCLUDED.date,
-                    pdf_url = EXCLUDED.pdf_url,
-                    updated_at = now()
-                """
-                if self.dry_run:
-                    print(f"🔍 DRY RUN: {len(reports)} reports")
-                    total_processed += len(reports)
-                else:
-                    cursor = self.conn.cursor()
-                    try:
-                        from psycopg2.extras import execute_values
-                        execute_values(cursor, query, reports)
-                        self.conn.commit()
-                        total_processed += len(reports)
-                    except Exception as e:
-                        print(f"❌ Batch insert failed: {e}")
-                        self.conn.rollback()
-                    finally:
-                        cursor.close()
-
-            offset += self.batch_size
-            time.sleep(0.1)
-
         self.close_db()
-        print(f"🎉 Completed: {total_processed} committee reports")
-
-    def ingest_committee_prints(self, congress: int):
-        """Ingest committee prints"""
-        print(f"🚀 Starting Congress {congress} committee prints ingestion")
-        if not self.connect_db(): return
-
-        offset = 0
-        total_processed = 0
-        while True:
-            params = {'congress': congress, 'limit': self.batch_size, 'offset': offset}
-            data = self.get("/committee-print", params)
-            if not data or not data.get('committeePrints'): break
-
-            prints = []
-            for item in data['committeePrints']:
-                prints.append((
-                    congress,
-                    item.get('chamber', '').lower(),
-                    item.get('committee', {}).get('systemCode'),
-                    item.get('number'),
-                    item.get('title'),
-                    item.get('date'),
-                    item.get('url'),
-                    datetime.now()
-                ))
-
-            if prints:
-                query = """
-                INSERT INTO congress.committee_prints
-                (congress_number, chamber_code, committee_id, print_number, title, date, pdf_url, created_at)
-                VALUES %s
-                ON CONFLICT (congress_number, chamber_code, print_number) DO UPDATE SET
-                    title = EXCLUDED.title,
-                    date = EXCLUDED.date,
-                    pdf_url = EXCLUDED.pdf_url,
-                    updated_at = now()
-                """
-                if self.dry_run:
-                    print(f"🔍 DRY RUN: {len(prints)} prints")
-                    total_processed += len(prints)
-                else:
-                    cursor = self.conn.cursor()
-                    try:
-                        from psycopg2.extras import execute_values
-                        execute_values(cursor, query, prints)
-                        self.conn.commit()
-                        total_processed += len(prints)
-                    except Exception as e:
-                        print(f"❌ Batch insert failed: {e}")
-                        self.conn.rollback()
-                    finally:
-                        cursor.close()
-
-            offset += self.batch_size
-            time.sleep(0.1)
-
-        self.close_db()
-        print(f"🎉 Completed: {total_processed} committee prints")
-
-    def ingest_hearings(self, congress: int):
-        """Ingest hearings"""
-        print(f"🚀 Starting Congress {congress} hearings ingestion")
-        if not self.connect_db(): return
-
-        offset = 0
-        total_processed = 0
-        while True:
-            params = {'congress': congress, 'limit': self.batch_size, 'offset': offset}
-            data = self.get("/hearing", params)
-            if not data or not data.get('hearings'): break
-
-            hearings = []
-            for item in data['hearings']:
-                hearings.append((
-                    congress,
-                    item.get('chamber', '').lower(),
-                    item.get('committee', {}).get('systemCode'),
-                    item.get('number'),
-                    item.get('title'),
-                    item.get('date'),
-                    item.get('url'),
-                    datetime.now()
-                ))
-
-            if hearings:
-                query = """
-                INSERT INTO congress.hearings
-                (congress_number, chamber_code, committee_id, hearing_number, title, date, pdf_url, created_at)
-                VALUES %s
-                ON CONFLICT (congress_number, chamber_code, hearing_number) DO UPDATE SET
-                    title = EXCLUDED.title,
-                    date = EXCLUDED.date,
-                    pdf_url = EXCLUDED.pdf_url,
-                    updated_at = now()
-                """
-                if self.dry_run:
-                    print(f"🔍 DRY RUN: {len(hearings)} hearings")
-                    total_processed += len(hearings)
-                else:
-                    cursor = self.conn.cursor()
-                    try:
-                        from psycopg2.extras import execute_values
-                        execute_values(cursor, query, hearings)
-                        self.conn.commit()
-                        total_processed += len(hearings)
-                    except Exception as e:
-                        print(f"❌ Batch insert failed: {e}")
-                        self.conn.rollback()
-                    finally:
-                        cursor.close()
-
-            offset += self.batch_size
-            time.sleep(0.1)
-
-        self.close_db()
-        print(f"🎉 Completed: {total_processed} hearings")
-
-    def ingest_congressional_record(self):
-        """Ingest daily congressional record"""
-        print(f"🚀 Starting Congressional Record ingestion")
-        if not self.connect_db(): return
-
-        # Note: API endpoint is /daily-congressional-record
-        offset = 0
-        total_processed = 0
-        while True:
-            params = {'limit': self.batch_size, 'offset': offset}
-            data = self.get("/daily-congressional-record", params)
-            if not data or not data.get('dailyCongressionalRecord'): break
-
-            records = []
-            for item in data['dailyCongressionalRecord']:
-                records.append((
-                    item.get('congress'),
-                    item.get('sessionNumber'),
-                    item.get('volumeNumber'),
-                    item.get('issueNumber'),
-                    item.get('issueDate'),
-                    item.get('fullText', {}).get('url'), # Assuming structure
-                    datetime.now()
-                ))
-
-            if records:
-                query = """
-                INSERT INTO congress.congressional_record
-                (congress_number, session_number, volume, issue, date, pdf_url, created_at)
-                VALUES %s
-                ON CONFLICT (volume, issue) DO UPDATE SET
-                    date = EXCLUDED.date,
-                    pdf_url = EXCLUDED.pdf_url,
-                    updated_at = now()
-                """
-                if self.dry_run:
-                    print(f"🔍 DRY RUN: {len(records)} records")
-                    total_processed += len(records)
-                else:
-                    cursor = self.conn.cursor()
-                    try:
-                        from psycopg2.extras import execute_values
-                        execute_values(cursor, query, records)
-                        self.conn.commit()
-                        total_processed += len(records)
-                    except Exception as e:
-                        print(f"❌ Batch insert failed: {e}")
-                        self.conn.rollback()
-                    finally:
-                        cursor.close()
-
-            offset += self.batch_size
-            time.sleep(0.1)
-
-        self.close_db()
-        print(f"🎉 Completed: {total_processed} congressional records")
-
-    def ingest_nominations(self, congress: int):
-        """Ingest nominations"""
-        print(f"🚀 Starting Congress {congress} nominations ingestion")
-        if not self.connect_db(): return
-
-        offset = 0
-        total_processed = 0
-        while True:
-            params = {'congress': congress, 'limit': self.batch_size, 'offset': offset}
-            data = self.get("/nomination", params)
-            if not data or not data.get('nominations'): break
-
-            nominations = []
-            for item in data['nominations']:
-                nominations.append((
-                    congress,
-                    item.get('number'),
-                    item.get('receivedDate'),
-                    item.get('description'),
-                    item.get('committee', {}).get('systemCode'), # Assuming structure
-                    item.get('latestAction', {}).get('actionDate'),
-                    item.get('latestAction', {}).get('text'),
-                    datetime.now()
-                ))
-
-            if nominations:
-                query = """
-                INSERT INTO congress.nominations
-                (congress_number, nomination_number, received_date, description, committee_id, latest_action_date, latest_action_text, created_at)
-                VALUES %s
-                ON CONFLICT (congress_number, nomination_number) DO UPDATE SET
-                    description = EXCLUDED.description,
-                    latest_action_date = EXCLUDED.latest_action_date,
-                    latest_action_text = EXCLUDED.latest_action_text,
-                    updated_at = now()
-                """
-                if self.dry_run:
-                    print(f"🔍 DRY RUN: {len(nominations)} nominations")
-                    total_processed += len(nominations)
-                else:
-                    cursor = self.conn.cursor()
-                    try:
-                        from psycopg2.extras import execute_values
-                        execute_values(cursor, query, nominations)
-                        self.conn.commit()
-                        total_processed += len(nominations)
-                    except Exception as e:
-                        print(f"❌ Batch insert failed: {e}")
-                        self.conn.rollback()
-                    finally:
-                        cursor.close()
-
-            offset += self.batch_size
-            time.sleep(0.1)
-
-        self.close_db()
-        print(f"🎉 Completed: {total_processed} nominations")
-
-    def ingest_treaties(self, congress: int):
-        """Ingest treaties"""
-        print(f"🚀 Starting Congress {congress} treaties ingestion")
-        if not self.connect_db(): return
-
-        offset = 0
-        total_processed = 0
-        while True:
-            params = {'congress': congress, 'limit': self.batch_size, 'offset': offset}
-            data = self.get("/treaty", params)
-            if not data or not data.get('treaties'): break
-
-            treaties = []
-            for item in data['treaties']:
-                treaties.append((
-                    congress,
-                    item.get('number'),
-                    item.get('receivedDate'), # Check API for field name
-                    item.get('topic'),
-                    datetime.now()
-                ))
-
-            if treaties:
-                query = """
-                INSERT INTO congress.treaties
-                (congress_number, treaty_number, received_date, topic, created_at)
-                VALUES %s
-                ON CONFLICT (congress_number, treaty_number) DO UPDATE SET
-                    topic = EXCLUDED.topic,
-                    updated_at = now()
-                """
-                if self.dry_run:
-                    print(f"🔍 DRY RUN: {len(treaties)} treaties")
-                    total_processed += len(treaties)
-                else:
-                    cursor = self.conn.cursor()
-                    try:
-                        from psycopg2.extras import execute_values
-                        execute_values(cursor, query, treaties)
-                        self.conn.commit()
-                        total_processed += len(treaties)
-                    except Exception as e:
-                        print(f"❌ Batch insert failed: {e}")
-                        self.conn.rollback()
-                    finally:
-                        cursor.close()
-
-            offset += self.batch_size
-            time.sleep(0.1)
-
-        self.close_db()
-        print(f"🎉 Completed: {total_processed} treaties")
-
-    def ingest_house_communications(self, congress: int):
-        """Ingest House communications"""
-        print(f"🚀 Starting Congress {congress} House communications ingestion")
-        if not self.connect_db(): return
-
-        offset = 0
-        total_processed = 0
-        while True:
-            params = {'congress': congress, 'limit': self.batch_size, 'offset': offset}
-            data = self.get("/house-communication", params)
-            if not data or not data.get('houseCommunications'): break
-
-            comms = []
-            for item in data['houseCommunications']:
-                comms.append((
-                    congress,
-                    item.get('number'),
-                    item.get('communicationType', {}).get('code'), # Assuming structure
-                    datetime.now()
-                ))
-
-            if comms:
-                query = """
-                INSERT INTO congress.house_communications
-                (congress_number, communication_number, description, created_at)
-                VALUES %s
-                ON CONFLICT (congress_number, communication_number) DO UPDATE SET
-                    description = EXCLUDED.description,
-                    updated_at = now()
-                """
-                # Note: Schema has description, but API might return type/code. Adjusting query to match schema.
-                # Re-mapping:
-                # item.get('communicationType', {}).get('name') -> description?
-
-                # Let's rebuild comms list with correct mapping
-                comms = []
-                for item in data['houseCommunications']:
-                     comms.append((
-                        congress,
-                        item.get('number'),
-                        item.get('communicationType', {}).get('name'),
-                        datetime.now()
-                    ))
-
-                if self.dry_run:
-                    print(f"🔍 DRY RUN: {len(comms)} communications")
-                    total_processed += len(comms)
-                else:
-                    cursor = self.conn.cursor()
-                    try:
-                        from psycopg2.extras import execute_values
-                        execute_values(cursor, query, comms)
-                        self.conn.commit()
-                        total_processed += len(comms)
-                    except Exception as e:
-                        print(f"❌ Batch insert failed: {e}")
-                        self.conn.rollback()
-                    finally:
-                        cursor.close()
-
-            offset += self.batch_size
-            time.sleep(0.1)
-
-        self.close_db()
-        print(f"🎉 Completed: {total_processed} House communications")
-
-    def ingest_senate_communications(self, congress: int):
-        """Ingest Senate communications"""
-        print(f"🚀 Starting Congress {congress} Senate communications ingestion")
-        if not self.connect_db(): return
-
-        offset = 0
-        total_processed = 0
-        while True:
-            params = {'congress': congress, 'limit': self.batch_size, 'offset': offset}
-            data = self.get("/senate-communication", params)
-            if not data or not data.get('senateCommunications'): break
-
-            comms = []
-            for item in data['senateCommunications']:
-                comms.append((
-                    congress,
-                    item.get('number'),
-                    item.get('communicationType', {}).get('name'),
-                    datetime.now()
-                ))
-
-            if comms:
-                query = """
-                INSERT INTO congress.senate_communications
-                (congress_number, communication_number, description, created_at)
-                VALUES %s
-                ON CONFLICT (congress_number, communication_number) DO UPDATE SET
-                    description = EXCLUDED.description,
-                    updated_at = now()
-                """
-                if self.dry_run:
-                    print(f"🔍 DRY RUN: {len(comms)} communications")
-                    total_processed += len(comms)
-                else:
-                    cursor = self.conn.cursor()
-                    try:
-                        from psycopg2.extras import execute_values
-                        execute_values(cursor, query, comms)
-                        self.conn.commit()
-                        total_processed += len(comms)
-                    except Exception as e:
-                        print(f"❌ Batch insert failed: {e}")
-                        self.conn.rollback()
-                    finally:
-                        cursor.close()
-
-            offset += self.batch_size
-            time.sleep(0.1)
-
-        self.close_db()
-        print(f"🎉 Completed: {total_processed} Senate communications")
-
-
+        print(f"🎉 Completed: {total_processed} committee members")
 
     def status(self):
         """Show Congress data status"""
@@ -2228,121 +1354,81 @@ class CongressCLI:
             self.close_db()
 
 def main():
-    # Create parent parser with shared arguments
-    parent_parser = argparse.ArgumentParser(add_help=False)
-    parent_parser.add_argument('--dry-run', action='store_true', help='Run without making changes')
-    parent_parser.add_argument('--batch-size', type=int, help='Batch size')
+    parser = argparse.ArgumentParser(description="Congress.gov Ingestion CLI")
+    parser.add_argument('--dry-run', action='store_true', help='Run without making changes')
+    parser.add_argument('--batch-size', type=int, default=50, help='Batch size')
 
-    parser = argparse.ArgumentParser(description='Congress.gov Ingestion CLI', parents=[parent_parser])
+    subparsers = parser.add_subparsers(dest='command', required=True)
 
-    subparsers = parser.add_subparsers(dest='command', help='Commands')
-
-    # Members
+    # Ingest Members
     members_parser = subparsers.add_parser('ingest-members', help='Ingest members')
     members_parser.add_argument('congress', type=int, help='Congress number')
 
-    # Bills
+    # Ingest Bills
     bills_parser = subparsers.add_parser('ingest-bills', help='Ingest bills')
     bills_parser.add_argument('congress', type=int, help='Congress number')
-    bills_parser.add_argument('--bill-type', help='Bill type filter')
 
-    # Amendments
-    amendments_parser = subparsers.add_parser('ingest-amendments', help='Ingest amendments')
-    amendments_parser.add_argument('congress', type=int, help='Congress number')
+    # Ingest Amendments
+    amdt_parser = subparsers.add_parser('ingest-amendments', help='Ingest amendments')
+    amdt_parser.add_argument('congress', type=int, help='Congress number')
 
-    # Summaries
-    summaries_parser = subparsers.add_parser('ingest-summaries', help='Ingest bill summaries')
-    summaries_parser.add_argument('congress', type=int, help='Congress number')
+    # Ingest Summaries
+    sum_parser = subparsers.add_parser('ingest-summaries', help='Ingest bill summaries')
+    sum_parser.add_argument('congress', type=int, help='Congress number')
 
-    # Text
+    # Ingest Text
     text_parser = subparsers.add_parser('ingest-text', help='Ingest bill text versions')
     text_parser.add_argument('congress', type=int, help='Congress number')
 
-    # Sessions
-    sessions_parser = subparsers.add_parser('ingest-sessions', help='Ingest congress sessions')
+    # Ingest Sessions
+    subparsers.add_parser('ingest-sessions', help='Ingest congress sessions')
 
-    # Chambers
-    chambers_parser = subparsers.add_parser('ingest-chambers', help='Ingest congress chambers')
+    # Ingest Chambers
+    subparsers.add_parser('ingest-chambers', help='Ingest congress chambers')
 
-    # Committees
-    committees_parser = subparsers.add_parser('ingest-committees', help='Ingest congress committees')
-    committees_parser.add_argument('congress', type=int, help='Congress number')
+    # Ingest Committees
+    comm_parser = subparsers.add_parser('ingest-committees', help='Ingest congress committees')
+    comm_parser.add_argument('congress', type=int, help='Congress number')
 
-    # Votes
-    votes_parser = subparsers.add_parser('ingest-votes', help='Ingest congress votes')
-    votes_parser.add_argument('congress', type=int, help='Congress number')
+    # Ingest Votes
+    vote_parser = subparsers.add_parser('ingest-votes', help='Ingest congress votes')
+    vote_parser.add_argument('congress', type=int, help='Congress number')
 
-    # Bill actions
+    # Ingest Bill Actions
     actions_parser = subparsers.add_parser('ingest-bill-actions', help='Ingest bill actions')
     actions_parser.add_argument('congress', type=int, help='Congress number')
 
-    # Bill cosponsors
-    cosponsors_parser = subparsers.add_parser('ingest-bill-cosponsors', help='Ingest bill cosponsors')
-    cosponsors_parser.add_argument('congress', type=int, help='Congress number')
+    # Ingest Bill Cosponsors
+    cosp_parser = subparsers.add_parser('ingest-bill-cosponsors', help='Ingest bill cosponsors')
+    cosp_parser.add_argument('congress', type=int, help='Congress number')
 
-    # Bill subjects
-    subjects_parser = subparsers.add_parser('ingest-bill-subjects', help='Ingest bill subjects')
-    subjects_parser.add_argument('congress', type=int, help='Congress number')
+    # Ingest Bill Subjects
+    subj_parser = subparsers.add_parser('ingest-bill-subjects', help='Ingest bill subjects')
+    subj_parser.add_argument('congress', type=int, help='Congress number')
 
-    # Bill titles
+    # Ingest Bill Titles
     titles_parser = subparsers.add_parser('ingest-bill-titles', help='Ingest bill titles')
     titles_parser.add_argument('congress', type=int, help='Congress number')
 
-    # Related bills
+    # Ingest Related Bills
     related_parser = subparsers.add_parser('ingest-related-bills', help='Ingest related bills')
     related_parser.add_argument('congress', type=int, help='Congress number')
 
-    # Committee members
-    committee_members_parser = subparsers.add_parser('ingest-committee-members', help='Ingest committee members')
-    committee_members_parser.add_argument('congress', type=int, help='Congress number')
-
-    # Committee reports
-    reports_parser = subparsers.add_parser('ingest-committee-reports', help='Ingest committee reports')
-    reports_parser.add_argument('congress', type=int, help='Congress number')
-
-    # Committee prints
-    prints_parser = subparsers.add_parser('ingest-committee-prints', help='Ingest committee prints')
-    prints_parser.add_argument('congress', type=int, help='Congress number')
-
-    # Hearings
-    hearings_parser = subparsers.add_parser('ingest-hearings', help='Ingest hearings')
-    hearings_parser.add_argument('congress', type=int, help='Congress number')
-
-    # Congressional Record
-    record_parser = subparsers.add_parser('ingest-congressional-record', help='Ingest congressional record')
-    record_parser.add_argument('congress', type=int, help='Congress number')
-
-    # Nominations
-    nominations_parser = subparsers.add_parser('ingest-nominations', help='Ingest nominations')
-    nominations_parser.add_argument('congress', type=int, help='Congress number')
-
-    # Treaties
-    treaties_parser = subparsers.add_parser('ingest-treaties', help='Ingest treaties')
-    treaties_parser.add_argument('congress', type=int, help='Congress number')
-
-    # House communications
-    house_parser = subparsers.add_parser('ingest-house-communications', help='Ingest House communications')
-    house_parser.add_argument('congress', type=int, help='Congress number')
-
-    # Senate communications
-    senate_parser = subparsers.add_parser('ingest-senate-communications', help='Ingest Senate communications')
-    senate_parser.add_argument('congress', type=int, help='Congress number')
+    # Ingest Committee Members
+    comm_mem_parser = subparsers.add_parser('ingest-committee-members', help='Ingest committee members')
+    comm_mem_parser.add_argument('congress', type=int, help='Congress number')
 
     # Status
-    status_parser = subparsers.add_parser('status', help='Show status')
+    subparsers.add_parser('status', help='Show status')
 
-    # Bill details (composite) - with parallel processing support
-    details_parser = subparsers.add_parser('ingest-bill-details', help='Ingest bill details (actions, cosponsors, etc)', parents=[parent_parser])
+    # Ingest Bill Details
+    details_parser = subparsers.add_parser('ingest-bill-details', help='Ingest bill details (actions, cosponsors, etc)')
     details_parser.add_argument('congress', type=int, help='Congress number')
-    details_parser.add_argument('type', help='Detail type (actions, cosponsors, subjects, titles, related)')
+    details_parser.add_argument('type', choices=['actions', 'cosponsors', 'subjects', 'titles', 'related'], help='Type of detail to ingest')
 
     args = parser.parse_args()
 
-    if not args.command:
-        parser.print_help()
-        return
-
-    api_key = resource_manager.CONGRESS_API_KEY
+    api_key = os.getenv('CONGRESS_GOV_API_KEY') or os.getenv('CONGRESS_API_KEY')
     if not api_key:
         print("❌ CONGRESS_GOV_API_KEY or CONGRESS_API_KEY environment variable required")
         return
@@ -2353,14 +1439,7 @@ def main():
         'host': '/var/run/postgresql'
     }
 
-    # Create CLI instance with optional parameters from args or config
-    # API key and db_config will be loaded from configuration system automatically
-    cli = CongressCLI(
-        api_key,
-        db_config,
-        batch_size=args.batch_size,  # None if not provided
-        dry_run=args.dry_run
-    )
+    cli = CongressCLI(api_key, db_config, args.batch_size, args.dry_run)
 
     if args.command == 'ingest-members':
         cli.ingest_members(args.congress)
@@ -2392,22 +1471,6 @@ def main():
         cli.ingest_bill_details(args.congress, 'related')
     elif args.command == 'ingest-committee-members':
         cli.ingest_committee_members(args.congress)
-    elif args.command == 'ingest-committee-reports':
-        cli.ingest_committee_reports(args.congress)
-    elif args.command == 'ingest-committee-prints':
-        cli.ingest_committee_prints(args.congress)
-    elif args.command == 'ingest-hearings':
-        cli.ingest_hearings(args.congress)
-    elif args.command == 'ingest-congressional-record':
-        cli.ingest_congressional_record()
-    elif args.command == 'ingest-nominations':
-        cli.ingest_nominations(args.congress)
-    elif args.command == 'ingest-treaties':
-        cli.ingest_treaties(args.congress)
-    elif args.command == 'ingest-house-communications':
-        cli.ingest_house_communications(args.congress)
-    elif args.command == 'ingest-senate-communications':
-        cli.ingest_senate_communications(args.congress)
     elif args.command == 'ingest-bill-details':
         cli.ingest_bill_details(args.congress, args.type)
     elif args.command == 'status':

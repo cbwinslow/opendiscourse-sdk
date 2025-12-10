@@ -181,8 +181,7 @@ class DataIngestionManager:
 
         return session
 
-    @staticmethod
-    def _retry_on_failure(func):
+    def _retry_on_failure(self, func):
         """Retry decorator for API calls"""
         def wrapper(*args, **kwargs):
             last_exception = None
@@ -391,81 +390,158 @@ class DataIngestionManager:
             logger.error(f"OpenStates data normalization failed: {str(e)}")
             return None
 
-    @_retry_on_failure
     def _fetch_congress_bills(self, congress: int, bill_type: str = None, limit: int = 20) -> List[Dict[str, Any]]:
-        """Fetch bills from Congress.gov API"""
+        """Fetch bills from Congress.gov API with retry logic"""
+        last_exception = None
+        for attempt in range(self.config.max_retries):
+            try:
+                params = {
+                    'congress': congress,
+                    'limit': limit,
+                    'offset': 0
+                }
+
+                if bill_type:
+                    params['type'] = bill_type.upper()
+
+                url = f"{CONGRESS_API_BASE}/bill"
+                if self.config.congress_api_key:
+                    params['api_key'] = self.config.congress_api_key
+
+                logger.info(f"Fetching Congress bills: {url} with params {params}")
+                response = self.session.get(url, params=params)
+                response.raise_for_status()
+
+                data = response.json()
+                bills = data.get('bills', [])
+                logger.info(f"Retrieved {len(bills)} bills from Congress.gov")
+                return bills
+            except Exception as e:
+                last_exception = e
+                logger.warning(f"Attempt {attempt + 1} failed: {str(e)}")
+                if attempt < self.config.max_retries - 1:
+                    time.sleep(self.config.timeout * (attempt + 1))
+                continue
+
+        logger.error(f"All {self.config.max_retries} attempts failed")
+        if last_exception:
+            logger.error(f"Failed to fetch Congress bills: {str(last_exception)}")
+        return []
+
+    def _parse_bill_type(self, bill_number):
+        """
+        Guess bill type from its number before the hyphen (e.g. hr, s).
+        This is a heuristic; NOT guaranteed to be correct.
+        """
+        bill_prefix = bill_number.split('-')[0].lower()
+        prefix_map = {
+            'hr': 'house-resolution',
+            's': 'senate-bill',
+            'hres': 'house-resolution',
+            'hrs': 'house-resolution',
+            'sres': 'senate-resolution',
+            'hjres': 'house-resolution',
+            'sjres': 'senate-resolution',
+            'hconres': 'house-concurrent-resolution',
+            'sconres': 'senate-concurrent-resolution'
+        }
+        return prefix_map.get(bill_prefix)
+
+    def _is_bill_published(self, bill_data: Dict[str, Any]) -> bool:
+        """
+        Determine if a bill was published according to it's publications.
+        This is a fairly basic heuristic; NOT guaranteed to be perfect.
+        """
         try:
-            params = {
-                'congress': congress,
-                'limit': limit,
-                'offset': 0
-            }
-
-            if bill_type:
-                params['type'] = bill_type.upper()
-
-            url = f"{CONGRESS_API_BASE}/bill"
-            if self.config.congress_api_key:
-                params['api_key'] = self.config.congress_api_key
-
-            logger.info(f"Fetching Congress bills: {url} with params {params}")
-            response = self.session.get(url, params=params)
-            response.raise_for_status()
-
-            data = response.json()
-            bills = data.get('bills', [])
-            logger.info(f"Retrieved {len(bills)} bills from Congress.gov")
-            return bills
+            bill = bill_data.get('bill', {})
+            legislation_types = bill.get('legislativeActions', [])
+            primary_action = next(
+                (a for a in legislation_types if a.get('actionDate') is not None), {}
+            )
+            last_action = next(
+                (a for a in reversed(legislation_types) if a.get('actionDate') is not None), {}
+            )
+            actions = {}
+            for a in [primary_action, last_action]:
+                if a.get('title') is not None:
+                    title = a['title'].lower().strip()
+                    date = a.get('actionDate')
+                    if date and title:
+                        # Possible future TODO: consider keying on action description
+                        actions[title] = datetime.fromisoformat(
+                            str(date).replace('Z', '+00:00')
+                        )
+            if any([(act in actions) for act in ['enacted', 'enrolled in senate', 'enrolled in house']]):
+                return True
+            return False
         except Exception as e:
-            logger.error(f"Failed to fetch Congress bills: {str(e)}")
-            return []
+            logger.error(f"Failed to determine bill publication status: {str(e)}")
+            return False
 
-    @_retry_on_failure
     def _fetch_govinfo_documents(self, collection: str, year: int = None) -> List[Dict[str, Any]]:
-        """Fetch documents from GovInfo API"""
-        try:
-            url = f"{GOVINFO_API_BASE}/{collection}"
-            if year:
-                url = f"{url}/{year}"
+        """Fetch documents from GovInfo API with retry logic"""
+        last_exception = None
+        for attempt in range(self.config.max_retries):
+            try:
+                url = f"{GOVINFO_API_BASE}/{collection}"
+                if year:
+                    url = f"{url}/{year}"
 
-            params = {}
-            if self.config.govinfo_api_key:
-                params['api_key'] = self.config.govinfo_api_key
+                params = {}
+                if self.config.govinfo_api_key:
+                    params['api_key'] = self.config.govinfo_api_key
 
-            logger.info(f"Fetching GovInfo documents: {url}")
-            response = self.session.get(url, params=params)
-            response.raise_for_status()
+                logger.info(f"Fetching GovInfo documents: {url}")
+                response = self.session.get(url, params=params)
+                response.raise_for_status()
 
-            data = response.json()
-            documents = data.get('documents', [])
-            logger.info(f"Retrieved {len(documents)} documents from GovInfo")
-            return documents
-        except Exception as e:
-            logger.error(f"Failed to fetch GovInfo documents: {str(e)}")
-            return []
+                data = response.json()
+                documents = data.get('documents', [])
+                logger.info(f"Retrieved {len(documents)} documents from GovInfo")
+                return documents
+            except Exception as e:
+                last_exception = e
+                logger.warning(f"Attempt {attempt + 1} failed: {str(e)}")
+                if attempt < self.config.max_retries - 1:
+                    time.sleep(self.config.timeout * (attempt + 1))
+                continue
 
-    @_retry_on_failure
+        logger.error(f"All {self.config.max_retries} attempts failed")
+        if last_exception:
+            logger.error(f"Failed to fetch GovInfo documents: {str(last_exception)}")
+        return []
+
     def _fetch_openstates_bills(self, state: str, session: str = None) -> List[Dict[str, Any]]:
-        """Fetch bills from OpenStates API"""
-        try:
-            url = f"{OPENSTATES_API_BASE}/bills"
-            params = {'state': state}
-            if session:
-                params['session'] = session
-            if self.config.openstates_api_key:
-                params['apikey'] = self.config.openstates_api_key
+        """Fetch bills from OpenStates API with retry logic"""
+        last_exception = None
+        for attempt in range(self.config.max_retries):
+            try:
+                url = f"{OPENSTATES_API_BASE}/bills"
+                params = {'state': state}
+                if session:
+                    params['session'] = session
+                if self.config.openstates_api_key:
+                    params['apikey'] = self.config.openstates_api_key
 
-            logger.info(f"Fetching OpenStates bills: {url} with params {params}")
-            response = self.session.get(url, params=params)
-            response.raise_for_status()
+                logger.info(f"Fetching OpenStates bills: {url} with params {params}")
+                response = self.session.get(url, params=params)
+                response.raise_for_status()
 
-            data = response.json()
-            bills = data.get('results', [])
-            logger.info(f"Retrieved {len(bills)} bills from OpenStates")
-            return bills
-        except Exception as e:
-            logger.error(f"Failed to fetch OpenStates bills: {str(e)}")
-            return []
+                data = response.json()
+                bills = data.get('results', [])
+                logger.info(f"Retrieved {len(bills)} bills from OpenStates")
+                return bills
+            except Exception as e:
+                last_exception = e
+                logger.warning(f"Attempt {attempt + 1} failed: {str(e)}")
+                if attempt < self.config.max_retries - 1:
+                    time.sleep(self.config.timeout * (attempt + 1))
+                continue
+
+        logger.error(f"All {self.config.max_retries} attempts failed")
+        if last_exception:
+            logger.error(f"Failed to fetch OpenStates bills: {str(last_exception)}")
+        return []
 
     def _save_to_database(self, data: List[Dict[str, Any]], table_name: str) -> Tuple[int, int]:
         """Save data to database"""

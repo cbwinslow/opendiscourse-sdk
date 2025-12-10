@@ -1,0 +1,19 @@
+[project]
+name = "openstates-mcp"
+version = "0.1.0"
+description = "MCP Server for OpenStates.org Data Ingestion"
+requires-python = ">=3.10"
+dependencies = [
+    "mcp>=0.1.0",
+    "httpx",
+    "psycopg2-binary",
+    "python-dotenv",
+    "click"
+]
+
+[project.scripts]
+openstates-mcp = "openstates_mcp.server:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

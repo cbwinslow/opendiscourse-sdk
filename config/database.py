@@ -62,7 +62,7 @@ class DatabaseManager:
             os.getenv("DB_HOST")
             or os.getenv("POSTGRES_HOST")
             or os.getenv("SUPABASE_HOST")
-            or "localhost"  # Will use docker exec fallback
+            or "localhost"  # Use localhost:5432 as requested
         )
 
         port = int(

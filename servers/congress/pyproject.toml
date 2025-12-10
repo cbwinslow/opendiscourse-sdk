@@ -1,0 +1,19 @@
+[project]
+name = "congress-mcp"
+version = "0.1.0"
+description = "MCP Server for Congress.gov Data Ingestion"
+requires-python = ">=3.10"
+dependencies = [
+    "mcp>=0.1.0",
+    "httpx",
+    "psycopg2-binary",
+    "python-dotenv",
+    "click"
+]
+
+[project.scripts]
+congress-mcp = "congress_mcp.server:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

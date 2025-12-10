@@ -207,6 +207,8 @@ class OpenStatesCLI:
             bill_data.get('session'),
             json.dumps(bill_data.get('actions', [])),
             datetime.now()
+        )
+
     def ingest_people(self, jurisdiction: str):
         """
         Ingest OpenStates people data for a specific jurisdiction.
