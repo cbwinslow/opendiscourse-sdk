@@ -10,9 +10,9 @@ from typing import Optional
 
 import requests
 from bs4 import BeautifulSoup
+from typing_extensions import TypedDict
 
 from vector_store.weaviate_manager import WeaviateManager
-from typing_extensions import TypedDict
 
 try:  # Optional dependencies
     from pdfminer.high_level import extract_text as extract_pdf_text

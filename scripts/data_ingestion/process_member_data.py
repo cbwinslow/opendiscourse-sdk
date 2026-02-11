@@ -12,9 +12,9 @@ Usage:
 import argparse
 import json
 import logging
-from pathlib import Path
-from typing import Dict, List, Any
 from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict
 
 logging.basicConfig(
     level=logging.INFO,
@@ -25,29 +25,29 @@ logger = logging.getLogger(__name__)
 
 class MemberDataProcessor:
     """Process and transform member data."""
-    
+
     def __init__(self, input_dir: Path, output_dir: Path):
         self.input_dir = input_dir
         self.output_dir = output_dir
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        
+
     def process_all_files(self) -> Dict[str, Any]:
         """Process all member data files."""
         logger.info(f"Processing member data from {self.input_dir}")
-        
+
         stats = {
             'files_processed': 0,
             'members_processed': 0,
             'errors': 0,
             'start_time': datetime.now().isoformat()
         }
-        
+
         json_files = list(self.input_dir.glob('**/*.json'))
-        
+
         if not json_files:
             logger.warning(f"No JSON files found in {self.input_dir}")
             return stats
-            
+
         for json_file in json_files:
             try:
                 self.process_file(json_file)
@@ -55,18 +55,18 @@ class MemberDataProcessor:
             except Exception as e:
                 logger.error(f"Error processing {json_file}: {e}")
                 stats['errors'] += 1
-                
+
         stats['end_time'] = datetime.now().isoformat()
         logger.info(f"Processing complete: {stats}")
         return stats
-        
+
     def process_file(self, file_path: Path) -> None:
         """Process a single member data file."""
         logger.info(f"Processing file: {file_path}")
-        
-        with open(file_path, 'r') as f:
+
+        with open(file_path) as f:
             data = json.load(f)
-            
+
         # Handle different data structures
         if 'members' in data:
             members = data['members']
@@ -74,9 +74,9 @@ class MemberDataProcessor:
             members = data
         else:
             members = [data]
-            
+
         processed_members = []
-        
+
         for member in members:
             try:
                 processed = self.process_member(member)
@@ -84,7 +84,7 @@ class MemberDataProcessor:
             except Exception as e:
                 logger.error(f"Error processing member: {e}")
                 continue
-                
+
         # Save processed data
         output_file = self.output_dir / file_path.name
         with open(output_file, 'w') as f:
@@ -93,9 +93,9 @@ class MemberDataProcessor:
                 'count': len(processed_members),
                 'processed_at': datetime.now().isoformat()
             }, f, indent=2)
-            
+
         logger.info(f"Saved processed data to {output_file}")
-        
+
     def process_member(self, member: Dict[str, Any]) -> Dict[str, Any]:
         """Process a single member record."""
         processed = {
@@ -147,43 +147,43 @@ class MemberDataProcessor:
             },
             'processed_at': datetime.now().isoformat()
         }
-        
+
         return processed
-        
+
     def generate_summary(self) -> None:
         """Generate a summary report of processed data."""
         summary_file = self.output_dir / 'processing_summary.json'
-        
+
         processed_files = list(self.output_dir.glob('*.json'))
-        
+
         total_members = 0
         parties = {}
         states = {}
         chambers = {}
-        
+
         for file_path in processed_files:
             if file_path.name == 'processing_summary.json':
                 continue
-                
-            with open(file_path, 'r') as f:
+
+            with open(file_path) as f:
                 data = json.load(f)
-                
+
             members = data.get('members', [])
             total_members += len(members)
-            
+
             for member in members:
                 # Count by party
                 party = member.get('party', {}).get('code', 'Unknown')
                 parties[party] = parties.get(party, 0) + 1
-                
+
                 # Count by state
                 state = member.get('state', 'Unknown')
                 states[state] = states.get(state, 0) + 1
-                
+
                 # Count by chamber
                 chamber = member.get('chamber', 'Unknown')
                 chambers[chamber] = chambers.get(chamber, 0) + 1
-                
+
         summary = {
             'total_members': total_members,
             'by_party': parties,
@@ -192,10 +192,10 @@ class MemberDataProcessor:
             'files_processed': len(processed_files) - 1,
             'generated_at': datetime.now().isoformat()
         }
-        
+
         with open(summary_file, 'w') as f:
             json.dump(summary, f, indent=2)
-            
+
         logger.info(f"Summary saved to {summary_file}")
         logger.info(f"Total members processed: {total_members}")
 
@@ -222,16 +222,16 @@ def main():
         action='store_true',
         help='Enable verbose logging'
     )
-    
+
     args = parser.parse_args()
-    
+
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
-        
+
     processor = MemberDataProcessor(args.input, args.output)
     stats = processor.process_all_files()
     processor.generate_summary()
-    
+
     logger.info(f"Processing complete: {stats}")
 
 

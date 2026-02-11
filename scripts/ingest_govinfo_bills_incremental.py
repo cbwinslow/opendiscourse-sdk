@@ -4,19 +4,18 @@ Incremental GovInfo Bills Ingestion
 Ingests bills from GovInfo.gov API with checkpoint tracking and fingerprinting
 """
 
-import os
-import sys
-import requests
 import hashlib
 import json
 import time
-import psycopg2
-from psycopg2.extras import execute_values
 from datetime import datetime
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
-from rate_limiter import adaptive_limiters
+import psycopg2
+import requests
 from env_config import get_optional_env_var, validate_api_keys
+from psycopg2.extras import execute_values
+from rate_limiter import adaptive_limiters
+
 
 class IncrementalGovInfoBillsIngestor:
     """Incremental bills ingestion for GovInfo.gov API"""
@@ -156,7 +155,7 @@ class IncrementalGovInfoBillsIngestor:
             # Handle rate limit errors
             if hasattr(e, 'response') and e.response.status_code == 429:
                 adaptive_limiters['govinfo.gov'].handle_error(429)
-                print(f"⚠️ Rate limit hit, waiting and retrying...")
+                print("⚠️ Rate limit hit, waiting and retrying...")
                 time.sleep(5)
                 response = requests.get(url, params=params, headers=headers, timeout=30)
                 response.raise_for_status()
@@ -194,7 +193,7 @@ class IncrementalGovInfoBillsIngestor:
             # Handle rate limit errors
             if hasattr(e, 'response') and e.response.status_code == 429:
                 adaptive_limiters['govinfo.gov'].handle_error(429)
-                print(f"⚠️ Rate limit hit on package details, waiting...")
+                print("⚠️ Rate limit hit on package details, waiting...")
                 time.sleep(5)
                 response = requests.get(url, params=params, headers=headers, timeout=30)
                 response.raise_for_status()
@@ -232,7 +231,7 @@ class IncrementalGovInfoBillsIngestor:
             # Handle rate limit errors
             if hasattr(e, 'response') and e.response.status_code == 429:
                 adaptive_limiters['govinfo.gov'].handle_error(429)
-                print(f"⚠️ Rate limit hit on bill text, waiting...")
+                print("⚠️ Rate limit hit on bill text, waiting...")
                 time.sleep(5)
                 response = requests.get(url, params=params, headers=headers, timeout=30)
                 response.raise_for_status()
@@ -418,7 +417,7 @@ class IncrementalGovInfoBillsIngestor:
                 packages = batch_data.get('packages', [])
 
                 if not packages:
-                    print(f"✅ No more bill packages found")
+                    print("✅ No more bill packages found")
                     break
 
                 print(f"📄 Processing {len(packages)} bill packages from offset {offset}")
@@ -464,7 +463,7 @@ class IncrementalGovInfoBillsIngestor:
 
                 # Check if we should continue
                 if len(packages) < self.batch_size:
-                    print(f"✅ Reached end of bill packages list")
+                    print("✅ Reached end of bill packages list")
                     break
 
                 offset += self.batch_size
@@ -511,8 +510,8 @@ class IncrementalGovInfoBillsIngestor:
         total_processed = sum(r.get('records_processed', 0) for r in results)
         total_skipped = sum(r.get('records_skipped', 0) for r in results)
 
-        print(f"\n🎉 All Congress bills ingestion completed!")
-        print(f"📊 Summary:")
+        print("\n🎉 All Congress bills ingestion completed!")
+        print("📊 Summary:")
         print(f"   Congresses completed: {completed}/{len(results)}")
         print(f"   Total bills processed: {total_processed}")
         print(f"   Total bills skipped: {total_skipped}")
@@ -526,7 +525,7 @@ def main():
     # Test with current congress
     results = ingestor.ingest_all_congresses(118, 118)
 
-    print(f"\n🎯 Bills ingestion test completed!")
+    print("\n🎯 Bills ingestion test completed!")
     print(f"Results: {results}")
 
 if __name__ == "__main__":

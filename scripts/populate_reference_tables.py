@@ -1,25 +1,26 @@
 #!/usr/bin/env python3
 """Populate reference tables for Congress schema"""
 
-import psycopg2
-from datetime import datetime
-from dotenv import load_dotenv
 import os
+from datetime import datetime
+
+import psycopg2
+from dotenv import load_dotenv
 
 load_dotenv()
 
 def populate_reference_tables():
     """Populate reference tables (parties, states)"""
-    
+
     # Connect to database
     conn_params = {
         'database': os.getenv('DB_NAME', 'cbwinslow'),
         'user': os.getenv('DB_USER', 'cbwinslow')
     }
-    
+
     conn = psycopg2.connect(**conn_params)
     cursor = conn.cursor()
-    
+
     try:
         # Populate parties
         parties = [
@@ -30,7 +31,7 @@ def populate_reference_tables():
             ('G', 'Green Party'),
             ('O', 'Other')
         ]
-        
+
         party_query = """
             INSERT INTO congress.parties (party_code, display_name, created_at, updated_at)
             VALUES (%s, %s, %s, %s)
@@ -38,12 +39,12 @@ def populate_reference_tables():
                 display_name = EXCLUDED.display_name,
                 updated_at = EXCLUDED.updated_at
         """
-        
+
         for party in parties:
             cursor.execute(party_query, (*party, datetime.now(), datetime.now()))
-        
+
         print(f"Inserted {len(parties)} parties")
-        
+
         # Populate states
         states = [
             ('AL', 'Alabama', '01', False),
@@ -103,7 +104,7 @@ def populate_reference_tables():
             ('AS', 'American Samoa', '60', True),
             ('MP', 'Northern Mariana Islands', '69', True)
         ]
-        
+
         state_query = """
             INSERT INTO congress.states (state_code, name, fips_code, is_territory, created_at, updated_at)
             VALUES (%s, %s, %s, %s, %s, %s)
@@ -113,23 +114,23 @@ def populate_reference_tables():
                 is_territory = EXCLUDED.is_territory,
                 updated_at = EXCLUDED.updated_at
         """
-        
+
         for state in states:
             cursor.execute(state_query, (*state, datetime.now(), datetime.now()))
-        
+
         print(f"Inserted {len(states)} states and territories")
-        
+
         conn.commit()
-        
+
         # Verify
         cursor.execute("SELECT COUNT(*) FROM congress.parties")
         party_count = cursor.fetchone()[0]
         cursor.execute("SELECT COUNT(*) FROM congress.states")
         state_count = cursor.fetchone()[0]
-        
+
         print(f"Total parties: {party_count}")
         print(f"Total states: {state_count}")
-        
+
     except Exception as e:
         conn.rollback()
         print(f"Error: {e}")

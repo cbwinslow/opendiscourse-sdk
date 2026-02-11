@@ -4,19 +4,17 @@ Incremental Congress Bills Ingestion
 Ingests bills from Congress.gov API with checkpoint tracking and fingerprinting
 """
 
-import os
-import sys
-import requests
-import hashlib
 import json
 import time
-import psycopg2
-from psycopg2.extras import execute_values
 from datetime import datetime
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
-from rate_limiter import adaptive_limiters
+import psycopg2
+import requests
 from env_config import get_optional_env_var, validate_api_keys
+from psycopg2.extras import execute_values
+from rate_limiter import adaptive_limiters
+
 
 class IncrementalCongressBillsIngestor:
     """Incremental bills ingestion for Congress.gov API"""
@@ -148,7 +146,7 @@ class IncrementalCongressBillsIngestor:
             # Handle rate limit errors
             if hasattr(e, 'response') and e.response.status_code == 429:
                 adaptive_limiters['congress.gov'].handle_error(429)
-                print(f"⚠️ Rate limit hit, waiting and retrying...")
+                print("⚠️ Rate limit hit, waiting and retrying...")
                 time.sleep(5)
                 response = requests.get(url, params=params, headers=headers, timeout=30)
                 response.raise_for_status()
@@ -328,7 +326,7 @@ class IncrementalCongressBillsIngestor:
                 bills = batch_data.get('bills', [])
 
                 if not bills:
-                    print(f"✅ No more bills found")
+                    print("✅ No more bills found")
                     break
 
                 print(f"📄 Processing {len(bills)} bills from offset {offset}")
@@ -366,7 +364,7 @@ class IncrementalCongressBillsIngestor:
 
                 # Check if we should continue
                 if len(bills) < self.batch_size:
-                    print(f"✅ Reached end of bills list")
+                    print("✅ Reached end of bills list")
                     break
 
                 offset += self.batch_size
@@ -413,8 +411,8 @@ class IncrementalCongressBillsIngestor:
         total_processed = sum(r.get('records_processed', 0) for r in results)
         total_skipped = sum(r.get('records_skipped', 0) for r in results)
 
-        print(f"\n🎉 All Congress bills ingestion completed!")
-        print(f"📊 Summary:")
+        print("\n🎉 All Congress bills ingestion completed!")
+        print("📊 Summary:")
         print(f"   Congresses completed: {completed}/{len(results)}")
         print(f"   Total bills processed: {total_processed}")
         print(f"   Total bills skipped: {total_skipped}")
@@ -428,7 +426,7 @@ def main():
     # Test with current congress
     results = ingestor.ingest_all_congresses(118, 118)
 
-    print(f"\n🎯 Bills ingestion test completed!")
+    print("\n🎯 Bills ingestion test completed!")
     print(f"Results: {results}")
 
 if __name__ == "__main__":

@@ -1,7 +1,8 @@
-import requests
-import time
 import logging
+import time
 from typing import Optional
+
+import requests
 
 # Configure logging
 logging.basicConfig(

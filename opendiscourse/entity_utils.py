@@ -4,12 +4,13 @@ This module provides utility functions for entity extraction, deduplication,
 and relationship inference.
 """
 
-from typing import Any, List, Dict
+from typing import Any, Dict, List
+
 from .services.entity_extractor import (
     deduplicate_entities,
-    infer_relationships,
     extract_declarations,
     extract_entities,
+    infer_relationships,
 )
 
 

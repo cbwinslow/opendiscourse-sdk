@@ -10,27 +10,27 @@ This is the enhanced main entry point that integrates with existing infrastructu
 - Legacy ingestion managers
 """
 
+import argparse
+import json
 import os
 import sys
-import json
-import time
-import argparse
 from datetime import datetime
-from typing import Dict, Any, List
 from pathlib import Path
+from typing import Any, Dict
 
 # Add project path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from enhanced_orchestrator import EnhancedOrchestrator
-from ingestion_config import validate_all_api_keys, get_ingestion_mode_from_env
-
-# Import existing components for direct access
-from verify_complete_ingestion import IngestionVerifier
-from data_status_queries import DataStatusDiagnostics
 from complete_bulk_ingestion import BulkIngestionOrchestrator
+from data_status_queries import DataStatusDiagnostics
 
 # Load environment variables
 from dotenv import load_dotenv
+from enhanced_orchestrator import EnhancedOrchestrator
+from ingestion_config import get_ingestion_mode_from_env, validate_all_api_keys
+
+# Import existing components for direct access
+from verify_complete_ingestion import IngestionVerifier
+
 load_dotenv()
 
 def print_enhanced_banner():

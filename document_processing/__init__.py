@@ -1,6 +1,11 @@
+from .document_chunker import ChunkMetadata, DocumentChunker
 from .document_ingestor import DocumentIngestor, ProcessedDocument
-from .document_chunker import DocumentChunker, ChunkMetadata
-from .pipeline_executor import PipelineExecutor, ProcessingResults, ProcessingError, ProcessingProgress
+from .pipeline_executor import (
+    PipelineExecutor,
+    ProcessingError,
+    ProcessingProgress,
+    ProcessingResults,
+)
 
 __all__ = [
     'DocumentIngestor',

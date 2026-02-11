@@ -3,16 +3,17 @@ from typing import Dict, Type
 from .base import VectorStoreBase
 from .stores import (
     ChromaDBStore,
+    ClickHouseStore,
     ElasticsearchStore,
+    OpenSearchStore,
     PineconeStore,
     WeaviateStore,
-    OpenSearchStore,
-    ClickHouseStore
 )
+
 
 class VectorStoreFactory:
     """Factory class for creating vector store instances."""
-    
+
     # Map store type strings to their corresponding classes
     STORE_TYPES: Dict[str, Type[VectorStoreBase]] = {
         "chromadb": ChromaDBStore,
@@ -22,7 +23,7 @@ class VectorStoreFactory:
         "opensearch": OpenSearchStore,
         "clickhouse": ClickHouseStore
     }
-    
+
     @staticmethod
     def create(store_type: str, **kwargs) -> VectorStoreBase:
         """Create a vector store instance of the specified type.
@@ -44,5 +45,5 @@ class VectorStoreFactory:
                 f"Unsupported vector store type: {store_type}. "
                 f"Supported types are: {supported_types}"
             )
-        
+
         return store_class(**kwargs)

@@ -3,7 +3,7 @@ import logging
 import os
 import sys
 from contextlib import contextmanager
-from typing import Generator, Optional
+from typing import Generator
 
 import psycopg2
 from dotenv import load_dotenv
@@ -39,10 +39,10 @@ def get_db_connection() -> Generator[psycopg2.extensions.connection, None, None]
         # Validate required environment variables
         required_vars = ["POSTGRES_DB", "POSTGRES_USER", "POSTGRES_PASSWORD", "POSTGRES_HOST", "POSTGRES_PORT"]
         missing_vars = [var for var in required_vars if not os.getenv(var)]
-        
+
         if missing_vars:
             raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
-        
+
         connection = psycopg2.connect(
             dbname=os.getenv("POSTGRES_DB"),
             user=os.getenv("POSTGRES_USER"),
@@ -52,7 +52,7 @@ def get_db_connection() -> Generator[psycopg2.extensions.connection, None, None]
         )
         logger.debug("Database connection established successfully")
         yield connection
-        
+
     except psycopg2.Error as e:
         logger.error("Database connection error: %s", str(e))
         if connection:
@@ -144,7 +144,7 @@ def create_tables() -> None:
                     ON documents(source_type, source_id)
                 """
                 )
-                
+
                 cursor.execute(
                     """
                     CREATE INDEX IF NOT EXISTS idx_entity_mentions_document_id 
@@ -176,11 +176,11 @@ def populate_database(scrape_only: bool = False, process_only: bool = False) -> 
             logger.info("Starting document scraping...")
             scrape_documents()
             logger.info("Document scraping completed")
-        
+
         # Process documents unless scrape_only is specified
         if not scrape_only:
             logger.info("Starting document processing for entities...")
-            
+
             with get_db_connection() as conn:
                 with conn.cursor(cursor_factory=RealDictCursor) as cursor:
                     # Get all documents with parameterized query
@@ -199,12 +199,12 @@ def populate_database(scrape_only: bool = False, process_only: bool = False) -> 
                     for idx, doc in enumerate(documents, 1):
                         doc_id = doc["id"]
                         title = doc["title"] or "Untitled"
-                        
+
                         logger.info(
                             "Processing document %d/%d (ID: %s): %s", 
                             idx, total_docs, doc_id, title[:50] + "..." if len(title) > 50 else title
                         )
-                        
+
                         try:
                             # Process document for entities
                             process_document(
@@ -219,7 +219,7 @@ def populate_database(scrape_only: bool = False, process_only: bool = False) -> 
                                 },
                             )
                             logger.debug("Successfully processed document ID: %s", doc_id)
-                            
+
                         except Exception as e:
                             logger.error(
                                 "Error processing document %s (ID: %s): %s", 
@@ -255,26 +255,26 @@ def main() -> None:
         action="store_true", 
         help="Enable verbose logging"
     )
-    
+
     args = parser.parse_args()
-    
+
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
-    
+
     if args.scrape_only and args.process_only:
         logger.error("Cannot specify both --scrape-only and --process-only")
         sys.exit(1)
-    
+
     try:
         # Create tables first
         logger.info("Creating database tables...")
         create_tables()
-        
+
         # Populate database based on arguments
         populate_database(scrape_only=args.scrape_only, process_only=args.process_only)
-        
+
         logger.info("Database population script completed successfully")
-        
+
     except Exception as e:
         logger.error("Database population script failed: %s", str(e))
         sys.exit(1)

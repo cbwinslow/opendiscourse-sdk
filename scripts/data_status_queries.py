@@ -6,20 +6,21 @@ This script provides comprehensive queries to paint a full picture of the data
 ingestion status, what's been ingested, and what's left to process.
 """
 
+import json
 import os
 import sys
-import json
 from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional
+
 import psycopg2
 from psycopg2.extras import DictCursor
 
 # Add project path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from ingestion_config import validate_all_api_keys, get_ingestion_mode_from_env
-
 # Load environment variables
 from dotenv import load_dotenv
+from ingestion_config import get_ingestion_mode_from_env, validate_all_api_keys
+
 load_dotenv()
 
 class DataStatusDiagnostics:

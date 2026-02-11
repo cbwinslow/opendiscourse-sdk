@@ -17,11 +17,12 @@ License: MIT
 
 import logging
 import time
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional
 from urllib.parse import urljoin
 
 import requests
-from pydantic import BaseModel, ValidationError as PydanticValidationError
+from pydantic import BaseModel
+from pydantic import ValidationError as PydanticValidationError
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
@@ -60,7 +61,7 @@ class BaseClient:
         >>> from opendiscourse_sdk import CongressClient
         >>> client = CongressClient(api_key="your_key")
     """
-    
+
     def __init__(
         self,
         base_url: str,
@@ -89,15 +90,15 @@ class BaseClient:
         self.timeout = timeout
         self.rate_limit_delay = rate_limit_delay
         self._last_request_time = 0.0
-        
+
         # Create session with retry logic
         self.session = self._create_session(
             max_retries=max_retries,
             backoff_factor=backoff_factor
         )
-        
+
         logger.debug(f"Initialized {self.__class__.__name__} with base_url: {base_url}")
-    
+
     def _create_session(self, max_retries: int, backoff_factor: float) -> requests.Session:
         """
         Create a requests session with automatic retry logic.
@@ -116,7 +117,7 @@ class BaseClient:
             Configured requests.Session object
         """
         session = requests.Session()
-        
+
         # Configure retry strategy
         retry_strategy = Retry(
             total=max_retries,
@@ -125,14 +126,14 @@ class BaseClient:
             allowed_methods=["GET", "POST", "PUT", "DELETE"],
             raise_on_status=False,  # We'll handle status codes manually
         )
-        
+
         # Mount adapter with retry strategy
         adapter = HTTPAdapter(max_retries=retry_strategy)
         session.mount("http://", adapter)
         session.mount("https://", adapter)
-        
+
         return session
-    
+
     def _enforce_rate_limit(self) -> None:
         """
         Enforce rate limiting by adding delay between requests.
@@ -146,7 +147,7 @@ class BaseClient:
             logger.debug(f"Rate limiting: sleeping for {sleep_time:.2f} seconds")
             time.sleep(sleep_time)
         self._last_request_time = time.time()
-    
+
     def _build_url(self, endpoint: str) -> str:
         """
         Build full URL from base URL and endpoint.
@@ -158,7 +159,7 @@ class BaseClient:
             Complete URL
         """
         return urljoin(self.base_url + "/", endpoint.lstrip("/"))
-    
+
     def _prepare_headers(self, headers: Optional[Dict[str, str]] = None) -> Dict[str, str]:
         """
         Prepare request headers including authentication.
@@ -173,12 +174,12 @@ class BaseClient:
             "Accept": "application/json",
             "User-Agent": "OpenDiscourse-SDK/1.0.0",
         }
-        
+
         if headers:
             default_headers.update(headers)
-        
+
         return default_headers
-    
+
     def _prepare_params(self, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Prepare request parameters including API key.
@@ -190,16 +191,16 @@ class BaseClient:
             Dictionary of parameters to include in request
         """
         prepared_params = params.copy() if params else {}
-        
+
         # Add API key if configured
         if self.api_key:
             prepared_params["api_key"] = self.api_key
-        
+
         # Remove None values
         prepared_params = {k: v for k, v in prepared_params.items() if v is not None}
-        
+
         return prepared_params
-    
+
     def _handle_response(self, response: requests.Response) -> Dict[str, Any]:
         """
         Handle API response and raise appropriate exceptions for errors.
@@ -222,7 +223,7 @@ class BaseClient:
             f"Response: {response.status_code} from {response.url} "
             f"(elapsed: {response.elapsed.total_seconds():.2f}s)"
         )
-        
+
         # Handle successful responses
         if response.status_code in (200, 201):
             try:
@@ -232,10 +233,10 @@ class BaseClient:
                     "Invalid JSON in response",
                     details={"error": str(e), "content": response.text[:200]}
                 )
-        
+
         # Handle error responses
         error_message = f"API request failed with status {response.status_code}"
-        
+
         try:
             error_data = response.json()
             if "message" in error_data:
@@ -244,7 +245,7 @@ class BaseClient:
                 error_message = error_data["error"]
         except ValueError:
             error_data = {"content": response.text[:200]}
-        
+
         # Map status codes to specific exceptions
         if response.status_code in (401, 403):
             raise AuthenticationError(
@@ -275,7 +276,7 @@ class BaseClient:
                 response=response,
                 details=error_data
             )
-    
+
     def _request(
         self,
         method: str,
@@ -305,14 +306,14 @@ class BaseClient:
         """
         # Enforce rate limiting
         self._enforce_rate_limit()
-        
+
         # Build request
         url = self._build_url(endpoint)
         prepared_headers = self._prepare_headers(headers)
         prepared_params = self._prepare_params(params)
-        
+
         logger.debug(f"Making {method} request to {url}")
-        
+
         try:
             # Make request
             response = self.session.request(
@@ -323,10 +324,10 @@ class BaseClient:
                 headers=prepared_headers,
                 timeout=self.timeout,
             )
-            
+
             # Handle response
             return self._handle_response(response)
-            
+
         except requests.exceptions.Timeout as e:
             raise APIError(
                 f"Request timed out after {self.timeout} seconds",
@@ -345,7 +346,7 @@ class BaseClient:
                 status_code=0,
                 details={"error": str(e)}
             )
-    
+
     def get(
         self,
         endpoint: str,
@@ -364,7 +365,7 @@ class BaseClient:
             Parsed JSON response as dictionary
         """
         return self._request("GET", endpoint, params=params, headers=headers)
-    
+
     def post(
         self,
         endpoint: str,
@@ -385,7 +386,7 @@ class BaseClient:
             Parsed JSON response as dictionary
         """
         return self._request("POST", endpoint, params=params, data=data, headers=headers)
-    
+
     def put(
         self,
         endpoint: str,
@@ -406,7 +407,7 @@ class BaseClient:
             Parsed JSON response as dictionary
         """
         return self._request("PUT", endpoint, params=params, data=data, headers=headers)
-    
+
     def delete(
         self,
         endpoint: str,
@@ -425,7 +426,7 @@ class BaseClient:
             Parsed JSON response as dictionary
         """
         return self._request("DELETE", endpoint, params=params, headers=headers)
-    
+
     def validate_response(
         self,
         data: Dict[str, Any],
@@ -451,7 +452,7 @@ class BaseClient:
                 f"Response validation failed for {model.__name__}",
                 details={"errors": e.errors()}
             )
-    
+
     def close(self) -> None:
         """
         Close the HTTP session and release resources.
@@ -462,11 +463,11 @@ class BaseClient:
         if self.session:
             self.session.close()
             logger.debug(f"Closed session for {self.__class__.__name__}")
-    
+
     def __enter__(self) -> "BaseClient":
         """Enter context manager."""
         return self
-    
+
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         """Exit context manager and close session."""
         self.close()

@@ -14,9 +14,9 @@ __author__ = "OpenDiscourse Team"
 __email__ = "team@opendiscourse.org"
 
 from .cli import cli
-from .models.api_models import CongressMember, CongressBill, APIResponse
 from .database.migrations import DatabaseBootstrap
 from .ingestion.incremental import IncrementalIngestor
+from .models.api_models import APIResponse, CongressBill, CongressMember
 
 __all__ = [
     "cli",

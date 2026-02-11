@@ -3,7 +3,7 @@ import logging
 import os
 import sys
 import traceback
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import pinecone
 from dotenv import load_dotenv
@@ -28,17 +28,17 @@ def validate_environment_variables() -> Dict[str, str]:
     required_vars = ["PINECONE_API_KEY", "PINECONE_ENVIRONMENT", "OPENAI_API_KEY"]
     env_vars = {}
     missing_vars = []
-    
+
     for var in required_vars:
         value = os.getenv(var)
         if not value:
             missing_vars.append(var)
         else:
             env_vars[var] = value
-    
+
     if missing_vars:
         raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
-    
+
     return env_vars
 
 
@@ -59,14 +59,14 @@ def search(query: str, top_k: int = 5) -> List[Dict[str, Any]]:
     """
     if not query or not query.strip():
         raise ValueError("Query cannot be empty")
-    
+
     if top_k <= 0:
         raise ValueError("top_k must be positive")
-    
+
     try:
         # Load environment variables
         load_dotenv()
-        
+
         # Validate environment variables
         env_vars = validate_environment_variables()
 
@@ -143,27 +143,27 @@ def main() -> None:
     parser.add_argument("query", help="Search query")
     parser.add_argument("--top_k", type=int, default=5, help="Number of results to return")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
-    
+
     args = parser.parse_args()
-    
+
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
-    
+
     try:
         results = search(args.query, args.top_k)
-        
+
         if not results:
             print("No results found.")
             return
-            
+
         print(f"\nFound {len(results)} results for query: '{args.query}'\n")
-        
+
         for i, result in enumerate(results, 1):
             print(f"Result {i} (Score: {result['score']:.3f})")
             print(f"Title: {result['title']}")
             print(f"Content: {result['content'][:200]}..." if len(result['content']) > 200 else result['content'])
             print("-" * 50)
-            
+
     except Exception as e:
         logger.error("Failed to perform search: %s", str(e))
         sys.exit(1)

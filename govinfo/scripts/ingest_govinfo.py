@@ -15,7 +15,8 @@ import math
 import os
 from collections.abc import AsyncIterator, Iterable, Sequence
 from dataclasses import dataclass, field
-from datetime import date, datetime, time as time_type
+from datetime import date, datetime
+from datetime import time as time_type
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, Optional
@@ -24,7 +25,6 @@ from urllib.parse import urljoin
 import aiofiles
 import aiohttp
 import asyncpg
-
 
 GPU_MODULE_SPEC = importlib.util.find_spec("cupy")
 GPU_MODULE = importlib.import_module("cupy") if GPU_MODULE_SPEC else None

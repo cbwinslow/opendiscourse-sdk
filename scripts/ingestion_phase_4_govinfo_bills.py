@@ -12,23 +12,24 @@ ASSIGNED TO: AI Agent responsible for GovInfo bills ingestion
 DEPENDENCIES: Phase 1 (validation) must complete successfully
 """
 
+import hashlib
+import json
 import os
 import sys
-import json
-import requests
-import hashlib
-import psycopg2
 import time
-from datetime import datetime, timedelta
-from typing import Dict, Any, List, Optional, Tuple
+from datetime import datetime
+from typing import Any, Dict, List, Tuple
+
+import psycopg2
+import requests
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 # Add project path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from ingestion_config import validate_all_api_keys, get_ingestion_mode_from_env
-
 # Load environment variables
 from dotenv import load_dotenv
+from ingestion_config import get_ingestion_mode_from_env, validate_all_api_keys
+
 load_dotenv()
 
 class Phase4GovInfoBillsIngestion:

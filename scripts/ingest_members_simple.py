@@ -7,20 +7,21 @@ Usage:
     python ingest_members_simple.py [--congress-start 101] [--congress-end 118] [--batch-size 50]
 """
 
+import logging
 import os
 import sys
-import logging
-from typing import Dict, List, Any, Optional
-from datetime import datetime, date
 from dataclasses import dataclass
+from datetime import datetime
+from typing import Any, Dict, List
 
 import psycopg2
-from psycopg2.extras import DictCursor, execute_values
 import requests
-from tenacity import retry, stop_after_attempt, wait_exponential
 
 # Load environment variables
 from dotenv import load_dotenv
+from psycopg2.extras import execute_values
+from tenacity import retry, stop_after_attempt, wait_exponential
+
 load_dotenv()
 
 # Configure logging
@@ -46,7 +47,7 @@ class MemberIngestionConfig:
 
 class SimpleMembersIngestor:
     """Simplified class for ingesting Congress members data only"""
-    
+
     def __init__(self, config: MemberIngestionConfig):
         self.config = config
         self.db_conn = None
@@ -55,17 +56,17 @@ class SimpleMembersIngestor:
             'X-API-Key': config.api_key,
             'Accept': 'application/json'
         })
-        
+
         # API endpoints
         self.base_url = "https://api.congress.gov/v3"
-        
+
         # Statistics
         self.stats = {
             'members_processed': 0,
             'errors': 0,
             'start_time': datetime.now()
         }
-    
+
     def connect_database(self):
         """Connect to PostgreSQL database"""
         try:
@@ -82,18 +83,18 @@ class SimpleMembersIngestor:
                     'database': self.config.db_name,
                     'user': self.config.db_user
                 }
-            
+
             # Only add password if it's not empty
             if self.config.db_password:
                 conn_params['password'] = self.config.db_password
-            
+
             self.db_conn = psycopg2.connect(**conn_params)
             self.db_conn.autocommit = False
             logger.info("Connected to database successfully")
         except Exception as e:
             logger.error(f"Database connection failed: {e}")
             raise
-    
+
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
     def fetch_members_page(self, congress: int, offset: int = 0) -> Dict[str, Any]:
         """Fetch a page of members from Congress.gov API"""
@@ -102,53 +103,53 @@ class SimpleMembersIngestor:
             'limit': self.config.batch_size,
             'offset': offset
         }
-        
+
         response = self.session.get(url, params=params, timeout=30)
         response.raise_for_status()
-        
+
         # Rate limiting
         import time
         time.sleep(self.config.request_delay)
-        
+
         return response.json()
-    
+
     def get_all_members_for_congress(self, congress: int) -> List[Dict[str, Any]]:
         """Get all members for a specific congress with pagination"""
         all_members = []
         offset = 0
-        
+
         while True:
             try:
                 logger.info(f"Fetching members for Congress {congress}, offset {offset}")
                 data = self.fetch_members_page(congress, offset)
-                
+
                 members = data.get('members', [])
                 if not members:
                     break
-                
+
                 all_members.extend(members)
                 logger.info(f"Fetched {len(members)} members (total: {len(all_members)})")
-                
+
                 # Check if we have more pages
                 pagination = data.get('pagination', {})
                 next_url = pagination.get('next')
                 if not next_url or offset >= pagination.get('count', 0):
                     break
-                
+
                 offset += len(members)
-                
+
                 # Safety check to prevent infinite loops
                 if offset > 10000:  # Reasonable upper limit
                     logger.warning(f"Offset {offset} exceeds safety limit, stopping pagination")
                     break
-                    
+
             except Exception as e:
                 logger.error(f"Error fetching members page: {e}")
                 self.stats['errors'] += 1
                 break
-        
+
         return all_members
-    
+
     def normalize_member_data(self, member_data: Dict[str, Any]) -> Dict[str, Any]:
         """Normalize member data for database insertion"""
         # Parse name field
@@ -156,7 +157,7 @@ class SimpleMembersIngestor:
         name_parts = full_name.split()
         first_name = name_parts[0] if name_parts else ''
         last_name = name_parts[-1] if len(name_parts) > 1 else ''
-        
+
         return {
             'bioguide_id': member_data.get('bioguideId'),
             'first_name': first_name,
@@ -172,14 +173,14 @@ class SimpleMembersIngestor:
             'created_at': datetime.now(),
             'updated_at': datetime.now()
         }
-    
+
     def insert_members_batch(self, members: List[Dict[str, Any]]) -> int:
         """Insert a batch of members into the database"""
         if not members:
             return 0
-        
+
         cursor = self.db_conn.cursor()
-        
+
         try:
             # Insert members
             member_query = """
@@ -201,7 +202,7 @@ class SimpleMembersIngestor:
                     death_date = EXCLUDED.death_date,
                     updated_at = EXCLUDED.updated_at
             """
-            
+
             member_values = [
                 (
                     m['bioguide_id'], m['first_name'], m['middle_name'], m['last_name'],
@@ -210,15 +211,15 @@ class SimpleMembersIngestor:
                 )
                 for m in members
             ]
-            
+
             execute_values(cursor, member_query, member_values)
             member_count = len(members)
-            
+
             self.db_conn.commit()
             logger.info(f"Inserted {member_count} members")
-            
+
             return member_count
-            
+
         except Exception as e:
             self.db_conn.rollback()
             logger.error(f"Error inserting members batch: {e}")
@@ -226,56 +227,56 @@ class SimpleMembersIngestor:
             return 0
         finally:
             cursor.close()
-    
+
     def ingest_all_congresses(self):
         """Ingest members data for all specified congresses"""
         logger.info(f"Starting ingestion for Congress {self.config.congress_start} to {self.config.congress_end}")
-        
+
         for congress in range(self.config.congress_start, self.config.congress_end + 1):
             logger.info(f"\n{'='*60}")
             logger.info(f"Processing Congress {congress}")
             logger.info(f"{'='*60}")
-            
+
             try:
                 # Get all members for this congress
                 members = self.get_all_members_for_congress(congress)
-                
+
                 if not members:
                     logger.warning(f"No members found for Congress {congress}")
                     continue
-                
+
                 # Normalize data
                 normalized_members = []
                 for member in members:
                     normalized = self.normalize_member_data(member)
                     normalized_members.append(normalized)
-                
+
                 # Insert in batches
                 batch_size = 100
                 for i in range(0, len(normalized_members), batch_size):
                     batch = normalized_members[i:i + batch_size]
                     inserted = self.insert_members_batch(batch)
                     self.stats['members_processed'] += inserted
-                    
+
                     # Log progress
                     progress = (i + batch_size) / len(normalized_members) * 100
                     logger.info(f"Congress {congress} progress: {min(progress, 100):.1f}%")
-                
+
                 logger.info(f"Completed Congress {congress}")
-                
+
             except Exception as e:
                 logger.error(f"Error processing Congress {congress}: {e}")
                 self.stats['errors'] += 1
                 continue
-        
+
         # Log final statistics
         self.log_final_statistics()
-    
+
     def log_final_statistics(self):
         """Log final ingestion statistics"""
         end_time = datetime.now()
         duration = end_time - self.stats['start_time']
-        
+
         logger.info(f"\n{'='*60}")
         logger.info("INGESTION COMPLETE")
         logger.info(f"{'='*60}")
@@ -284,7 +285,7 @@ class SimpleMembersIngestor:
         logger.info(f"Duration: {duration}")
         logger.info(f"Average Rate: {self.stats['members_processed']/duration.total_seconds():.2f} members/second")
         logger.info(f"{'='*60}")
-    
+
     def close(self):
         """Clean up resources"""
         if self.db_conn:
@@ -295,15 +296,15 @@ class SimpleMembersIngestor:
 def main():
     """Main function"""
     import argparse
-    
+
     parser = argparse.ArgumentParser(description="Ingest Congress members data")
     parser.add_argument('--congress-start', type=int, default=101, help='Starting Congress number')
     parser.add_argument('--congress-end', type=int, default=118, help='Ending Congress number')
     parser.add_argument('--batch-size', type=int, default=50, help='API batch size')
     parser.add_argument('--dry-run', action='store_true', help='Run without inserting data')
-    
+
     args = parser.parse_args()
-    
+
     # Load configuration
     config = MemberIngestionConfig(
         api_key=os.getenv('CONGRESS_API_KEY'),
@@ -316,21 +317,21 @@ def main():
         congress_end=args.congress_end,
         batch_size=args.batch_size
     )
-    
+
     # Validate configuration
     if not config.api_key:
         logger.error("CONGRESS_API_KEY not found in environment variables")
         sys.exit(1)
-    
+
     if not config.db_password and config.db_user == 'cbwinslow':
         logger.info("Using cbwinslow user without password (local connection)")
     elif not config.db_password:
         logger.error("DB_PASSWORD not found in environment variables")
         sys.exit(1)
-    
+
     # Create ingestor and run
     ingestor = SimpleMembersIngestor(config)
-    
+
     try:
         if not args.dry_run:
             ingestor.connect_database()

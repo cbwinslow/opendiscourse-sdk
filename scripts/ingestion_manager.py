@@ -4,23 +4,25 @@ Incremental Ingestion Manager
 Orchestrates incremental ingestion across all data sources with checkpoint tracking
 """
 
+import argparse
+import json
 import os
 import sys
-import json
-import argparse
-import psycopg2
 from datetime import datetime
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List
+
+import psycopg2
 
 # Add project root to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from ingest_congress_incremental import IncrementalCongressIngestor
-from ingest_openstates_incremental import IncrementalOpenStatesIngestor
-from ingest_govinfo_incremental import IncrementalGovInfoIngestor
 from ingest_congress_bills_incremental import IncrementalCongressBillsIngestor
-from ingest_openstates_bills_incremental import IncrementalOpenStatesBillsIngestor
+from ingest_congress_incremental import IncrementalCongressIngestor
 from ingest_govinfo_bills_incremental import IncrementalGovInfoBillsIngestor
+from ingest_govinfo_incremental import IncrementalGovInfoIngestor
+from ingest_openstates_bills_incremental import IncrementalOpenStatesBillsIngestor
+from ingest_openstates_incremental import IncrementalOpenStatesIngestor
+
 
 class IncrementalIngestionManager:
     """Manages incremental ingestion across all data sources"""
@@ -344,7 +346,7 @@ class IncrementalIngestionManager:
             total_skipped += source_skipped
             total_failed += source_failed
 
-        print(f"\n🎯 OVERALL TOTALS:")
+        print("\n🎯 OVERALL TOTALS:")
         print(f"  ✅ Total Processed: {total_processed}")
         print(f"  ⏭️  Total Skipped: {total_skipped}")
         print(f"  ❌ Total Failed: {total_failed}")

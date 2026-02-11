@@ -1,8 +1,10 @@
 import os
-import requests
-from config.api_config import BASE_URL, HEADERS
-from datetime import datetime, timedelta
 import time
+from datetime import datetime, timedelta
+
+import requests
+
+from config.api_config import BASE_URL, HEADERS
 
 # Directory setup
 DATA_DIR = "data"

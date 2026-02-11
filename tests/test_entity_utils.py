@@ -1,8 +1,5 @@
 import unittest
-import importlib
 from unittest.mock import MagicMock, patch
-import os
-import sys
 
 
 class TestEntityUtils(unittest.TestCase):

@@ -4,12 +4,12 @@ Detailed Test of Congress Members Ingestion Process
 Tests all components without relying on external API
 """
 
-import os
-import sys
 import json
 import logging
-from typing import Dict, List, Any, Optional
-from datetime import datetime, date
+import sys
+from datetime import datetime
+from typing import Any, Dict
+
 import psycopg2
 from psycopg2.extras import execute_values
 

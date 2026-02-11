@@ -10,7 +10,7 @@ import os
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Optional, TypedDict
+from typing import Dict, Optional, TypedDict
 from xml.etree import ElementTree as ET
 
 import requests
@@ -18,7 +18,10 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 try:
-    from opendiscourse.ingestion.document_ingestion import DocumentMetadata, _save_document
+    from opendiscourse.ingestion.document_ingestion import (
+        DocumentMetadata,
+        _save_document,
+    )
 except ImportError:
     # Fallback if module is not available
     class DocumentMetadata(TypedDict, total=False):

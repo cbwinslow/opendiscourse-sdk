@@ -6,26 +6,31 @@ This script ingests Congress members data from congress.gov API with comprehensi
 real-time progress monitoring, error handling, and performance tracking.
 """
 
+import logging
 import os
 import sys
-import logging
-from typing import Dict, List, Any, Optional
-from datetime import datetime, date
 from dataclasses import dataclass
+from datetime import date, datetime
+from typing import Any, Dict, List, Optional
 
 import psycopg2
-from psycopg2.extras import DictCursor, execute_values
 import requests
+from psycopg2.extras import execute_values
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 # Import monitoring components
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from monitoring.progress_monitor import UniversalProgressMonitor
-from monitoring.delegates import setup_all_delegates
-from ingestion_config import validate_and_start_ingestion, get_api_key_from_env, get_ingestion_mode_from_env, IngestionMode, validate_all_api_keys
-
 # Load environment variables
 from dotenv import load_dotenv
+from ingestion_config import (
+    get_ingestion_mode_from_env,
+    validate_all_api_keys,
+    validate_and_start_ingestion,
+)
+
+from monitoring.delegates import setup_all_delegates
+from monitoring.progress_monitor import UniversalProgressMonitor
+
 load_dotenv()
 
 # Configure logging

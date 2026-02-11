@@ -1,8 +1,9 @@
 """Tests for research crawler endpoints."""
-import json
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
 from fastapi.testclient import TestClient
+
 from api.main import app
 
 client = TestClient(app)
@@ -38,7 +39,7 @@ class TestResearchEndpoints:
     def test_start_research_success(self, sample_research_request):
         """Test successful research initiation."""
         response = client.post("/v1/research/start", json=sample_research_request)
-        
+
         assert response.status_code == 200
         result = response.json()
         assert "task_id" in result
@@ -52,7 +53,7 @@ class TestResearchEndpoints:
             "search_depth": 10,  # Too high
             "max_pages": 0  # Too low
         }
-        
+
         response = client.post("/v1/research/start", json=invalid_request)
         assert response.status_code == 422  # Validation error
 
@@ -61,7 +62,7 @@ class TestResearchEndpoints:
         minimal_request = {
             "query": "Test research query"
         }
-        
+
         response = client.post("/v1/research/start", json=minimal_request)
         assert response.status_code == 200
         result = response.json()
@@ -70,7 +71,7 @@ class TestResearchEndpoints:
     def test_get_research_status_not_found(self):
         """Test getting status for non-existent task."""
         fake_task_id = "non-existent-task-id"
-        
+
         response = client.get(f"/v1/research/status/{fake_task_id}")
         assert response.status_code == 404
         assert response.json()["detail"] == "Task not found"
@@ -78,7 +79,7 @@ class TestResearchEndpoints:
     def test_get_research_reports_empty(self, mock_db_connection):
         """Test getting reports when none exist."""
         mock_db_connection.fetchall.return_value = []
-        
+
         response = client.get("/v1/research/reports")
         assert response.status_code == 200
         result = response.json()
@@ -97,9 +98,9 @@ class TestResearchEndpoints:
             "pages_crawled": 5,
             "sources": 5
         }
-        
+
         mock_db_connection.fetchall.return_value = [sample_report]
-        
+
         response = client.get("/v1/research/reports")
         assert response.status_code == 200
         result = response.json()
@@ -120,9 +121,9 @@ class TestResearchEndpoints:
             "pages_crawled": 5,
             "sources": 5
         }
-        
+
         mock_db_connection.fetchone.return_value = sample_report
-        
+
         response = client.get("/v1/research/reports/test-report-id")
         assert response.status_code == 200
         result = response.json()
@@ -132,7 +133,7 @@ class TestResearchEndpoints:
     def test_get_research_report_not_found(self, mock_db_connection):
         """Test getting non-existent report."""
         mock_db_connection.fetchone.return_value = None
-        
+
         response = client.get("/v1/research/reports/non-existent-id")
         assert response.status_code == 404
         assert response.json()["detail"] == "Report not found"
@@ -140,7 +141,7 @@ class TestResearchEndpoints:
     def test_delete_research_report_success(self, mock_db_connection):
         """Test successful report deletion."""
         mock_db_connection.rowcount = 1  # Simulate successful deletion
-        
+
         response = client.delete("/v1/research/reports/test-report-id")
         assert response.status_code == 200
         assert response.json()["message"] == "Report deleted successfully"
@@ -148,7 +149,7 @@ class TestResearchEndpoints:
     def test_delete_research_report_not_found(self, mock_db_connection):
         """Test deleting non-existent report."""
         mock_db_connection.rowcount = 0  # Simulate no rows affected
-        
+
         response = client.delete("/v1/research/reports/non-existent-id")
         assert response.status_code == 404
         assert response.json()["detail"] == "Report not found"
@@ -161,7 +162,7 @@ class TestWebCrawler:
     async def test_crawler_initialization(self, mock_session):
         """Test crawler initialization."""
         from api.routes.research_endpoints import WebCrawler
-        
+
         crawler = WebCrawler(max_pages=5, search_depth=2)
         assert crawler.max_pages == 5
         assert crawler.search_depth == 2
@@ -171,10 +172,10 @@ class TestWebCrawler:
     async def test_search_urls_basic(self):
         """Test URL search functionality."""
         from api.routes.research_endpoints import WebCrawler
-        
+
         crawler = WebCrawler()
         urls = await crawler.search_urls("test query")
-        
+
         assert isinstance(urls, list)
         assert len(urls) <= crawler.max_pages
         assert all(url.startswith('http') for url in urls)
@@ -182,10 +183,10 @@ class TestWebCrawler:
     async def test_search_urls_with_domain_filter(self):
         """Test URL search with domain filtering."""
         from api.routes.research_endpoints import WebCrawler
-        
+
         crawler = WebCrawler()
         urls = await crawler.search_urls("test query", domains=".gov")
-        
+
         assert isinstance(urls, list)
         # All URLs should be from .gov domains
         assert all('.gov' in url for url in urls)
@@ -194,18 +195,18 @@ class TestWebCrawler:
     async def test_crawl_page_success(self, mock_get):
         """Test successful page crawling."""
         from api.routes.research_endpoints import WebCrawler
-        
+
         # Mock successful HTTP response
         mock_response = AsyncMock()
         mock_response.status = 200
         mock_response.text = AsyncMock(return_value="<html><body>Test content</body></html>")
         mock_get.return_value.__aenter__.return_value = mock_response
-        
+
         crawler = WebCrawler()
         session = MagicMock()
-        
+
         result = await crawler.crawl_page(session, "https://example.com")
-        
+
         assert result is not None
         assert result.url == "https://example.com"
         assert "Test content" in result.content or result.content
@@ -216,8 +217,8 @@ class TestReportGenerator:
 
     def test_generate_report_basic(self):
         """Test basic report generation."""
-        from api.routes.research_endpoints import ReportGenerator, CrawledPage
-        
+        from api.routes.research_endpoints import CrawledPage, ReportGenerator
+
         pages = [
             CrawledPage(
                 url="https://example.com",
@@ -226,9 +227,9 @@ class TestReportGenerator:
                 metadata={"word_count": 100}
             )
         ]
-        
+
         report = ReportGenerator.generate_report("Test Query", pages, "comprehensive")
-        
+
         assert "Test Query" in report
         assert "Research Report" in report
         assert "Executive Summary" in report
@@ -239,17 +240,17 @@ class TestReportGenerator:
     def test_generate_report_empty_pages(self):
         """Test report generation with no pages."""
         from api.routes.research_endpoints import ReportGenerator
-        
+
         report = ReportGenerator.generate_report("Empty Query", [], "summary")
-        
+
         assert "Empty Query" in report
         assert "0 web pages" in report
         assert "Research Report" in report
 
     def test_generate_report_multiple_pages(self):
         """Test report generation with multiple pages."""
-        from api.routes.research_endpoints import ReportGenerator, CrawledPage
-        
+        from api.routes.research_endpoints import CrawledPage, ReportGenerator
+
         pages = [
             CrawledPage(
                 url="https://example1.com",
@@ -264,9 +265,9 @@ class TestReportGenerator:
                 metadata={"word_count": 150}
             )
         ]
-        
+
         report = ReportGenerator.generate_report("Multi-page Query", pages, "detailed")
-        
+
         assert "Multi-page Query" in report
         assert "2 web pages" in report
         assert "example1.com" in report

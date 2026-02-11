@@ -50,7 +50,6 @@ Modification Log:
 from __future__ import annotations
 
 import argparse
-import dataclasses
 import datetime as dt
 import json
 import logging
@@ -398,7 +397,7 @@ def fetch_published_page(
     next_offset: Optional[str] = None
     if next_page_url:
         # Parse offsetMark from next_page_url query string
-        from urllib.parse import urlparse, parse_qs
+        from urllib.parse import parse_qs, urlparse
 
         parsed = urlparse(next_page_url)
         qs = parse_qs(parsed.query)

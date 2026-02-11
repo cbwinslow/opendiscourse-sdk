@@ -1,9 +1,13 @@
-from fastapi import APIRouter, HTTPException, Body
-from typing import Optional, List
 import os
+from typing import List, Optional
+
 import psycopg2
+from fastapi import APIRouter, Body, HTTPException
 from psycopg2.extras import Json
-from diagnostic_tools.linux_system_diagnostics.python.collector import LinuxDiagnosticCollector
+
+from diagnostic_tools.linux_system_diagnostics.python.collector import (
+    LinuxDiagnosticCollector,
+)
 
 router = APIRouter()
 

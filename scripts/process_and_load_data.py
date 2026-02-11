@@ -1,7 +1,9 @@
 import os
 import xml.etree.ElementTree as ET
-from opendiscourse.db.session import SessionLocal
+
 from opendiscourse.db.models import Entity, EntityType
+from opendiscourse.db.session import SessionLocal
+
 
 def process_and_load_data():
     """

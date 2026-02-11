@@ -4,13 +4,14 @@ Congress Members Data Verification Utility
 Provides easy access to all verification queries, views, and procedures
 """
 
-import psycopg2
-from psycopg2.extras import DictCursor
-from dotenv import load_dotenv
+import argparse
 import os
 import sys
-from typing import List, Dict, Any
-import argparse
+from typing import Any, Dict, List
+
+import psycopg2
+from dotenv import load_dotenv
+from psycopg2.extras import DictCursor
 
 load_dotenv()
 

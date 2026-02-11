@@ -4,12 +4,13 @@ Simple OpenStates Jurisdictions Ingestion
 Works with the existing schema without feature_flags
 """
 
-import os
-import requests
-import psycopg2
-from psycopg2.extras import execute_values
-from dotenv import load_dotenv
 import logging
+import os
+
+import psycopg2
+import requests
+from dotenv import load_dotenv
+from psycopg2.extras import execute_values
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

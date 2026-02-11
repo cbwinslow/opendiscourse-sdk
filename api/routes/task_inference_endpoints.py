@@ -1,15 +1,17 @@
 import os
 import uuid
-from datetime import datetime
 from typing import Dict
 
 import psycopg2
 import psycopg2.extras
-from api.models.task_inference_models import (InferenceIngestionRequest,
-                                              InferenceIngestionResponse,
-                                              TaskIngestionRequest,
-                                              TaskIngestionResponse)
 from fastapi import APIRouter, BackgroundTasks, HTTPException
+
+from api.models.task_inference_models import (
+    InferenceIngestionRequest,
+    InferenceIngestionResponse,
+    TaskIngestionRequest,
+    TaskIngestionResponse,
+)
 
 router = APIRouter(prefix="/v1", tags=["Task & Inference Ingestion"])
 
@@ -21,10 +23,10 @@ DB_URL = os.environ.get(
 def insert_task(task_data: Dict) -> str:
     """Insert a task into the database and return the generated ID."""
     task_id = str(uuid.uuid4())
-    
+
     conn = psycopg2.connect(DB_URL)
     cur = conn.cursor()
-    
+
     try:
         cur.execute(
             """
@@ -55,10 +57,10 @@ def insert_task(task_data: Dict) -> str:
 def insert_inference(inference_data: Dict) -> str:
     """Insert an inference into the database and return the generated ID."""
     inference_id = str(uuid.uuid4())
-    
+
     conn = psycopg2.connect(DB_URL)
     cur = conn.cursor()
-    
+
     try:
         cur.execute(
             """
@@ -92,7 +94,7 @@ async def ingest_tasks(request: TaskIngestionRequest, background_tasks: Backgrou
         for task_data in request.tasks:
             task_id = insert_task(task_data)
             task_ids.append(task_id)
-        
+
         return TaskIngestionResponse(success=True, task_ids=task_ids, metadata=request.metadata)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -106,7 +108,7 @@ async def ingest_inferences(request: InferenceIngestionRequest, background_tasks
         for inference_data in request.inferences:
             inference_id = insert_inference(inference_data)
             inference_ids.append(inference_id)
-        
+
         return InferenceIngestionResponse(success=True, inference_ids=inference_ids, metadata=request.metadata)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

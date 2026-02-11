@@ -1138,9 +1138,9 @@ def run_script(
     )
     data = decrypt_bytes(fernet, encrypted)
 
-    import tempfile
     import os
     import subprocess
+    import tempfile
 
     suffix = ".sh" if language == "bash" else ".py" if language == "python" else ".txt"
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:

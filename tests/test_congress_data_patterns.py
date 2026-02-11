@@ -2,13 +2,13 @@
 Test suite for Congress Members data patterns and integrity
 """
 
-import unittest
-import psycopg2
-from psycopg2.extras import DictCursor
-from dotenv import load_dotenv
 import os
-from datetime import datetime
 import sys
+import unittest
+
+import psycopg2
+from dotenv import load_dotenv
+from psycopg2.extras import DictCursor
 
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -127,7 +127,7 @@ class TestCongressDataPatterns(unittest.TestCase):
             self.assertGreater(member_count, 500, f"Congress {congress_num} should have >500 members")
             self.assertLess(member_count, 650, f"Congress {congress_num} should have <650 members")
 
-        print(f"✅ All congresses have expected member counts (500-600 range)")
+        print("✅ All congresses have expected member counts (500-600 range)")
 
     def test_chamber_distribution_patterns(self):
         """Test chamber distribution patterns"""
@@ -150,7 +150,7 @@ class TestCongressDataPatterns(unittest.TestCase):
                 self.assertGreater(count, 95, f"Senate in Congress {congress_num} should have >95 members")
                 self.assertLess(count, 115, f"Senate in Congress {congress_num} should have <115 members")
 
-        print(f"✅ Chamber distributions follow expected patterns")
+        print("✅ Chamber distributions follow expected patterns")
 
     def test_state_representation_patterns(self):
         """Test state representation patterns"""
@@ -170,7 +170,7 @@ class TestCongressDataPatterns(unittest.TestCase):
             self.assertGreater(state_count, 45, f"Congress {congress_num} should represent >45 states")
             self.assertLess(state_count, 60, f"Congress {congress_num} should represent <60 states")
 
-        print(f"✅ State representation patterns are correct")
+        print("✅ State representation patterns are correct")
 
     def test_party_distribution_patterns(self):
         """Test party distribution patterns"""
@@ -199,7 +199,7 @@ class TestCongressDataPatterns(unittest.TestCase):
             self.assertGreater(parties['D'], 150, f"Democrats should have >150 members in Congress {congress_num}")
             self.assertGreater(parties['R'], 150, f"Republicans should have >150 members in Congress {congress_num}")
 
-        print(f"✅ Party distribution patterns are correct")
+        print("✅ Party distribution patterns are correct")
 
     # Test Temporal Patterns
 
@@ -296,7 +296,7 @@ class TestCongressDataPatterns(unittest.TestCase):
 
         self.assertEqual(invalid_chambers[0]['count'], 0, "All member terms should reference valid chambers")
 
-        print(f"✅ All foreign key relationships are valid")
+        print("✅ All foreign key relationships are valid")
 
     def test_data_consistency_patterns(self):
         """Test overall data consistency patterns"""
@@ -374,10 +374,10 @@ class TestCongressDataAnomalies(unittest.TestCase):
             # If we have party switchers, verify they have reasonable party counts
             for switcher in party_switchers:
                 self.assertLess(switcher['party_count'], 5, "No member should switch parties more than 4 times")
-            print(f"✅ Party switchers found with reasonable party counts")
+            print("✅ Party switchers found with reasonable party counts")
         else:
             # No party switchers is also valid for many congress periods
-            print(f"✅ No party switchers found (valid for many congress periods)")
+            print("✅ No party switchers found (valid for many congress periods)")
 
         # At minimum, we should have party diversity
         party_diversity = self.query("""
@@ -435,7 +435,7 @@ class TestCongressDataAnomalies(unittest.TestCase):
               )
         """)
 
-        print(f"✅ Checked for service gaps (complex query - results may vary)")
+        print("✅ Checked for service gaps (complex query - results may vary)")
 
     def test_extreme_service_lengths(self):
         """Test for members with extremely long or short service"""

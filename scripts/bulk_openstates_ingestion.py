@@ -4,13 +4,13 @@ Enhanced OpenStates Bulk Data Ingestion Script
 Comprehensive ingestion for all jurisdictions with optimized pagination (200 per page)
 """
 
+import logging
 import os
+import subprocess
 import sys
 import time
-import logging
-import subprocess
 from datetime import datetime
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 # Add project root to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -359,7 +359,7 @@ def main():
         elif args.mode == 'parallel':
             ingestor.logger.info(f"   Mode: Parallel regions ({len(ingestor.regions)} regions)")
         else:
-            ingestor.logger.info(f"   Mode: Sample (CA, TX, NY, FL)")
+            ingestor.logger.info("   Mode: Sample (CA, TX, NY, FL)")
         return
 
     results = None

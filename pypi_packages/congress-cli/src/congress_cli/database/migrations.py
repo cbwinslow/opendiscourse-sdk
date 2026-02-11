@@ -3,14 +3,13 @@ Database bootstrap and migration system for Congress CLI.
 """
 
 import os
-import psycopg2
 from pathlib import Path
-from typing import Dict, Any, List, Optional
-from datetime import datetime
-import logging
+from typing import Any, Dict, Optional
 
-from ..utils.logger import get_logger
+import psycopg2
+
 from ..utils.config import get_config
+from ..utils.logger import get_logger
 
 
 class DatabaseBootstrap:
@@ -91,7 +90,7 @@ class DatabaseBootstrap:
 
     def _run_migration(self, cursor, migration_file: Path):
         """Run a single migration file."""
-        with open(migration_file, 'r') as f:
+        with open(migration_file) as f:
             migration_sql = f.read()
 
         # Split by semicolons and execute each statement

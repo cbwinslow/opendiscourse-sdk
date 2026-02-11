@@ -51,11 +51,11 @@ if Embeddings is not None:
             """Initialize with model name."""
             if SentenceTransformer is None:
                 raise ImportError("sentence-transformers is required for this class")
-            
+
             device = "cpu"
             if torch is not None and torch.cuda.is_available():
                 device = "cuda"
-                
+
             self.model: SentenceTransformer = SentenceTransformer(
                 model_name, device=device
             )
@@ -148,12 +148,12 @@ class VectorDatabase:
                 persist_directory=str(self.persist_directory),
             )
             logger.info("Vector store initialized successfully")
-            
+
             # Register shutdown handler if not already done
             if not self._shutdown_registered:
                 atexit.register(self._shutdown)
                 self._shutdown_registered = True
-                
+
         return cast("Chroma", self._vector_store)
 
     def __init__(
@@ -190,7 +190,7 @@ class VectorDatabase:
                 logger.info("Vector store persisted successfully")
         except Exception as e:
             logger.warning("Error during vector store shutdown: %s", str(e))
-        
+
         try:
             # Clear model from memory if loaded
             if hasattr(self.embeddings, '_model') and self.embeddings._model is not None:
@@ -198,7 +198,7 @@ class VectorDatabase:
                 logger.debug("Embedding model cleared from memory")
         except Exception as e:
             logger.warning("Error clearing embedding model: %s", str(e))
-            
+
         logger.info("VectorDatabase shutdown completed")
 
     def _ensure_initialized(self) -> None:

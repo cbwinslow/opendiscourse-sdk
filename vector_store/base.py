@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import Dict, List, TypeVar, NamedTuple
+from typing import Dict, List, NamedTuple
+
 
 class DocumentScore(NamedTuple):
     """Represents a document and its similarity score."""
@@ -10,7 +11,7 @@ class DocumentScore(NamedTuple):
 
 class VectorStoreBase(ABC):
     """Abstract base class for vector store operations."""
-    
+
     @abstractmethod
     def add_document(self, doc_id: str, content: str, metadata: Dict) -> None:
         """Add a document to the vector store.
@@ -21,7 +22,7 @@ class VectorStoreBase(ABC):
             metadata: Additional metadata for the document
         """
         pass
-    
+
     @abstractmethod
     def search(self, query: str, k: int = 5) -> List[DocumentScore]:
         """Search for similar documents in the vector store.
@@ -34,7 +35,7 @@ class VectorStoreBase(ABC):
             List of DocumentScore containing matched documents and their scores
         """
         pass
-    
+
     @abstractmethod
     def delete(self, doc_ids: List[str]) -> None:
         """Delete documents from the vector store.

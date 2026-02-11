@@ -12,19 +12,20 @@ ASSIGNED TO: AI Agent responsible for final verification
 DEPENDENCIES: All previous phases must complete successfully
 """
 
+import json
 import os
 import sys
-import json
+from datetime import datetime
+from typing import Any, Dict, List
+
 import psycopg2
-from datetime import datetime, timedelta
-from typing import Dict, Any, List, Optional, Tuple
 
 # Add project path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from ingestion_config import validate_all_api_keys, get_ingestion_mode_from_env
-
 # Load environment variables
 from dotenv import load_dotenv
+from ingestion_config import get_ingestion_mode_from_env, validate_all_api_keys
+
 load_dotenv()
 
 class Phase6Verification:
@@ -415,7 +416,7 @@ class Phase6Verification:
                 print(f"   - {issue}")
 
         if recommendations:
-            print(f"\n💡 RECOMMENDATIONS:")
+            print("\n💡 RECOMMENDATIONS:")
             for rec in recommendations:
                 print(f"   - {rec}")
 

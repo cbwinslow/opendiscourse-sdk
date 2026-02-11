@@ -1,12 +1,14 @@
 import os
-import requests
 import time
 from datetime import datetime
+
+import requests
+
 from config.member_api_config import (
-    MEMBER_LIST_URL,
-    MEMBER_DETAILS_URL,
     HEADERS,
     MEMBER_DATA_DIR,
+    MEMBER_DETAILS_URL,
+    MEMBER_LIST_URL,
 )
 
 

@@ -7,12 +7,10 @@ using PostgreSQL with the pgvector extension, integrated with the congress schem
 
 import json
 import logging
-import os
-from typing import List, Dict, Any, Optional, Tuple
-from datetime import datetime
+from typing import Any, Dict, List
+
 import psycopg2
 from psycopg2.extras import RealDictCursor
-import numpy as np
 
 
 class PGVectorClient:
@@ -411,7 +409,7 @@ def create_pgvector_client(config_path: str) -> PGVectorClient:
     Returns:
         PGVectorClient: Configured client instance
     """
-    with open(config_path, 'r') as f:
+    with open(config_path) as f:
         config = json.load(f)
 
     return PGVectorClient(config)

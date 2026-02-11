@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Populate Congress sessions table"""
 
-import psycopg2
-from datetime import datetime, date
-from dotenv import load_dotenv
 import os
+from datetime import date, datetime
+
+import psycopg2
+from dotenv import load_dotenv
 
 load_dotenv()
 

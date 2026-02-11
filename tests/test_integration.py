@@ -1,11 +1,12 @@
 """Integration tests for the OpenDiscourse system."""
 
 import os
-import pytest
-import psycopg2
 from uuid import uuid4
 
-from api.routes.task_inference_endpoints import insert_task, insert_inference
+import psycopg2
+import pytest
+
+from api.routes.task_inference_endpoints import insert_inference, insert_task
 
 
 @pytest.fixture
@@ -23,7 +24,7 @@ def setup_test_db(test_db_url):
     try:
         conn = psycopg2.connect(test_db_url)
         cur = conn.cursor()
-        
+
         # Create test tables if they don't exist
         cur.execute("""
             CREATE TABLE IF NOT EXISTS tasks (
@@ -41,7 +42,7 @@ def setup_test_db(test_db_url):
                 updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             );
         """)
-        
+
         cur.execute("""
             CREATE TABLE IF NOT EXISTS inferences (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -56,13 +57,13 @@ def setup_test_db(test_db_url):
                 updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             );
         """)
-        
+
         conn.commit()
         cur.close()
         conn.close()
-        
+
         yield test_db_url
-        
+
         # Cleanup
         conn = psycopg2.connect(test_db_url)
         cur = conn.cursor()
@@ -71,7 +72,7 @@ def setup_test_db(test_db_url):
         conn.commit()
         cur.close()
         conn.close()
-        
+
     except Exception as e:
         pytest.skip(f"Database not available: {e}")
 
@@ -80,7 +81,7 @@ def test_task_insertion(setup_test_db):
     """Test task insertion into database."""
     # Set environment variable for the function to use
     os.environ["RAG_DB_URL"] = setup_test_db
-    
+
     task_data = {
         "title": "Test Task",
         "description": "This is a test task",
@@ -89,12 +90,12 @@ def test_task_insertion(setup_test_db):
         "assignee": "test_user",
         "metadata": {"category": "testing"}
     }
-    
+
     task_id = insert_task(task_data)
-    
+
     assert task_id is not None
     assert isinstance(task_id, str)
-    
+
     # Verify task was inserted
     conn = psycopg2.connect(setup_test_db)
     cur = conn.cursor()
@@ -102,7 +103,7 @@ def test_task_insertion(setup_test_db):
     result = cur.fetchone()
     cur.close()
     conn.close()
-    
+
     assert result is not None
     assert result[0] == "Test Task"
     assert result[1] == "todo"
@@ -113,19 +114,19 @@ def test_inference_insertion(setup_test_db):
     """Test inference insertion into database."""
     # Set environment variable for the function to use
     os.environ["RAG_DB_URL"] = setup_test_db
-    
+
     inference_data = {
         "type": "classification",
         "content": "This is a positive sentiment inference",
         "confidence": 0.95,
         "metadata": {"model": "test_model"}
     }
-    
+
     inference_id = insert_inference(inference_data)
-    
+
     assert inference_id is not None
     assert isinstance(inference_id, str)
-    
+
     # Verify inference was inserted
     conn = psycopg2.connect(setup_test_db)
     cur = conn.cursor()
@@ -133,7 +134,7 @@ def test_inference_insertion(setup_test_db):
     result = cur.fetchone()
     cur.close()
     conn.close()
-    
+
     assert result is not None
     assert result[0] == "classification"
     assert result[1] == "This is a positive sentiment inference"
@@ -144,10 +145,10 @@ def test_task_with_relationships(setup_test_db):
     """Test task insertion with entity and document relationships."""
     # Set environment variable for the function to use
     os.environ["RAG_DB_URL"] = setup_test_db
-    
+
     entity_id = str(uuid4())
     document_id = str(uuid4())
-    
+
     task_data = {
         "title": "Task with Relations",
         "description": "Task linked to entities and documents",
@@ -157,10 +158,10 @@ def test_task_with_relationships(setup_test_db):
         "document_ids": [document_id],
         "metadata": {"linked": True}
     }
-    
+
     task_id = insert_task(task_data)
     assert task_id is not None
-    
+
     # Verify relationships were stored
     conn = psycopg2.connect(setup_test_db)
     cur = conn.cursor()
@@ -171,7 +172,7 @@ def test_task_with_relationships(setup_test_db):
     result = cur.fetchone()
     cur.close()
     conn.close()
-    
+
     assert result is not None
     assert entity_id in result[0]
     assert document_id in result[1]
@@ -181,7 +182,7 @@ def test_inference_with_source_references(setup_test_db):
     """Test inference insertion with source document and task references."""
     # Set environment variable for the function to use
     os.environ["RAG_DB_URL"] = setup_test_db
-    
+
     # First create a task to reference
     task_data = {
         "title": "Source Task",
@@ -189,7 +190,7 @@ def test_inference_with_source_references(setup_test_db):
         "status": "completed"
     }
     source_task_id = insert_task(task_data)
-    
+
     # Create inference referencing the task
     inference_data = {
         "type": "summary",
@@ -198,10 +199,10 @@ def test_inference_with_source_references(setup_test_db):
         "source_task_id": source_task_id,
         "metadata": {"auto_generated": True}
     }
-    
+
     inference_id = insert_inference(inference_data)
     assert inference_id is not None
-    
+
     # Verify source reference was stored
     conn = psycopg2.connect(setup_test_db)
     cur = conn.cursor()
@@ -212,7 +213,7 @@ def test_inference_with_source_references(setup_test_db):
     result = cur.fetchone()
     cur.close()
     conn.close()
-    
+
     assert result is not None
     assert result[0] == source_task_id
 
@@ -221,7 +222,7 @@ def test_multiple_task_insertion(setup_test_db):
     """Test inserting multiple tasks and verify they're all stored."""
     # Set environment variable for the function to use
     os.environ["RAG_DB_URL"] = setup_test_db
-    
+
     task_data_list = [
         {
             "title": f"Batch Task {i}",
@@ -231,16 +232,16 @@ def test_multiple_task_insertion(setup_test_db):
         }
         for i in range(5)
     ]
-    
+
     task_ids = []
     for task_data in task_data_list:
         task_id = insert_task(task_data)
         task_ids.append(task_id)
-    
+
     assert len(task_ids) == 5
     assert all(task_id is not None for task_id in task_ids)
     assert len(set(task_ids)) == 5  # All IDs should be unique
-    
+
     # Verify all tasks were inserted
     conn = psycopg2.connect(setup_test_db)
     cur = conn.cursor()
@@ -248,5 +249,5 @@ def test_multiple_task_insertion(setup_test_db):
     count = cur.fetchone()[0]
     cur.close()
     conn.close()
-    
+
     assert count == 5

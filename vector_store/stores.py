@@ -1,33 +1,35 @@
 from typing import Dict, List
+
 import chromadb
-from elasticsearch import Elasticsearch
 import pinecone
 import weaviate
-from opensearchpy import OpenSearch
 from clickhouse_driver import Client
+from elasticsearch import Elasticsearch
+from opensearchpy import OpenSearch
 
-from .base import VectorStoreBase, DocumentScore
+from .base import DocumentScore, VectorStoreBase
+
 
 class ChromaDBStore(VectorStoreBase):
     """Vector store implementation using ChromaDB."""
-    
+
     def __init__(self, **kwargs):
         self.client = chromadb.Client()
         self.collection = self.client.create_collection("documents")
-    
+
     def add_document(self, doc_id: str, content: str, metadata: Dict) -> None:
         self.collection.add(
             documents=[content],
             metadatas=[metadata],
             ids=[doc_id]
         )
-    
+
     def search(self, query: str, k: int = 5) -> List[DocumentScore]:
         results = self.collection.query(
             query_texts=[query],
             n_results=k
         )
-        
+
         return [
             DocumentScore(
                 doc_id=result.id,
@@ -37,17 +39,17 @@ class ChromaDBStore(VectorStoreBase):
             )
             for result in results
         ]
-    
+
     def delete(self, doc_ids: List[str]) -> None:
         self.collection.delete(ids=doc_ids)
 
 class ElasticsearchStore(VectorStoreBase):
     """Vector store implementation using Elasticsearch."""
-    
+
     def __init__(self, **kwargs):
         self.client = Elasticsearch(**kwargs)
         self.index = "documents"
-    
+
     def add_document(self, doc_id: str, content: str, metadata: Dict) -> None:
         doc = {
             "content": content,
@@ -55,7 +57,7 @@ class ElasticsearchStore(VectorStoreBase):
             "vector": self._encode_text(content)
         }
         self.client.index(index=self.index, id=doc_id, body=doc)
-    
+
     def search(self, query: str, k: int = 5) -> List[DocumentScore]:
         query_vector = self._encode_text(query)
         response = self.client.search(
@@ -73,7 +75,7 @@ class ElasticsearchStore(VectorStoreBase):
                 "size": k
             }
         )
-        
+
         return [
             DocumentScore(
                 doc_id=hit["_id"],
@@ -83,11 +85,11 @@ class ElasticsearchStore(VectorStoreBase):
             )
             for hit in response["hits"]["hits"]
         ]
-    
+
     def delete(self, doc_ids: List[str]) -> None:
         for doc_id in doc_ids:
             self.client.delete(index=self.index, id=doc_id)
-    
+
     def _encode_text(self, text: str) -> List[float]:
         """Encode text into vector using appropriate model."""
         # Implementation depends on chosen embedding model
@@ -95,19 +97,19 @@ class ElasticsearchStore(VectorStoreBase):
 
 class PineconeStore(VectorStoreBase):
     """Vector store implementation using Pinecone."""
-    
+
     def __init__(self, **kwargs):
         pinecone.init(**kwargs)
         self.index = pinecone.Index("documents")
-    
+
     def add_document(self, doc_id: str, content: str, metadata: Dict) -> None:
         vector = self._encode_text(content)
         self.index.upsert([(doc_id, vector, {"content": content, **metadata})])
-    
+
     def search(self, query: str, k: int = 5) -> List[DocumentScore]:
         query_vector = self._encode_text(query)
         results = self.index.query(query_vector, top_k=k, include_metadata=True)
-        
+
         return [
             DocumentScore(
                 doc_id=match.id,
@@ -117,10 +119,10 @@ class PineconeStore(VectorStoreBase):
             )
             for match in results.matches
         ]
-    
+
     def delete(self, doc_ids: List[str]) -> None:
         self.index.delete(ids=doc_ids)
-    
+
     def _encode_text(self, text: str) -> List[float]:
         """Encode text into vector using appropriate model."""
         # Implementation depends on chosen embedding model
@@ -128,11 +130,11 @@ class PineconeStore(VectorStoreBase):
 
 class WeaviateStore(VectorStoreBase):
     """Vector store implementation using Weaviate."""
-    
+
     def __init__(self, **kwargs):
         self.client = weaviate.Client(**kwargs)
         self.class_name = "Document"
-    
+
     def add_document(self, doc_id: str, content: str, metadata: Dict) -> None:
         properties = {
             "content": content,
@@ -143,7 +145,7 @@ class WeaviateStore(VectorStoreBase):
             data_object=properties,
             uuid=doc_id
         )
-    
+
     def search(self, query: str, k: int = 5) -> List[DocumentScore]:
         vector = self._encode_text(query)
         results = (
@@ -155,7 +157,7 @@ class WeaviateStore(VectorStoreBase):
             .with_limit(k)
             .do()
         )
-        
+
         return [
             DocumentScore(
                 doc_id=obj["_additional"]["id"],
@@ -165,14 +167,14 @@ class WeaviateStore(VectorStoreBase):
             )
             for obj in results["data"]["Get"][self.class_name]
         ]
-    
+
     def delete(self, doc_ids: List[str]) -> None:
         for doc_id in doc_ids:
             self.client.data_object.delete(
                 class_name=self.class_name,
                 uuid=doc_id
             )
-    
+
     def _encode_text(self, text: str) -> List[float]:
         """Encode text into vector using appropriate model."""
         # Implementation depends on chosen embedding model
@@ -180,11 +182,11 @@ class WeaviateStore(VectorStoreBase):
 
 class OpenSearchStore(VectorStoreBase):
     """Vector store implementation using OpenSearch."""
-    
+
     def __init__(self, **kwargs):
         self.client = OpenSearch(**kwargs)
         self.index = "documents"
-    
+
     def add_document(self, doc_id: str, content: str, metadata: Dict) -> None:
         doc = {
             "content": content,
@@ -192,7 +194,7 @@ class OpenSearchStore(VectorStoreBase):
             "vector": self._encode_text(content)
         }
         self.client.index(index=self.index, id=doc_id, body=doc)
-    
+
     def search(self, query: str, k: int = 5) -> List[DocumentScore]:
         query_vector = self._encode_text(query)
         response = self.client.search(
@@ -210,7 +212,7 @@ class OpenSearchStore(VectorStoreBase):
                 "size": k
             }
         )
-        
+
         return [
             DocumentScore(
                 doc_id=hit["_id"],
@@ -220,11 +222,11 @@ class OpenSearchStore(VectorStoreBase):
             )
             for hit in response["hits"]["hits"]
         ]
-    
+
     def delete(self, doc_ids: List[str]) -> None:
         for doc_id in doc_ids:
             self.client.delete(index=self.index, id=doc_id)
-    
+
     def _encode_text(self, text: str) -> List[float]:
         """Encode text into vector using appropriate model."""
         # Implementation depends on chosen embedding model
@@ -232,11 +234,11 @@ class OpenSearchStore(VectorStoreBase):
 
 class ClickHouseStore(VectorStoreBase):
     """Vector store implementation using ClickHouse."""
-    
+
     def __init__(self, **kwargs):
         self.client = Client(**kwargs)
         self.table = "documents"
-        
+
         # Create table if it doesn't exist
         self.client.execute(f"""
             CREATE TABLE IF NOT EXISTS {self.table} (
@@ -247,19 +249,19 @@ class ClickHouseStore(VectorStoreBase):
             ) ENGINE = MergeTree()
             ORDER BY doc_id
         """)
-    
+
     def add_document(self, doc_id: str, content: str, metadata: Dict) -> None:
         vector = self._encode_text(content)
         metadata_str = str(metadata)  # Simple serialization, could use JSON
-        
+
         self.client.execute(
             f"INSERT INTO {self.table} (doc_id, content, metadata, vector) VALUES",
             [(doc_id, content, metadata_str, vector)]
         )
-    
+
     def search(self, query: str, k: int = 5) -> List[DocumentScore]:
         query_vector = self._encode_text(query)
-        
+
         # Using cosine similarity
         results = self.client.execute(f"""
             SELECT 
@@ -271,7 +273,7 @@ class ClickHouseStore(VectorStoreBase):
             ORDER BY score DESC
             LIMIT {k}
         """)
-        
+
         return [
             DocumentScore(
                 doc_id=row[0],
@@ -281,11 +283,11 @@ class ClickHouseStore(VectorStoreBase):
             )
             for row in results
         ]
-    
+
     def delete(self, doc_ids: List[str]) -> None:
         doc_ids_str = ", ".join(f"'{doc_id}'" for doc_id in doc_ids)
         self.client.execute(f"DELETE FROM {self.table} WHERE doc_id IN ({doc_ids_str})")
-    
+
     def _encode_text(self, text: str) -> List[float]:
         """Encode text into vector using appropriate model."""
         # Implementation depends on chosen embedding model

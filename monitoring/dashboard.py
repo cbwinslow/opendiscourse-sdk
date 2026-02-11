@@ -1,63 +1,63 @@
-import streamlit as st
-import plotly.graph_objects as go
-import plotly.express as px
-import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
 import asyncio
-from typing import Dict, List
 import json
+from typing import Dict, List
+
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+import streamlit as st
 
 from monitoring.enhanced_monitor import EnhancedMonitor
 from monitoring.health_checks import EnhancedHealthChecker
+
 
 class MonitoringDashboard:
     def __init__(self, config_path: str):
         """Initialize the monitoring dashboard."""
         self.config_path = config_path
         self.monitor = EnhancedMonitor(config_path)
-        with open(config_path, 'r') as f:
+        with open(config_path) as f:
             self.config = json.load(f)
         self.health_checker = EnhancedHealthChecker(self.config)
-        
+
     def render_dashboard(self):
         """Render the main dashboard."""
         st.set_page_config(page_title="Vector Store Monitor", layout="wide")
         st.title("Vector Store Monitoring Dashboard")
-        
+
         # Sidebar for filters and settings
         self._render_sidebar()
-        
+
         # Main dashboard layout
         col1, col2 = st.columns(2)
-        
+
         with col1:
             self._render_health_status()
             self._render_performance_metrics()
-            
+
         with col2:
             self._render_store_metrics()
             self._render_anomaly_detection()
-            
+
         # Bottom section for detailed logs and alerts
         st.markdown("---")
         self._render_logs_and_alerts()
-        
+
     def _render_sidebar(self):
         """Render sidebar with filters and settings."""
         st.sidebar.title("Dashboard Controls")
-        
+
         # Time range selector
         st.sidebar.subheader("Time Range")
         time_range = st.sidebar.selectbox(
             "Select time range",
             ["Last Hour", "Last 24 Hours", "Last 7 Days", "Custom"]
         )
-        
+
         if time_range == "Custom":
             start_date = st.sidebar.date_input("Start date")
             end_date = st.sidebar.date_input("End date")
-            
+
         # Store selector
         st.sidebar.subheader("Vector Stores")
         stores = list(self.config["stores"].keys())
@@ -66,7 +66,7 @@ class MonitoringDashboard:
             stores,
             default=stores
         )
-        
+
         # Metric thresholds
         st.sidebar.subheader("Alert Thresholds")
         error_rate = st.sidebar.slider(
@@ -79,7 +79,7 @@ class MonitoringDashboard:
             0, 5000,
             value=int(self.config["monitoring"]["thresholds"]["latency_ms"])
         )
-        
+
         # Auto-refresh toggle
         st.sidebar.subheader("Settings")
         auto_refresh = st.sidebar.checkbox("Auto-refresh", value=True)
@@ -89,14 +89,14 @@ class MonitoringDashboard:
                 min_value=5,
                 value=30
             )
-            
+
     def _render_health_status(self):
         """Render health status cards for all stores."""
         st.subheader("Health Status")
-        
+
         # Get current health status
         health_status = asyncio.run(self.health_checker.run_diagnostics())
-        
+
         # Create status cards
         cols = st.columns(len(self.config["stores"]))
         for i, (store_name, status) in enumerate(health_status["stores"].items()):
@@ -112,14 +112,14 @@ class MonitoringDashboard:
                     """,
                     unsafe_allow_html=True
                 )
-                
+
     def _render_performance_metrics(self):
         """Render performance metrics charts."""
         st.subheader("Performance Metrics")
-        
+
         # Get performance data
         metrics = self.monitor.get_performance_summary()
-        
+
         # Create latency chart
         fig_latency = go.Figure()
         fig_latency.add_trace(go.Scatter(
@@ -132,7 +132,7 @@ class MonitoringDashboard:
         ))
         fig_latency.update_layout(title="Latency Over Time")
         st.plotly_chart(fig_latency)
-        
+
         # Create system metrics chart
         fig_system = go.Figure()
         fig_system.add_trace(go.Scatter(
@@ -145,14 +145,14 @@ class MonitoringDashboard:
         ))
         fig_system.update_layout(title="System Resource Usage")
         st.plotly_chart(fig_system)
-        
+
     def _render_store_metrics(self):
         """Render store-specific metrics."""
         st.subheader("Store Metrics")
-        
+
         # Get store metrics
         store_metrics = self.monitor.store_metrics
-        
+
         for store_name, metrics in store_metrics.items():
             with st.expander(f"{store_name} Metrics"):
                 cols = st.columns(4)
@@ -160,7 +160,7 @@ class MonitoringDashboard:
                 cols[1].metric("Error Count", metrics.error_count)
                 cols[2].metric("Avg Latency", f"{metrics.avg_latency_ms:.2f}ms")
                 cols[3].metric("Cache Hit Rate", f"{metrics.cache_hit_rate:.1%}")
-                
+
                 # Show trend chart
                 df = pd.DataFrame({
                     "timestamp": self.monitor.performance_history.timestamp,
@@ -168,14 +168,14 @@ class MonitoringDashboard:
                 })
                 fig = px.line(df, x="timestamp", y="latency", title="Operation Latency Trend")
                 st.plotly_chart(fig)
-                
+
     def _render_anomaly_detection(self):
         """Render anomaly detection results."""
         st.subheader("Anomaly Detection")
-        
+
         # Get anomalies
         anomalies = self.monitor.detect_anomalies()
-        
+
         if anomalies:
             for anomaly in anomalies:
                 st.error(
@@ -188,11 +188,11 @@ class MonitoringDashboard:
                 )
         else:
             st.success("No anomalies detected")
-            
+
     def _render_logs_and_alerts(self):
         """Render logs and alerts section."""
         tab1, tab2 = st.tabs(["Logs", "Alerts"])
-        
+
         with tab1:
             st.subheader("System Logs")
             logs = self._get_recent_logs()
@@ -202,7 +202,7 @@ class MonitoringDashboard:
                     "WARNING": "orange",
                     "ERROR": "red"
                 }.get(log["level"], "gray")
-                
+
                 st.markdown(
                     f"""
                     <div style="color: {severity_color};">
@@ -211,7 +211,7 @@ class MonitoringDashboard:
                     """,
                     unsafe_allow_html=True
                 )
-                
+
         with tab2:
             st.subheader("Recent Alerts")
             alerts = self.monitor.alert_history
@@ -225,12 +225,12 @@ class MonitoringDashboard:
                     Time: {alert['timestamp']}
                     """
                 )
-                
+
     def _get_recent_logs(self) -> List[Dict]:
         """Get recent logs from the log file."""
         logs = []
         try:
-            with open("logs/vector_store_monitor.log", "r") as f:
+            with open("logs/vector_store_monitor.log") as f:
                 for line in f.readlines()[-100:]:  # Last 100 lines
                     parts = line.split(" - ")
                     if len(parts) >= 3:

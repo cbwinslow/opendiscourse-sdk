@@ -2,16 +2,16 @@
 Unit tests for the core progress monitoring functionality.
 """
 
-import pytest
-import time
-from unittest.mock import Mock, patch, MagicMock
-from datetime import datetime, timedelta
-
 # Import monitoring components
 import sys
+import time
+from unittest.mock import Mock
+
+import pytest
+
 sys.path.insert(0, '.')
 
-from monitoring.progress_monitor import UniversalProgressMonitor, IngestionContext
+from monitoring.progress_monitor import IngestionContext, UniversalProgressMonitor
 
 
 class TestUniversalProgressMonitor:

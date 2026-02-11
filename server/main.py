@@ -1,11 +1,12 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from typing import Optional
 import os
 import tempfile
-import textract
+
 import psycopg2
+import textract
+from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from psycopg2.extras import Json
+
 from .diagnostics import router as diagnostics_router
 
 app = FastAPI(title="OpenDiscourse API", version="0.1.0")

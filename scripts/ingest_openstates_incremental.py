@@ -3,21 +3,20 @@
 Incremental OpenStates People Ingestion Script
 """
 
-import os
-import sys
-import requests
 import hashlib
 import json
-import time
 import logging
-import psycopg2
-from psycopg2.extras import execute_values
+import os
+import sys
+import time
 from datetime import datetime
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
-from rate_limiter import adaptive_limiters
+import psycopg2
+import requests
 from env_config import get_optional_env_var, validate_api_keys
-from psycopg2.extras import execute_values, Json
+from psycopg2.extras import Json, execute_values
+from rate_limiter import adaptive_limiters
 
 # Add project root to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -433,7 +432,7 @@ class IncrementalOpenStatesIngestor:
                 people = batch_data.get("results", [])
 
                 if not people:
-                    print(f"✅ No more people found")
+                    print("✅ No more people found")
                     break
 
                 print(f"📦 Processing page {page} - {len(people)} people...")
@@ -483,7 +482,7 @@ class IncrementalOpenStatesIngestor:
                 print(f"   📄 Page {current_page} of {max_page}")
 
                 if current_page >= max_page or len(people) < self.batch_size:
-                    print(f"✅ Reached end of pagination")
+                    print("✅ Reached end of pagination")
                     break
 
                 page += 1
@@ -538,8 +537,8 @@ class IncrementalOpenStatesIngestor:
         total_processed = sum(r.get("records_processed", 0) for r in results)
         total_skipped = sum(r.get("records_skipped", 0) for r in results)
 
-        print(f"\n🎉 All jurisdictions ingestion completed!")
-        print(f"📊 Summary:")
+        print("\n🎉 All jurisdictions ingestion completed!")
+        print("📊 Summary:")
         print(f"   Jurisdictions completed: {completed}/{len(results)}")
         print(f"   Total records processed: {total_processed}")
         print(f"   Total records skipped: {total_skipped}")

@@ -4,29 +4,27 @@ Enhanced OpenStates Data Ingestion System
 Comprehensive bulk ingestion with rate limiting, pagination, parallel processing, and orchestration
 """
 
-import os
-import sys
-import requests
+import concurrent.futures
 import hashlib
 import json
-import time
 import logging
-import psycopg2
+import os
+import sys
 import threading
-import concurrent.futures
-from psycopg2.extras import execute_values, Json
+import time
+from dataclasses import field
 from datetime import datetime, timedelta
-from typing import Dict, Any, List, Optional, Tuple, Union
-from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional
+
+import psycopg2
+import requests
+from psycopg2.extras import Json, execute_values
 from pydantic import BaseModel, ValidationError
-from enum import Enum
 
 # Add project root to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from rate_limiter import adaptive_limiters
 from env_config import get_optional_env_var, validate_api_keys
-
 
 # ============================================================================
 # DATA MODELS (Pydantic Validation)
@@ -896,7 +894,7 @@ def main():
 
         # Display progress summary
         progress_summary = ingestor.progress_monitor.get_summary()
-        print(f"\n📊 Progress Summary:")
+        print("\n📊 Progress Summary:")
         print(f"   Total elapsed: {progress_summary.get('total_elapsed_seconds', 0):.1f}s")
         print(f"   Data types: {progress_summary.get('total_data_types', 0)}")
         print(f"   Average rate: {progress_summary.get('average_rate', 0):.1f} records/s")

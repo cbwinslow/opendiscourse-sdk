@@ -8,22 +8,21 @@ Usage:
     python ingest_members_all_time.py [--congress-start 101] [--congress-end 118] [--batch-size 50]
 """
 
+import logging
 import os
 import sys
-import asyncio
-import logging
-from typing import Dict, List, Any, Optional
-from datetime import datetime, date
 from dataclasses import dataclass
-import json
+from datetime import date, datetime
+from typing import Any, Dict, List, Optional
 
 import psycopg2
-from psycopg2.extras import DictCursor, execute_values
 import requests
-from tenacity import retry, stop_after_attempt, wait_exponential
 
 # Load environment variables
 from dotenv import load_dotenv
+from psycopg2.extras import execute_values
+from tenacity import retry, stop_after_attempt, wait_exponential
+
 load_dotenv()
 
 # Configure logging

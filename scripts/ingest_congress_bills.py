@@ -6,32 +6,31 @@ This script ingests bills data from congress.gov API with comprehensive
 offset-based pagination, checkpoint tracking, and API key enforcement.
 """
 
+import argparse
+import logging
 import os
 import sys
-import logging
-import argparse
-from typing import Dict, List, Any, Optional
-from datetime import datetime, date
 from dataclasses import dataclass
+from datetime import date, datetime
+from typing import Any, Dict, List, Optional
 
 import psycopg2
-from psycopg2.extras import DictCursor, execute_values
 import requests
+from psycopg2.extras import DictCursor
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 # Import monitoring and configuration components
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from monitoring.progress_monitor import UniversalProgressMonitor
-from monitoring.delegates import setup_all_delegates
-from ingestion_config import (
-    validate_all_api_keys,
-    get_ingestion_mode_from_env,
-    IngestionMode,
-    get_api_key_from_env,
-)
-
 # Load environment variables
 from dotenv import load_dotenv
+from ingestion_config import (
+    get_api_key_from_env,
+    get_ingestion_mode_from_env,
+    validate_all_api_keys,
+)
+
+from monitoring.delegates import setup_all_delegates
+from monitoring.progress_monitor import UniversalProgressMonitor
 
 load_dotenv()
 

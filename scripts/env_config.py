@@ -6,7 +6,8 @@ Automatically loads .env file and provides configuration utilities
 
 import os
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Dict, Optional
+
 
 def load_env_file(env_file_path: str = ".env") -> Dict[str, str]:
     """
@@ -29,7 +30,7 @@ def load_env_file(env_file_path: str = ".env") -> Dict[str, str]:
         env_file = Path(env_file_path)
 
     if env_file.exists():
-        with open(env_file, 'r') as f:
+        with open(env_file) as f:
             for line in f:
                 line = line.strip()
 

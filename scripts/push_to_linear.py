@@ -1,6 +1,7 @@
-import os
-import requests
 import glob
+import os
+
+import requests
 
 LINEAR_API_KEY = os.environ.get("LINEAR_APP_API_KEY") or os.environ.get("LINEAR_APP_LONG_TOKEN")
 LINEAR_API_URL = "https://api.linear.app/graphql"
@@ -61,7 +62,7 @@ def main():
     files = glob.glob("*.*")
     for file in files:
         if os.path.isfile(file):
-            with open(file, "r", encoding="utf-8", errors="replace") as f:
+            with open(file, encoding="utf-8", errors="replace") as f:
                 content = f.read()
             title = f"[AutoImport] {file}"
             print(f"Pushing {file} to Linear...")

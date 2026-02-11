@@ -5,15 +5,16 @@ Focused CLI for ingesting Congress members, bills, amendments, summaries, and te
 """
 
 import argparse
-import sys
-import os
-import time
-import psycopg2
-from datetime import datetime
-from typing import Dict, List, Optional
-import requests
 import json
+import os
+import sys
+import time
+from datetime import datetime
 from pathlib import Path
+from typing import Dict, Optional
+
+import psycopg2
+import requests
 
 # Add project root to path
 sys.path.append(str(Path(__file__).parent.parent.parent))

@@ -2,22 +2,24 @@
 Main CLI interface for Congress CLI.
 """
 
-import click
-import sys
 import json
-from pathlib import Path
-from typing import Optional, Dict, Any
-from datetime import datetime
+import sys
+
+import click
 from rich.console import Console
+from rich.progress import (
+    BarColumn,
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    TimeRemainingColumn,
+)
 from rich.table import Table
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeRemainingColumn
-from rich.panel import Panel
-from rich.text import Text
 
 from .database.migrations import DatabaseBootstrap, DatabaseManager
 from .ingestion.incremental import IncrementalIngestor
-from .utils.config import Config, get_config
-from .utils.logger import setup_logging, get_logger
+from .utils.config import get_config
+from .utils.logger import setup_logging
 
 # Initialize rich console
 console = Console()
@@ -102,7 +104,7 @@ def bootstrap(ctx, drop_existing, dry_run):
 
             # Show status
             status = bootstrap.get_migration_status()
-            console.print(f"\n[bold]Bootstrap Status:[/bold]")
+            console.print("\n[bold]Bootstrap Status:[/bold]")
             console.print(f"  Schemas created: {', '.join(status.get('schemas', []))}")
 
             for schema, count in status.get('table_counts', {}).items():
@@ -133,9 +135,9 @@ def ingest_members(ctx, congress, resume, batch_size, max_workers, dry_run):
         console.print("[yellow]DRY RUN MODE - No data will be ingested[/yellow]")
 
         # Show ingestion plan
-        console.print(f"\n[bold]Ingestion Plan:[/bold]")
+        console.print("\n[bold]Ingestion Plan:[/bold]")
         console.print(f"  Congress: {congress}")
-        console.print(f"  Data type: Members")
+        console.print("  Data type: Members")
         console.print(f"  Resume from checkpoint: {resume}")
         console.print(f"  Batch size: {batch_size}")
         console.print(f"  Max workers: {max_workers}")
@@ -147,13 +149,13 @@ def ingest_members(ctx, congress, resume, batch_size, max_workers, dry_run):
             checkpoint = ingestor.get_checkpoint('congress', 'members', str(congress))
 
             if checkpoint:
-                console.print(f"\n[bold]Checkpoint Status:[/bold]")
+                console.print("\n[bold]Checkpoint Status:[/bold]")
                 console.print(f"  Offset: {checkpoint.offset}")
                 console.print(f"  Total processed: {checkpoint.total_processed}")
                 console.print(f"  Status: {checkpoint.status}")
                 console.print(f"  Last ingestion: {checkpoint.last_ingestion_at}")
             else:
-                console.print(f"\n[yellow]No existing checkpoint found - will start from beginning[/yellow]")
+                console.print("\n[yellow]No existing checkpoint found - will start from beginning[/yellow]")
         except Exception as e:
             console.print(f"[yellow]Could not check checkpoint status: {e}[/yellow]")
 
@@ -185,7 +187,7 @@ def ingest_members(ctx, congress, resume, batch_size, max_workers, dry_run):
             progress.update(task, completed=result['total_processed'], total=result['total_expected'])
 
         # Display results
-        console.print(f"\n[bold green]✅ Members Ingestion Completed[/bold green]")
+        console.print("\n[bold green]✅ Members Ingestion Completed[/bold green]")
         console.print(f"  Total processed: {result['total_processed']:,}")
         console.print(f"  Total expected: {result['total_expected']:,}")
         console.print(f"  Completion: {result['completion_percentage']:.1f}%")
@@ -220,9 +222,9 @@ def ingest_bills(ctx, congress, resume, batch_size, max_workers, dry_run):
         console.print("[yellow]DRY RUN MODE - No data will be ingested[/yellow]")
 
         # Show ingestion plan
-        console.print(f"\n[bold]Ingestion Plan:[/bold]")
+        console.print("\n[bold]Ingestion Plan:[/bold]")
         console.print(f"  Congress: {congress}")
-        console.print(f"  Data type: Bills")
+        console.print("  Data type: Bills")
         console.print(f"  Resume from checkpoint: {resume}")
         console.print(f"  Batch size: {batch_size}")
         console.print(f"  Max workers: {max_workers}")
@@ -256,7 +258,7 @@ def ingest_bills(ctx, congress, resume, batch_size, max_workers, dry_run):
             progress.update(task, completed=result['total_processed'], total=result['total_expected'])
 
         # Display results
-        console.print(f"\n[bold green]✅ Bills Ingestion Completed[/bold green]")
+        console.print("\n[bold green]✅ Bills Ingestion Completed[/bold green]")
         console.print(f"  Total processed: {result['total_processed']:,}")
         console.print(f"  Total expected: {result['total_expected']:,}")
         console.print(f"  Completion: {result['completion_percentage']:.1f}%")
@@ -341,7 +343,7 @@ def info(ctx):
             console.print(f"  {schema} tables: {count}")
 
         # Configuration information
-        console.print(f"\n[bold]Configuration:[/bold]")
+        console.print("\n[bold]Configuration:[/bold]")
         console.print(f"  API Base URL: {config.api.base_url}")
         console.print(f"  Rate Limit: {config.api.rate_limit_per_second} requests/sec")
         console.print(f"  Timeout: {config.api.timeout_seconds} seconds")
@@ -374,7 +376,7 @@ def report(ctx, days, output):
         report_data = ingestor.generate_report(days)
 
         # Display summary
-        console.print(f"\n[bold]Report Summary:[/bold]")
+        console.print("\n[bold]Report Summary:[/bold]")
         console.print(f"  Report Period: {report_data['period']['start']} to {report_data['period']['end']}")
         console.print(f"  Total Data Sources: {len(report_data['data_sources'])}")
         console.print(f"  Total Checkpoints: {report_data['summary']['total_checkpoints']}")
@@ -448,7 +450,7 @@ def test_connection(ctx):
 @click.pass_context
 def version(ctx):
     """Show version information."""
-    from . import __version__, __author__, __email__
+    from . import __author__, __email__, __version__
 
     console.print("[bold blue]📦 Congress CLI[/bold blue]")
     console.print(f"  Version: {__version__}")

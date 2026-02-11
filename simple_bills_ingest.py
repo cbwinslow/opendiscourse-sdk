@@ -4,13 +4,14 @@ Simple Congress Bills Ingestion
 Works with simplified database connection
 """
 
-import os
-import requests
-import psycopg2
-from psycopg2.extras import execute_values
-from dotenv import load_dotenv
 import logging
+import os
 from datetime import datetime
+
+import psycopg2
+import requests
+from dotenv import load_dotenv
+from psycopg2.extras import execute_values
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -115,5 +116,4 @@ def ingest_congress_bills(congress_number, limit=100):
         conn.close()
 
 if __name__ == "__main__":
-    import json
     ingest_congress_bills(118, limit=200)

@@ -9,13 +9,16 @@ from typing import Any
 
 from cassandra.cluster import Cluster
 from crawl4ai import AsyncCrawler
+from crawl4ai_openrouter import (
+    Crawl4AIOpenRouterPipeline,
+    PipelineSettings,
+    build_default_targets,
+)
 from neo4j import GraphDatabase
 from openrouter import OpenRouter
-from psycopg import AsyncConnection, AsyncConnectionPool
-from pymongo import MongoClient
-
-from crawl4ai_openrouter import Crawl4AIOpenRouterPipeline, PipelineSettings, build_default_targets
 from persistence import StorageClients, upsert_record
+from psycopg import AsyncConnectionPool
+from pymongo import MongoClient
 from source_ingestion_tasks import DEFAULT_PROCESSORS
 
 

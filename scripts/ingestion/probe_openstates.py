@@ -1,7 +1,7 @@
-import requests
 import os
-import json
 import sys
+
+import requests
 
 api_key = os.environ.get('OPENSTATES_API_KEY')
 if not api_key:
@@ -61,7 +61,7 @@ if j_sessions and 'legislative_sessions' in j_sessions:
     print(f"Found {len(j_sessions['legislative_sessions'])} legislative sessions")
 
 # 6. Probe Bills with 'ca' and page param (to reproduce 400)
-print(f"\n--- Probing Bills for 'ca' with page=1 ---")
+print("\n--- Probing Bills for 'ca' with page=1 ---")
 bills_ca = get(f'{base_url}/bills', {'jurisdiction': 'ca', 'page': 1, 'per_page': 50})
 if bills_ca:
     print("Success with page=1")

@@ -1,7 +1,7 @@
-import weaviate
 import os
 import uuid
-from datetime import datetime
+
+import weaviate
 
 # Weaviate connection details (replace with your actual details or use environment variables)
 WEAVIATE_URL = os.getenv("WEAVIATE_URL", "http://localhost:8080")

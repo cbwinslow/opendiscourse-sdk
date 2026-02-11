@@ -1,12 +1,14 @@
 import os
-import requests
 import time
+
+import requests
+
 from config.committee_api_config import (
     COMMITTEE_BROWSE_URL,
+    COMMITTEE_DATA_DIR,
     COMMITTEE_DETAILS_URL,
     COMMITTEE_DOCUMENTS_URL,
     HEADERS,
-    COMMITTEE_DATA_DIR,
 )
 
 

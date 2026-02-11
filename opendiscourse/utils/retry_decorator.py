@@ -30,7 +30,7 @@ import functools
 import logging
 import random
 import time
-from typing import Any, Callable, Optional, Tuple, Type, Union
+from typing import Any, Callable, Tuple, Type, Union
 
 # Default logger for the retry decorator
 logger = logging.getLogger(__name__)
@@ -76,7 +76,7 @@ def retry_with_backoff(
         raise ValueError("backoff_factor must be non-negative")
     if max_backoff <= 0:
         raise ValueError("max_backoff must be positive")
-    
+
     # Convert log level string to logging constant
     log_levels = {
         "debug": logging.DEBUG,
@@ -84,24 +84,24 @@ def retry_with_backoff(
         "warning": logging.WARNING,
         "error": logging.ERROR,
     }
-    
+
     if log_level.lower() not in log_levels:
         raise ValueError(f"Invalid log_level. Must be one of: {list(log_levels.keys())}")
-    
+
     log_level_const = log_levels[log_level.lower()]
-    
+
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             last_exception = None
-            
+
             for attempt in range(max_retries + 1):
                 try:
                     return func(*args, **kwargs)
-                    
+
                 except exceptions as e:
                     last_exception = e
-                    
+
                     # Don't retry on the last attempt
                     if attempt == max_retries:
                         logger.log(
@@ -112,17 +112,17 @@ def retry_with_backoff(
                             str(e)
                         )
                         raise e
-                    
+
                     # Calculate delay with exponential backoff
                     delay = min(backoff_factor * (2 ** attempt), max_backoff)
-                    
+
                     # Add jitter if enabled to avoid thundering herd
                     if jitter:
                         # Add random jitter of ±25% of the delay
                         jitter_range = delay * 0.25
                         delay += random.uniform(-jitter_range, jitter_range)
                         delay = max(0, delay)  # Ensure delay is not negative
-                    
+
                     logger.log(
                         log_level_const,
                         "Function %s failed on attempt %d/%d with %s: %s. Retrying in %.2f seconds...",
@@ -133,14 +133,14 @@ def retry_with_backoff(
                         str(e),
                         delay
                     )
-                    
+
                     time.sleep(delay)
-            
+
             # This should never be reached due to the raise in the loop,
             # but included for completeness
             if last_exception:
                 raise last_exception
-            
+
         return wrapper
     return decorator
 
@@ -176,7 +176,7 @@ def retry_on_connection_error(
     except ImportError:
         # If requests is not available, use built-in exceptions only
         connection_exceptions = (ConnectionError, TimeoutError)
-    
+
     return retry_with_backoff(
         max_retries=max_retries,
         backoff_factor=backoff_factor,
@@ -214,7 +214,7 @@ def retry_on_database_error(
     except ImportError:
         # If psycopg2 is not available, use generic exceptions
         db_exceptions = (ConnectionError,)
-    
+
     return retry_with_backoff(
         max_retries=max_retries,
         backoff_factor=backoff_factor,

@@ -6,14 +6,14 @@ Demonstrates the complete trace flow with checkpoint tracking and fingerprinting
 
 import os
 import sys
-import json
+
 import psycopg2
-from datetime import datetime
 
 # Add project root to path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from scripts.ingest_congress_incremental import IncrementalCongressIngestor
+
 
 def demo_incremental_ingestion():
     """Demonstrate the complete incremental ingestion flow"""
@@ -70,7 +70,7 @@ def demo_incremental_ingestion():
 
     try:
         result = ingestor.ingest_congress_members(congress)
-        print(f"\n✅ Ingestion completed:")
+        print("\n✅ Ingestion completed:")
         print(f"  Status: {result['status']}")
         print(f"  Records processed: {result['records_processed']}")
         print(f"  Records skipped: {result['records_skipped']}")

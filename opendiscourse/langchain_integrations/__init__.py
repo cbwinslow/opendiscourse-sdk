@@ -12,9 +12,9 @@ Modules:
 """
 
 from .rag_service import (
+    DocumentMetadata,
     OpenDiscourseRAGService,
     RAGResult,
-    DocumentMetadata,
     create_bill_metadata,
     create_committee_metadata,
 )

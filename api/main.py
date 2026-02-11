@@ -1,20 +1,27 @@
 from datetime import datetime
 from typing import Optional
 
-# Import the new endpoints
-from api.routes.task_inference_endpoints import router as task_inference_router
-from api.routes.llm_endpoints import router as llm_router
-from api.routes.auth_endpoints import router as auth_router
-from ..config.settings import Settings
 from fastapi import BackgroundTasks, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from api.models.models import ConfigurationRequest, DocumentRequest, SearchRequest
-from models.response_models import (DocumentResponse, HealthCheckResponse,
-                                    MetricsResponse, SearchResponse)
+from models.response_models import (
+    DocumentResponse,
+    HealthCheckResponse,
+    MetricsResponse,
+    SearchResponse,
+)
 from services.health_check import HealthCheckService
 from services.monitoring import MonitoringService
 from services.vector_store import VectorStoreService
+
+from api.models.models import ConfigurationRequest, DocumentRequest, SearchRequest
+from api.routes.auth_endpoints import router as auth_router
+from api.routes.llm_endpoints import router as llm_router
+
+# Import the new endpoints
+from api.routes.task_inference_endpoints import router as task_inference_router
+
+from ..config.settings import Settings
 
 app = FastAPI(
     title="Vector Store API",

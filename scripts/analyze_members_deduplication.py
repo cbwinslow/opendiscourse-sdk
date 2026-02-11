@@ -4,13 +4,13 @@ Members Data Deduplication Analysis and Setup
 Analyzes and sets up proper deduplication strategy across all data sources
 """
 
+import argparse
 import os
 import sys
+
 import psycopg2
-from psycopg2.extras import DictCursor
 from dotenv import load_dotenv
-import argparse
-from typing import Dict, List, Any
+from psycopg2.extras import DictCursor
 
 load_dotenv()
 
@@ -50,7 +50,7 @@ class MembersDeduplicationAnalyzer:
             cursor.execute("SELECT COUNT(*) as count FROM openstates.people")
             openstates_count = cursor.fetchone()['count']
 
-            print(f"\n📊 Current Data Status:")
+            print("\n📊 Current Data Status:")
             print(f"   Congress members: {congress_count}")
             print(f"   GovInfo members: {govinfo_count}")
             print(f"   OpenStates people: {openstates_count}")
@@ -74,7 +74,7 @@ class MembersDeduplicationAnalyzer:
             """)
             govinfo_bioguide = cursor.fetchone()
 
-            print(f"\n🔗 Bioguide ID Analysis:")
+            print("\n🔗 Bioguide ID Analysis:")
             print(f"   Congress: {congress_bioguide['with_bioguide_id']}/{congress_bioguide['total_congress']} have bioguide_id")
             print(f"   GovInfo: {govinfo_bioguide['with_bioguide_id']}/{govinfo_bioguide['total_govinfo']} have bioguide_id")
 
@@ -91,7 +91,7 @@ class MembersDeduplicationAnalyzer:
 
     def analyze_deduplication_strategy(self):
         """Analyze the current deduplication strategy"""
-        print(f"\n🎯 Deduplication Strategy Analysis:")
+        print("\n🎯 Deduplication Strategy Analysis:")
 
         with self.conn.cursor() as cursor:
             # Check primary keys and constraints
@@ -131,17 +131,17 @@ class MembersDeduplicationAnalyzer:
                 print(f"     Primary Key: {[pk['column_name'] for pk in pks]}")
                 print(f"     Unique Constraints: {[uk['column_name'] for uk in uniques]}")
 
-        print(f"\n💡 Deduplication Strategy:")
-        print(f"   • Congress: Uses bioguide_id as primary key (unique per person)")
-        print(f"   • GovInfo: Uses member_id as primary key, bioguide_id unique constraint")
-        print(f"   • OpenStates: Uses person_id as primary key (different identifier system)")
-        print(f"   • These are SEPARATE data sources with different identifier systems")
-        print(f"   • Deduplication should be maintained WITHIN each source")
-        print(f"   • Cross-source matching would require additional mapping tables")
+        print("\n💡 Deduplication Strategy:")
+        print("   • Congress: Uses bioguide_id as primary key (unique per person)")
+        print("   • GovInfo: Uses member_id as primary key, bioguide_id unique constraint")
+        print("   • OpenStates: Uses person_id as primary key (different identifier system)")
+        print("   • These are SEPARATE data sources with different identifier systems")
+        print("   • Deduplication should be maintained WITHIN each source")
+        print("   • Cross-source matching would require additional mapping tables")
 
     def setup_reference_data(self):
         """Set up reference data for all schemas"""
-        print(f"\n🔧 Setting up reference data...")
+        print("\n🔧 Setting up reference data...")
 
         with self.conn.cursor() as cursor:
             # Check GovInfo parties
@@ -185,7 +185,7 @@ class MembersDeduplicationAnalyzer:
 
     def create_cross_reference_view(self):
         """Create a view for cross-reference analysis"""
-        print(f"\n🔗 Creating cross-reference analysis view...")
+        print("\n🔗 Creating cross-reference analysis view...")
 
         with self.conn.cursor() as cursor:
             cursor.execute("""
@@ -233,7 +233,7 @@ class MembersDeduplicationAnalyzer:
 
     def validate_deduplication(self):
         """Validate that deduplication is working correctly"""
-        print(f"\n✅ Validating deduplication...")
+        print("\n✅ Validating deduplication...")
 
         with self.conn.cursor() as cursor:
             # Check for duplicates in Congress
@@ -287,7 +287,7 @@ class MembersDeduplicationAnalyzer:
 
     def generate_report(self):
         """Generate a comprehensive deduplication report"""
-        print(f"\n📋 Generating deduplication report...")
+        print("\n📋 Generating deduplication report...")
 
         with self.conn.cursor() as cursor:
             # Summary statistics
@@ -321,7 +321,7 @@ class MembersDeduplicationAnalyzer:
 
             results = cursor.fetchall()
 
-            print(f"\n📊 Deduplication Summary Report:")
+            print("\n📊 Deduplication Summary Report:")
             print(f"{'Schema':<12} {'Total':<8} {'With ID':<10} {'Unique ID':<11}")
             print(f"{'-'*45}")
 
@@ -341,7 +341,7 @@ class MembersDeduplicationAnalyzer:
 
             cross_ref = cursor.fetchall()
 
-            print(f"\n🔗 Cross-Reference Analysis:")
+            print("\n🔗 Cross-Reference Analysis:")
             for row in cross_ref:
                 print(f"   {row['source_schema']}: {row['with_cross_ref']}/{row['total_records']} have cross-references")
 
@@ -380,7 +380,7 @@ def main():
             if args.report:
                 analyzer.generate_report()
 
-        print(f"\n🎉 Deduplication analysis completed!")
+        print("\n🎉 Deduplication analysis completed!")
 
     except Exception as e:
         print(f"❌ Error: {e}")

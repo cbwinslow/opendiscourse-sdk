@@ -14,11 +14,9 @@ Requirements:
     - Environment variables configured (optional)
 """
 
-import os
-import sys
 import logging
+import sys
 from pathlib import Path
-from datetime import datetime
 
 # Add the project root to the Python path
 project_root = Path(__file__).parent.parent
@@ -39,7 +37,7 @@ def create_sample_documents():
     """Create sample documents for demonstration."""
     sample_dir = Path("./data/sample_documents")
     sample_dir.mkdir(parents=True, exist_ok=True)
-    
+
     # Sample Bill Text
     bill_text = """
     H.R. 1234 - The Digital Democracy Enhancement Act
@@ -68,7 +66,7 @@ def create_sample_documents():
     There are authorized to be appropriated $50,000,000 for fiscal year 2024
     to carry out this Act.
     """
-    
+
     # Sample Committee Document
     committee_text = """
     House Committee on Science, Space, and Technology
@@ -106,7 +104,7 @@ def create_sample_documents():
     FINAL VOTE:
     The Committee voted 22-6 to report H.R. 1234 favorably to the House.
     """
-    
+
     # Sample Federal Register Entry
     federal_register_text = """
     Federal Register / Vol. 89, No. 45 / Wednesday, March 6, 2024
@@ -156,17 +154,17 @@ def create_sample_documents():
     The estimated cost of implementation is $25 million annually across
     all affected agencies.
     """
-    
+
     # Write sample documents
     with open(sample_dir / "hr1234_bill.txt", "w") as f:
         f.write(bill_text)
-    
+
     with open(sample_dir / "committee_markup_hr1234.txt", "w") as f:
         f.write(committee_text)
-    
+
     with open(sample_dir / "federal_register_digital_standards.txt", "w") as f:
         f.write(federal_register_text)
-    
+
     logger.info(f"Created sample documents in {sample_dir}")
     return sample_dir
 
@@ -176,19 +174,19 @@ def demo_basic_usage():
     print("\n" + "="*60)
     print("DEMO 1: Basic RAG Service Usage")
     print("="*60)
-    
+
     # Initialize the RAG service
     rag_service = OpenDiscourseRAGService(
         vector_store_path="./data/demo_chroma_db",
         embedding_model="sentence-transformers/all-MiniLM-L6-v2",
         llm_provider="huggingface"
     )
-    
+
     print(f"✓ Initialized RAG service with {rag_service.llm_provider} LLM")
-    
+
     # Create sample documents
     sample_dir = create_sample_documents()
-    
+
     # Ingest documents
     print(f"\n📁 Ingesting documents from {sample_dir}")
     results = rag_service.ingest_directory(
@@ -196,14 +194,14 @@ def demo_basic_usage():
         "**/*.txt",
         "legislative"
     )
-    
+
     total_chunks = sum(results.values())
     print(f"✓ Ingested {len(results)} files ({total_chunks} chunks)")
-    
+
     # Get collection info
     info = rag_service.get_collection_info()
     print(f"📊 Collection: {info['total_documents']} documents, {len(info['document_types'])} types")
-    
+
     return rag_service
 
 
@@ -212,7 +210,7 @@ def demo_querying(rag_service):
     print("\n" + "="*60)
     print("DEMO 2: Querying Documents")
     print("="*60)
-    
+
     # Example queries
     queries = [
         "What is the Digital Democracy Enhancement Act about?",
@@ -221,21 +219,21 @@ def demo_querying(rag_service):
         "Which committee considered this bill?",
         "What amendments were proposed during committee markup?"
     ]
-    
+
     for i, question in enumerate(queries, 1):
         print(f"\n🤔 Query {i}: {question}")
-        
+
         try:
             result = rag_service.query(question)
             print(f"💬 Answer: {result.answer}")
             print(f"📚 Sources: {len(result.source_documents)} documents")
-            
+
             # Show source preview
             if result.source_documents:
                 source = result.source_documents[0]
                 preview = source.page_content[:150] + "..." if len(source.page_content) > 150 else source.page_content
                 print(f"📄 Source preview: {preview}")
-        
+
         except Exception as e:
             print(f"❌ Error: {e}")
 
@@ -245,7 +243,7 @@ def demo_search(rag_service):
     print("\n" + "="*60)
     print("DEMO 3: Document Search")
     print("="*60)
-    
+
     # Search for documents
     search_queries = [
         "funding appropriations",
@@ -253,20 +251,20 @@ def demo_search(rag_service):
         "digital accessibility standards",
         "implementation timeline"
     ]
-    
+
     for query in search_queries:
         print(f"\n🔍 Searching for: '{query}'")
-        
+
         try:
             docs = rag_service.search_similar_documents(query, k=2)
             print(f"📋 Found {len(docs)} relevant documents:")
-            
+
             for i, doc in enumerate(docs, 1):
                 source = doc.metadata.get('source', 'Unknown')
                 preview = doc.page_content[:100] + "..." if len(doc.page_content) > 100 else doc.page_content
                 print(f"  {i}. {source}")
                 print(f"     Preview: {preview}")
-        
+
         except Exception as e:
             print(f"❌ Search error: {e}")
 
@@ -276,27 +274,27 @@ def demo_metadata_usage():
     print("\n" + "="*60)
     print("DEMO 4: Metadata and Specialized Functions")
     print("="*60)
-    
+
     # Create bill metadata
     bill_metadata = create_bill_metadata(
         bill_number="H.R. 1234",
         congress_session="118th",
         committee="House Committee on Science, Space, and Technology"
     )
-    
-    print(f"📋 Bill metadata created:")
+
+    print("📋 Bill metadata created:")
     print(f"   Bill: {bill_metadata.bill_number}")
     print(f"   Congress: {bill_metadata.congress_session}")
     print(f"   Committee: {bill_metadata.committee}")
     print(f"   Type: {bill_metadata.document_type}")
-    
+
     # Create committee metadata
     committee_metadata = create_committee_metadata(
         committee_name="House Committee on Science, Space, and Technology",
         congress_session="118th"
     )
-    
-    print(f"\n🏛️ Committee metadata created:")
+
+    print("\n🏛️ Committee metadata created:")
     print(f"   Committee: {committee_metadata.committee}")
     print(f"   Congress: {committee_metadata.congress_session}")
     print(f"   Type: {committee_metadata.document_type}")
@@ -307,16 +305,16 @@ def demo_filtered_queries(rag_service):
     print("\n" + "="*60)
     print("DEMO 5: Filtered Queries")
     print("="*60)
-    
+
     # Query with filters
     question = "What are the key provisions of this legislation?"
-    
+
     # Query all documents
     print(f"🔍 Query (no filter): {question}")
     result_all = rag_service.query(question)
     print(f"💬 Answer: {result_all.answer[:200]}...")
     print(f"📚 Sources: {len(result_all.source_documents)} documents")
-    
+
     # Query with document type filter
     print(f"\n🔍 Query (legislative filter): {question}")
     result_filtered = rag_service.query(
@@ -332,7 +330,7 @@ def demo_api_preview():
     print("\n" + "="*60)
     print("DEMO 6: API Server Usage")
     print("="*60)
-    
+
     print("🚀 To start the RAG API server, run:")
     print("   python -m opendiscourse.langchain_integrations.rag_api")
     print("")
@@ -352,7 +350,7 @@ def main():
     """Run the complete demo."""
     print("🎯 OpenDiscourse LangChain Integration Demo")
     print("=" * 60)
-    
+
     try:
         # Run demos
         rag_service = demo_basic_usage()
@@ -361,22 +359,22 @@ def main():
         demo_metadata_usage()
         demo_filtered_queries(rag_service)
         demo_api_preview()
-        
+
         print("\n" + "="*60)
         print("✅ Demo completed successfully!")
         print("✨ Your RAG system is ready for government document analysis!")
         print("="*60)
-        
+
     except Exception as e:
         logger.error(f"Demo failed: {e}")
         print(f"\n❌ Demo failed: {e}")
         print("💡 Make sure all dependencies are installed:")
         print("   pip install langchain langchain-community langchain-text-splitters")
         print("   pip install sentence-transformers chromadb")
-        
+
     finally:
         # Cleanup note
-        print(f"\n🧹 Note: Demo data stored in ./data/")
+        print("\n🧹 Note: Demo data stored in ./data/")
         print("   You can safely delete this directory if needed.")
 
 

@@ -8,20 +8,20 @@ on government documents and legislative data.
 Based on LangChain examples and adapted for OpenDiscourse use cases.
 """
 
-import os
 import logging
-from typing import Dict, List, Optional, Any, Union
-from datetime import datetime
+import os
 from dataclasses import dataclass
+from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 from langchain.chains import RetrievalQA
-from langchain_community.vectorstores import Chroma
 from langchain_community.document_loaders import DirectoryLoader, TextLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.llms import HuggingFaceHub
+from langchain_community.vectorstores import Chroma
 from langchain_core.documents import Document
 from langchain_core.embeddings import FakeEmbeddings
 from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 try:
     from langchain_ollama import OllamaLLM
@@ -33,7 +33,6 @@ try:
 except ImportError:
     ChatOpenAI = None
 
-from ..core.config import settings
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -87,14 +86,14 @@ class OpenDiscourseRAGService:
         self.llm_provider = llm_provider
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
-        
+
         # Initialize components
         self._setup_embeddings()
         self._setup_vector_store()
         self._setup_llm()
         self._setup_text_splitter()
         self._setup_qa_chain()
-        
+
         logger.info(f"OpenDiscourse RAG Service initialized with {llm_provider} LLM")
 
     def _setup_embeddings(self):
@@ -150,7 +149,7 @@ class OpenDiscourseRAGService:
             search_type="similarity_score_threshold",
             search_kwargs={"score_threshold": 0.5, "k": 4}
         )
-        
+
         self.qa_chain = RetrievalQA.from_chain_type(
             llm=self.llm,
             chain_type="stuff",
@@ -178,7 +177,7 @@ class OpenDiscourseRAGService:
             # Load document
             loader = TextLoader(file_path, encoding="utf-8")
             documents = loader.load()
-            
+
             # Add metadata
             if metadata:
                 for doc in documents:
@@ -190,17 +189,17 @@ class OpenDiscourseRAGService:
                         "congress_session": metadata.congress_session,
                         "committee": metadata.committee,
                     })
-            
+
             # Split documents
             chunks = self.text_splitter.split_documents(documents)
-            
+
             # Add to vector store
             self.vector_store.add_documents(chunks)
             self.vector_store.persist()
-            
+
             logger.info(f"Ingested {len(chunks)} chunks from {file_path}")
             return len(chunks)
-            
+
         except Exception as e:
             logger.error(f"Error ingesting document {file_path}: {e}")
             raise
@@ -229,9 +228,9 @@ class OpenDiscourseRAGService:
                 loader_cls=TextLoader,
                 loader_kwargs={"encoding": "utf-8"}
             )
-            
+
             documents = loader.load()
-            
+
             # Add consistent metadata
             for doc in documents:
                 doc.metadata.update({
@@ -239,14 +238,14 @@ class OpenDiscourseRAGService:
                     "date_ingested": datetime.now().isoformat(),
                     "source": directory_path
                 })
-            
+
             # Split documents
             chunks = self.text_splitter.split_documents(documents)
-            
+
             # Add to vector store
             self.vector_store.add_documents(chunks)
             self.vector_store.persist()
-            
+
             # Create result mapping
             result = {}
             current_chunks = 0
@@ -254,10 +253,10 @@ class OpenDiscourseRAGService:
                 doc_chunks = len(self.text_splitter.split_documents([doc]))
                 result[doc.metadata.get("source", "unknown")] = doc_chunks
                 current_chunks += doc_chunks
-            
+
             logger.info(f"Ingested {len(documents)} documents ({current_chunks} chunks) from {directory_path}")
             return result
-            
+
         except Exception as e:
             logger.error(f"Error ingesting directory {directory_path}: {e}")
             raise
@@ -290,17 +289,17 @@ class OpenDiscourseRAGService:
                 )
                 # Update QA chain with filtered retriever
                 self.qa_chain.retriever = retriever
-            
+
             # Run the query
             result = self.qa_chain.invoke({"query": question})
-            
+
             return RAGResult(
                 answer=result["result"],
                 source_documents=result.get("source_documents", []),
                 query=question,
                 timestamp=datetime.now()
             )
-            
+
         except Exception as e:
             logger.error(f"Error processing query '{question}': {e}")
             raise
@@ -329,9 +328,9 @@ class OpenDiscourseRAGService:
                 )
             else:
                 docs = self.vector_store.similarity_search(query, k=k)
-            
+
             return docs
-            
+
         except Exception as e:
             logger.error(f"Error searching documents: {e}")
             raise
@@ -363,19 +362,19 @@ class OpenDiscourseRAGService:
         """Get information about the current document collection."""
         try:
             doc_count = self.get_document_count()
-            
+
             # Sample some documents to get metadata insights
             sample_docs = self.vector_store.similarity_search("", k=10)
-            
+
             document_types = set()
             sources = set()
-            
+
             for doc in sample_docs:
                 if "document_type" in doc.metadata:
                     document_types.add(doc.metadata["document_type"])
                 if "source" in doc.metadata:
                     sources.add(doc.metadata["source"])
-            
+
             return {
                 "total_documents": doc_count,
                 "document_types": list(document_types),
@@ -384,7 +383,7 @@ class OpenDiscourseRAGService:
                 "llm_provider": self.llm_provider,
                 "vector_store_path": self.vector_store_path
             }
-            
+
         except Exception as e:
             logger.error(f"Error getting collection info: {e}")
             return {}
@@ -426,13 +425,13 @@ def create_committee_metadata(
 
 def example_usage():
     """Example of how to use the OpenDiscourse RAG Service."""
-    
+
     # Initialize service
     rag_service = OpenDiscourseRAGService(
         llm_provider="huggingface",  # or "openai", "ollama"
         embedding_model="sentence-transformers/all-MiniLM-L6-v2"
     )
-    
+
     # Ingest a directory of documents
     if os.path.exists("./data/documents"):
         results = rag_service.ingest_directory(
@@ -441,25 +440,25 @@ def example_usage():
             "legislative"
         )
         print(f"Ingested documents: {results}")
-    
+
     # Query the system
     question = "What is the main purpose of this legislation?"
     result = rag_service.query(question)
-    
+
     print(f"Question: {result.query}")
     print(f"Answer: {result.answer}")
     print(f"Sources: {len(result.source_documents)} documents")
-    
+
     # Search for similar documents
     similar_docs = rag_service.search_similar_documents(
         "budget appropriations",
         k=3
     )
-    
+
     for i, doc in enumerate(similar_docs):
         print(f"Document {i+1}: {doc.metadata.get('source', 'Unknown')}")
         print(f"Preview: {doc.page_content[:200]}...")
-    
+
     # Get collection info
     info = rag_service.get_collection_info()
     print(f"Collection info: {info}")

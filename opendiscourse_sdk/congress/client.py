@@ -51,7 +51,7 @@ class BillsResource:
     Attributes:
         client: Parent CongressClient instance
     """
-    
+
     def __init__(self, client: "CongressClient") -> None:
         """
         Initialize the bills resource.
@@ -60,7 +60,7 @@ class BillsResource:
             client: Parent CongressClient instance
         """
         self.client = client
-    
+
     def list(
         self,
         congress: int,
@@ -96,22 +96,22 @@ class BillsResource:
             endpoint = f"/bill/{congress}/{bill_type}"
         else:
             endpoint = f"/bill/{congress}"
-        
+
         # Build parameters
         params = {
             "limit": min(limit, 250),  # API max is 250
             "offset": offset,
         }
-        
+
         if sort:
             params["sort"] = sort.value
-        
+
         # Make request
         response_data = self.client.get(endpoint, params=params)
-        
+
         # Parse and return
         return self.client.validate_response(response_data, BillListResponse)
-    
+
     def get(
         self,
         congress: int,
@@ -140,11 +140,11 @@ class BillsResource:
         """
         endpoint = f"/bill/{congress}/{bill_type}/{number}"
         response_data = self.client.get(endpoint)
-        
+
         # API returns {"bill": {...}} structure
         bill_data = response_data.get("bill", response_data)
         return self.client.validate_response(bill_data, Bill)
-    
+
     def get_actions(
         self,
         congress: int,
@@ -170,7 +170,7 @@ class BillsResource:
         endpoint = f"/bill/{congress}/{bill_type}/{number}/actions"
         response_data = self.client.get(endpoint)
         return response_data.get("actions", [])
-    
+
     def get_cosponsors(
         self,
         congress: int,
@@ -206,7 +206,7 @@ class MembersResource:
     Attributes:
         client: Parent CongressClient instance
     """
-    
+
     def __init__(self, client: "CongressClient") -> None:
         """
         Initialize the members resource.
@@ -215,7 +215,7 @@ class MembersResource:
             client: Parent CongressClient instance
         """
         self.client = client
-    
+
     def list(
         self,
         congress: Optional[int] = None,
@@ -252,20 +252,20 @@ class MembersResource:
             endpoint = f"/member/congress/{congress}"
         else:
             endpoint = "/member"
-        
+
         # Build parameters
         params = {
             "limit": min(limit, 250),
             "offset": offset,
         }
-        
+
         if state:
             params["state"] = state.upper()
-        
+
         # Make request
         response_data = self.client.get(endpoint, params=params)
         return self.client.validate_response(response_data, MemberListResponse)
-    
+
     def get(self, bioguide_id: str) -> Member:
         """
         Get detailed information about a specific member.
@@ -285,7 +285,7 @@ class MembersResource:
         """
         endpoint = f"/member/{bioguide_id}"
         response_data = self.client.get(endpoint)
-        
+
         # API returns {"member": {...}} structure
         member_data = response_data.get("member", response_data)
         return self.client.validate_response(member_data, Member)
@@ -300,7 +300,7 @@ class VotesResource:
     Attributes:
         client: Parent CongressClient instance
     """
-    
+
     def __init__(self, client: "CongressClient") -> None:
         """
         Initialize the votes resource.
@@ -309,7 +309,7 @@ class VotesResource:
             client: Parent CongressClient instance
         """
         self.client = client
-    
+
     def list(
         self,
         congress: int,
@@ -335,15 +335,15 @@ class VotesResource:
             ...     print(f"Vote {vote.vote_number}: {vote.question}")
         """
         endpoint = f"/vote/{congress}/{chamber}"
-        
+
         params = {
             "limit": min(limit, 250),
             "offset": offset,
         }
-        
+
         response_data = self.client.get(endpoint, params=params)
         return self.client.validate_response(response_data, VoteListResponse)
-    
+
     def get(
         self,
         congress: int,
@@ -371,7 +371,7 @@ class VotesResource:
         """
         endpoint = f"/vote/{congress}/{chamber}/{vote_number}"
         response_data = self.client.get(endpoint)
-        
+
         # API returns {"vote": {...}} structure
         vote_data = response_data.get("vote", response_data)
         return self.client.validate_response(vote_data, Vote)
@@ -409,7 +409,7 @@ class CongressClient(BaseClient):
         >>> with CongressClient(api_key="your_key") as client:
         ...     bills = client.bills.list(congress=118, limit=10)
     """
-    
+
     def __init__(
         self,
         api_key: Optional[str] = None,
@@ -431,7 +431,7 @@ class CongressClient(BaseClient):
         """
         # Get API key from parameter or environment
         api_key = api_key or os.getenv("CONGRESS_API_KEY")
-        
+
         # Initialize base client
         super().__init__(
             base_url="https://api.congress.gov/v3",
@@ -440,7 +440,7 @@ class CongressClient(BaseClient):
             rate_limit_delay=rate_limit_delay,
             max_retries=max_retries,
         )
-        
+
         # Initialize resources
         self.bills = BillsResource(self)
         self.members = MembersResource(self)

@@ -11,25 +11,24 @@ This script provides comprehensive query and reporting capabilities for the RAG 
 - Custom report generation
 """
 
+import csv
+import json
 import logging
 import os
 import sys
-from typing import List, Dict, Any, Optional, Tuple
-from pathlib import Path
-import json
 from datetime import datetime, timedelta
-import csv
-from collections import defaultdict, Counter
+from pathlib import Path
+from typing import Any, Dict, List
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 
 try:
-    import psycopg2
-    from psycopg2.extras import RealDictCursor
-    from dotenv import load_dotenv
     import numpy as np
+    import psycopg2
+    from dotenv import load_dotenv
+    from psycopg2.extras import RealDictCursor
 except ImportError as e:
     print(f"Missing dependency: {e}")
     print("Please install required packages: pip install psycopg2-binary python-dotenv numpy")
@@ -52,13 +51,13 @@ load_dotenv()
 
 class RAGQueryReporter:
     """Comprehensive query and reporting system for RAG database."""
-    
+
     def __init__(self):
         """Initialize query reporter with database connection."""
         self.db_connection = None
         self._connect_to_database()
         logger.info("RAG Query Reporter initialized successfully")
-    
+
     def _connect_to_database(self):
         """Establish database connection."""
         try:
@@ -73,7 +72,7 @@ class RAGQueryReporter:
         except Exception as e:
             logger.error(f"Failed to connect to database: {e}")
             raise
-    
+
     def semantic_search(self, query: str, limit: int = 10, threshold: float = 0.7) -> List[Dict[str, Any]]:
         """
         Perform semantic search using embeddings.
@@ -87,12 +86,12 @@ class RAGQueryReporter:
             List of matching documents with similarity scores
         """
         logger.info(f"Performing semantic search for: '{query}'")
-        
+
         # For this implementation, we'll use a placeholder query embedding
         # In a real implementation, this would use the same embedding model as the documents
-        
+
         cursor = self.db_connection.cursor(cursor_factory=RealDictCursor)
-        
+
         # Fallback to text search if no embeddings available
         cursor.execute("""
             SELECT d.id, d.title, d.content, d.source_url, d.source_type, d.created_at,
@@ -103,7 +102,7 @@ class RAGQueryReporter:
             ORDER BY text_rank DESC
             LIMIT %s
         """, (query, query, limit))
-        
+
         results = []
         for row in cursor.fetchall():
             results.append({
@@ -116,11 +115,11 @@ class RAGQueryReporter:
                 'similarity_score': float(row['text_rank']) if row['text_rank'] else 0.0,
                 'search_method': 'text_search'
             })
-        
+
         cursor.close()
         logger.info(f"Found {len(results)} documents matching query")
         return results
-    
+
     def entity_search(self, entity_text: str = None, entity_type: str = None, 
                      limit: int = 50) -> List[Dict[str, Any]]:
         """
@@ -135,24 +134,24 @@ class RAGQueryReporter:
             List of entities with related document information
         """
         logger.info(f"Searching entities: text='{entity_text}', type='{entity_type}'")
-        
+
         cursor = self.db_connection.cursor(cursor_factory=RealDictCursor)
-        
+
         # Build query based on parameters
         where_conditions = []
         params = []
-        
+
         if entity_text:
             where_conditions.append("e.text ILIKE %s")
             params.append(f"%{entity_text}%")
-        
+
         if entity_type:
             where_conditions.append("e.label = %s")
             params.append(entity_type)
-        
+
         where_clause = " AND ".join(where_conditions) if where_conditions else "TRUE"
         params.append(limit)
-        
+
         cursor.execute(f"""
             SELECT e.id, e.text, e.label, e.kb_id, e.created_at,
                    COUNT(dem.document_id) as document_count,
@@ -165,7 +164,7 @@ class RAGQueryReporter:
             ORDER BY document_count DESC, e.text
             LIMIT %s
         """, params)
-        
+
         results = []
         for row in cursor.fetchall():
             results.append({
@@ -177,11 +176,11 @@ class RAGQueryReporter:
                 'document_count': row['document_count'],
                 'related_documents': row['related_documents'][:5] if row['related_documents'] else []  # Limit to first 5
             })
-        
+
         cursor.close()
         logger.info(f"Found {len(results)} entities matching criteria")
         return results
-    
+
     def get_document_analytics(self, document_id: int = None) -> Dict[str, Any]:
         """
         Get analytics for specific document or all documents.
@@ -193,10 +192,10 @@ class RAGQueryReporter:
             Dictionary containing document analytics
         """
         cursor = self.db_connection.cursor(cursor_factory=RealDictCursor)
-        
+
         if document_id:
             logger.info(f"Getting analytics for document {document_id}")
-            
+
             # Get document details
             cursor.execute("""
                 SELECT d.id, d.title, d.content, d.source_type, d.source_url, d.created_at,
@@ -205,11 +204,11 @@ class RAGQueryReporter:
                 FROM documents d
                 WHERE d.id = %s AND NOT d.is_deleted
             """, (document_id,))
-            
+
             document = cursor.fetchone()
             if not document:
                 raise ValueError(f"Document {document_id} not found")
-            
+
             # Get related entities
             cursor.execute("""
                 SELECT e.text, e.label, COUNT(*) as mention_count
@@ -219,9 +218,9 @@ class RAGQueryReporter:
                 GROUP BY e.id, e.text, e.label
                 ORDER BY mention_count DESC
             """, (document_id,))
-            
+
             entities = cursor.fetchall()
-            
+
             analytics = {
                 'document_id': document['id'],
                 'title': document['title'],
@@ -234,10 +233,10 @@ class RAGQueryReporter:
                 'entities': [dict(e) for e in entities],
                 'estimated_reading_time': round((document['word_count'] or 0) / 200, 1)  # 200 WPM average
             }
-            
+
         else:
             logger.info("Getting analytics for all documents")
-            
+
             # Get overall statistics
             cursor.execute("""
                 SELECT 
@@ -248,9 +247,9 @@ class RAGQueryReporter:
                 FROM documents
                 WHERE NOT is_deleted
             """)
-            
+
             stats = cursor.fetchone()
-            
+
             # Get source type distribution
             cursor.execute("""
                 SELECT source_type, COUNT(*) as count
@@ -259,9 +258,9 @@ class RAGQueryReporter:
                 GROUP BY source_type
                 ORDER BY count DESC
             """)
-            
+
             source_distribution = cursor.fetchall()
-            
+
             # Get entity statistics
             cursor.execute("""
                 SELECT 
@@ -270,9 +269,9 @@ class RAGQueryReporter:
                     COUNT(DISTINCT text) as unique_entities
                 FROM entities
             """)
-            
+
             entity_stats = cursor.fetchone()
-            
+
             analytics = {
                 'total_documents': stats['total_documents'],
                 'avg_content_length': float(stats['avg_content_length']) if stats['avg_content_length'] else 0,
@@ -282,10 +281,10 @@ class RAGQueryReporter:
                 'source_distribution': [dict(s) for s in source_distribution],
                 'entity_statistics': dict(entity_stats)
             }
-        
+
         cursor.close()
         return analytics
-    
+
     def generate_content_insights(self, days_back: int = 30) -> Dict[str, Any]:
         """
         Generate content insights for the specified time period.
@@ -297,10 +296,10 @@ class RAGQueryReporter:
             Dictionary containing content insights
         """
         logger.info(f"Generating content insights for last {days_back} days")
-        
+
         cursor = self.db_connection.cursor(cursor_factory=RealDictCursor)
         cutoff_date = datetime.now() - timedelta(days=days_back)
-        
+
         # Get document creation trends
         cursor.execute("""
             SELECT DATE(created_at) as date, COUNT(*) as documents_created
@@ -309,9 +308,9 @@ class RAGQueryReporter:
             GROUP BY DATE(created_at)
             ORDER BY date
         """, (cutoff_date,))
-        
+
         creation_trends = cursor.fetchall()
-        
+
         # Get most common entity types
         cursor.execute("""
             SELECT e.label, COUNT(*) as count
@@ -323,9 +322,9 @@ class RAGQueryReporter:
             ORDER BY count DESC
             LIMIT 10
         """, (cutoff_date,))
-        
+
         top_entity_types = cursor.fetchall()
-        
+
         # Get most mentioned entities
         cursor.execute("""
             SELECT e.text, e.label, COUNT(*) as mention_count
@@ -337,9 +336,9 @@ class RAGQueryReporter:
             ORDER BY mention_count DESC
             LIMIT 20
         """, (cutoff_date,))
-        
+
         top_entities = cursor.fetchall()
-        
+
         # Get content length distribution
         cursor.execute("""
             SELECT 
@@ -355,9 +354,9 @@ class RAGQueryReporter:
             GROUP BY length_category
             ORDER BY count DESC
         """, (cutoff_date,))
-        
+
         length_distribution = cursor.fetchall()
-        
+
         insights = {
             'analysis_period': {
                 'days_back': days_back,
@@ -370,10 +369,10 @@ class RAGQueryReporter:
             'content_length_distribution': [dict(l) for l in length_distribution],
             'insights_generated_at': datetime.now().isoformat()
         }
-        
+
         cursor.close()
         return insights
-    
+
     def generate_performance_report(self) -> Dict[str, Any]:
         """
         Generate database performance and usage report.
@@ -382,9 +381,9 @@ class RAGQueryReporter:
             Dictionary containing performance metrics
         """
         logger.info("Generating performance report")
-        
+
         cursor = self.db_connection.cursor(cursor_factory=RealDictCursor)
-        
+
         # Get table sizes
         cursor.execute("""
             SELECT 
@@ -397,9 +396,9 @@ class RAGQueryReporter:
             WHERE schemaname = 'public' 
             AND tablename IN ('documents', 'entities', 'document_entity_map')
         """)
-        
+
         table_stats = cursor.fetchall()
-        
+
         # Get index usage
         cursor.execute("""
             SELECT 
@@ -412,9 +411,9 @@ class RAGQueryReporter:
             JOIN pg_stat_user_tables t ON i.relid = t.relid
             WHERE t.schemaname = 'public'
         """)
-        
+
         index_usage = cursor.fetchall()
-        
+
         # Get database size information
         cursor.execute("""
             SELECT 
@@ -422,9 +421,9 @@ class RAGQueryReporter:
                 pg_size_pretty(pg_total_relation_size('documents')) as documents_table_size,
                 pg_size_pretty(pg_total_relation_size('entities')) as entities_table_size
         """)
-        
+
         size_info = cursor.fetchone()
-        
+
         # Get recent query performance (if pg_stat_statements is available)
         try:
             cursor.execute("""
@@ -437,7 +436,7 @@ class RAGQueryReporter:
             query_stats = cursor.fetchall()
         except:
             query_stats = []
-        
+
         report = {
             'report_generated_at': datetime.now().isoformat(),
             'database_size_info': dict(size_info) if size_info else {},
@@ -446,10 +445,10 @@ class RAGQueryReporter:
             'query_performance': [dict(q) for q in query_stats],
             'recommendations': self._generate_performance_recommendations(table_stats, index_usage)
         }
-        
+
         cursor.close()
         return report
-    
+
     def export_data(self, export_format: str = 'json', output_file: str = None, 
                    query: str = None) -> str:
         """
@@ -466,11 +465,11 @@ class RAGQueryReporter:
         if not output_file:
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
             output_file = f"rag_export_{timestamp}.{export_format}"
-        
+
         logger.info(f"Exporting data to {output_file} in {export_format} format")
-        
+
         cursor = self.db_connection.cursor(cursor_factory=RealDictCursor)
-        
+
         if query:
             cursor.execute(query)
         else:
@@ -486,13 +485,13 @@ class RAGQueryReporter:
                 GROUP BY d.id, d.title, d.content, d.source_type, d.source_url, d.created_at
                 ORDER BY d.created_at DESC
             """)
-        
+
         data = cursor.fetchall()
-        
+
         if export_format.lower() == 'json':
             with open(output_file, 'w', encoding='utf-8') as f:
                 json.dump([dict(row) for row in data], f, indent=2, default=str)
-        
+
         elif export_format.lower() == 'csv':
             if data:
                 with open(output_file, 'w', newline='', encoding='utf-8') as f:
@@ -500,11 +499,11 @@ class RAGQueryReporter:
                     writer.writeheader()
                     for row in data:
                         writer.writerow(row)
-        
+
         cursor.close()
         logger.info(f"Exported {len(data)} records to {output_file}")
         return output_file
-    
+
     def create_custom_report(self, report_config: Dict[str, Any]) -> Dict[str, Any]:
         """
         Create a custom report based on configuration.
@@ -516,66 +515,66 @@ class RAGQueryReporter:
             Generated report data
         """
         logger.info("Creating custom report")
-        
+
         report = {
             'report_name': report_config.get('name', 'Custom Report'),
             'generated_at': datetime.now().isoformat(),
             'config': report_config,
             'sections': {}
         }
-        
+
         cursor = self.db_connection.cursor(cursor_factory=RealDictCursor)
-        
+
         # Process each section in the report config
         for section_name, section_config in report_config.get('sections', {}).items():
             if section_config['type'] == 'query':
                 cursor.execute(section_config['sql'], section_config.get('params', []))
                 report['sections'][section_name] = [dict(row) for row in cursor.fetchall()]
-            
+
             elif section_config['type'] == 'analytics':
                 if section_config['analytics_type'] == 'document_stats':
                     report['sections'][section_name] = self.get_document_analytics()
                 elif section_config['analytics_type'] == 'content_insights':
                     days_back = section_config.get('days_back', 30)
                     report['sections'][section_name] = self.generate_content_insights(days_back)
-            
+
             elif section_config['type'] == 'search':
                 search_results = self.semantic_search(
                     section_config['query'],
                     limit=section_config.get('limit', 10)
                 )
                 report['sections'][section_name] = search_results
-        
+
         cursor.close()
         return report
-    
+
     def _generate_performance_recommendations(self, table_stats: List[Dict], 
                                            index_usage: List[Dict]) -> List[str]:
         """Generate performance optimization recommendations."""
         recommendations = []
-        
+
         # Check for unused indexes
         for index in index_usage:
             if index['idx_scan'] == 0:
                 recommendations.append(f"Consider dropping unused index: {index['indexname']}")
-        
+
         # Check for tables without proper indexing
         table_names = {stat['tablename'] for stat in table_stats}
         indexed_tables = {index['tablename'] for index in index_usage}
-        
+
         for table in table_names:
             if table not in indexed_tables:
                 recommendations.append(f"Consider adding indexes to table: {table}")
-        
+
         # General recommendations
         recommendations.extend([
             "Run VACUUM ANALYZE regularly to update table statistics",
             "Monitor query performance and add indexes for slow queries",
             "Consider partitioning large tables for better performance"
         ])
-        
+
         return recommendations
-    
+
     def close(self):
         """Close database connection."""
         if self.db_connection:
@@ -586,7 +585,7 @@ class RAGQueryReporter:
 def main():
     """Main execution function."""
     import argparse
-    
+
     parser = argparse.ArgumentParser(description="RAG Database Query and Reporting")
     parser.add_argument('--search', type=str, help='Perform semantic search')
     parser.add_argument('--entity-search', type=str, help='Search for entities')
@@ -598,18 +597,18 @@ def main():
     parser.add_argument('--output', type=str, help='Output file path')
     parser.add_argument('--query', type=str, help='Custom SQL query for export')
     parser.add_argument('--limit', type=int, default=10, help='Limit number of results')
-    
+
     args = parser.parse_args()
-    
+
     reporter = RAGQueryReporter()
-    
+
     try:
         if args.search:
             # Perform semantic search
             results = reporter.semantic_search(args.search, limit=args.limit)
             print("Search Results:")
             print(json.dumps(results, indent=2, default=str))
-        
+
         elif args.entity_search:
             # Search entities
             results = reporter.entity_search(
@@ -619,25 +618,25 @@ def main():
             )
             print("Entity Search Results:")
             print(json.dumps(results, indent=2, default=str))
-        
+
         elif args.document_analytics is not None:
             # Get document analytics
             analytics = reporter.get_document_analytics(args.document_analytics)
             print("Document Analytics:")
             print(json.dumps(analytics, indent=2, default=str))
-        
+
         elif args.content_insights:
             # Generate content insights
             insights = reporter.generate_content_insights(args.content_insights)
             print("Content Insights:")
             print(json.dumps(insights, indent=2, default=str))
-        
+
         elif args.performance_report:
             # Generate performance report
             report = reporter.generate_performance_report()
             print("Performance Report:")
             print(json.dumps(report, indent=2, default=str))
-        
+
         elif args.export:
             # Export data
             output_file = reporter.export_data(
@@ -646,10 +645,10 @@ def main():
                 query=args.query
             )
             print(f"Data exported to: {output_file}")
-        
+
         else:
             print("Please specify an operation. Use --help for available options.")
-    
+
     finally:
         reporter.close()
 

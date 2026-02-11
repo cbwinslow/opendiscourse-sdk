@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Compute embeddings for a sample text set."""
 import os
+
 from openai import OpenAI
 
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))

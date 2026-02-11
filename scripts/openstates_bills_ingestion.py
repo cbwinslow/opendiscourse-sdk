@@ -4,33 +4,31 @@ OpenStates Bills Ingestion System
 Comprehensive bills data ingestion with actions, votes, and relationships
 """
 
-import os
-import sys
-import requests
 import hashlib
 import json
-import time
 import logging
+import os
+import sys
+import time
+from dataclasses import field
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
 import psycopg2
-import threading
-import concurrent.futures
-from psycopg2.extras import execute_values, Json
-from datetime import datetime, timedelta
-from typing import Dict, Any, List, Optional, Tuple, Union
-from dataclasses import dataclass, field
+import requests
+from psycopg2.extras import Json, execute_values
 from pydantic import BaseModel, ValidationError
-from enum import Enum
 
 # Add project root to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from rate_limiter import adaptive_limiters
-from env_config import get_optional_env_var, validate_api_keys
 from enhanced_openstates_ingestion import (
-    OpenStatesRateLimitManager, OpenStatesPaginationManager,
-    OpenStatesDataValidator, OpenStatesProgressMonitor
+    OpenStatesDataValidator,
+    OpenStatesPaginationManager,
+    OpenStatesProgressMonitor,
+    OpenStatesRateLimitManager,
 )
-
+from env_config import get_optional_env_var
 
 # ============================================================================
 # BILLS DATA MODELS
@@ -831,7 +829,7 @@ def main():
 
         # Display progress summary
         progress_summary = progress_monitor.get_summary()
-        print(f"\n📊 Progress Summary:")
+        print("\n📊 Progress Summary:")
         print(f"   Total elapsed: {progress_summary.get('total_elapsed_seconds', 0):.1f}s")
         print(f"   Average rate: {progress_summary.get('average_rate', 0):.1f} records/s")
 

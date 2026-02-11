@@ -5,7 +5,6 @@ This script starts the OpenDiscourse application with the specified settings.
 """
 
 import logging
-import os
 import sys
 from pathlib import Path
 

@@ -1,9 +1,9 @@
 """Tests for task and inference ingestion endpoints."""
-import json
-import os
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
+
 from api.main import app
 
 client = TestClient(app)

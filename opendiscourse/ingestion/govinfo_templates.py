@@ -9,8 +9,9 @@ from typing import Optional
 
 import requests
 
-from .document_ingestion import DocumentMetadata, _save_document
 from vector_store.weaviate_manager import WeaviateManager
+
+from .document_ingestion import DocumentMetadata, _save_document
 
 logger = logging.getLogger(__name__)
 

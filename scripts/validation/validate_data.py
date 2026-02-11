@@ -1,7 +1,8 @@
+import hashlib
 import os
 import xml.etree.ElementTree as ET
+
 from lxml import etree
-import hashlib
 
 
 def validate_xml_structure(xml_file, xsd_file=None):

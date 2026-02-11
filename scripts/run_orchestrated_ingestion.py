@@ -6,21 +6,20 @@ This is the main entry point for running orchestrated multi-agent data ingestion
 It provides a simple interface to start, monitor, and manage the complete ingestion process.
 """
 
+import argparse
 import os
 import sys
-import json
 import time
-import argparse
 from datetime import datetime
-from typing import Dict, Any, List
+from typing import Any, Dict
 
 # Add project path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from orchestrator_framework import Orchestrator, AgentTask, AgentStatus
-from ingestion_config import validate_all_api_keys, get_ingestion_mode_from_env
-
 # Load environment variables
 from dotenv import load_dotenv
+from ingestion_config import get_ingestion_mode_from_env, validate_all_api_keys
+from orchestrator_framework import Orchestrator
+
 load_dotenv()
 
 def print_banner():
@@ -183,7 +182,7 @@ def run_sequential_demo():
         'overall_status': 'SUCCESS' if len(failed_phases) == 0 else 'PARTIAL_SUCCESS'
     }
 
-    print(f"\n📊 Sequential Demo Results:")
+    print("\n📊 Sequential Demo Results:")
     print(f"✅ Completed: {len(completed_phases)}/{len(phases)} phases")
     print(f"❌ Failed: {len(failed_phases)}/{len(phases)} phases")
     print(f"⏱️  Total Duration: {total_duration:.1f}s")
@@ -267,7 +266,7 @@ def run_parallel_demo():
         'overall_status': 'SUCCESS' if len(failed_groups) == 0 else 'PARTIAL_SUCCESS'
     }
 
-    print(f"\n📊 Parallel Demo Results:")
+    print("\n📊 Parallel Demo Results:")
     print(f"✅ Completed: {len(completed_groups)}/{len(parallel_groups)} groups")
     print(f"❌ Failed: {len(failed_groups)}/{len(parallel_groups)} groups")
     print(f"⏱️  Total Duration: {total_duration:.1f}s")

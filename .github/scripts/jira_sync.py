@@ -19,7 +19,7 @@ auth = (JIRA_USER, JIRA_TOKEN)
 
 def parse_tasks():
     tasks = []
-    with open(TASKS_FILE, "r") as f:
+    with open(TASKS_FILE) as f:
         for line in f:
             m = re.match(r"\| ([^|]+)\| ([^|]+)\| ([^|]+)\| ([^|]+)\|", line)
             if m:

@@ -6,20 +6,21 @@ This script provides comprehensive verification of the bulk data ingestion proce
 with working queries that show what's been ingested and what's left.
 """
 
+import json
 import os
 import sys
-import json
 from datetime import datetime
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List
+
 import psycopg2
 from psycopg2.extras import DictCursor
 
 # Add project path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from ingestion_config import validate_all_api_keys, get_ingestion_mode_from_env
-
 # Load environment variables
 from dotenv import load_dotenv
+from ingestion_config import get_ingestion_mode_from_env, validate_all_api_keys
+
 load_dotenv()
 
 class IngestionVerifier:
@@ -259,7 +260,7 @@ class IngestionVerifier:
 
         # Summary
         summary = report['summary']
-        print(f"\\n📊 SUMMARY:")
+        print("\\n📊 SUMMARY:")
         print(f"  Total Records: {summary['total_records_ingested']:,}")
         print(f"  Members: {summary['total_members_ingested']:,}")
         print(f"  Bills: {summary['total_bills_ingested']:,}")
@@ -267,7 +268,7 @@ class IngestionVerifier:
         print(f"  Overall Status: {summary['overall_status']}")
 
         # Checkpoint Details
-        print(f"\\n📋 CHECKPOINT STATUS:")
+        print("\\n📋 CHECKPOINT STATUS:")
         for cp in report['checkpoint_status']:
             status_icon = "✅" if cp['is_completed'] else "🔄" if cp['total_processed'] > 0 else "❌"
             processed = cp['total_processed'] or 0
@@ -276,7 +277,7 @@ class IngestionVerifier:
             print(f"  {status_icon} {cp['data_source']} | {cp['data_type']} | {cp['category']}: {processed:,}/{estimated} ({percentage:.1f}%)")
 
         # Members Status
-        print(f"\\n👥 MEMBERS STATUS:")
+        print("\\n👥 MEMBERS STATUS:")
         for member in report['members_status']:
             status_icon = "✅" if member['status'] == 'COMPLETE' else "🔄" if member['status'] == 'IN_PROGRESS' else "❌"
             expected = 550 if member['congress'] in [117, 118] else 440
@@ -284,7 +285,7 @@ class IngestionVerifier:
             print(f"  {status_icon} Congress {member['congress']}: {member['total_members']:,}/{expected} ({completion:.1f}%) - {member['status']}")
 
         # Bills Status
-        print(f"\\n📜 BILLS STATUS:")
+        print("\\n📜 BILLS STATUS:")
         for bill in report['bills_status']:
             status_icon = "🔄" if bill['total_bills'] > 0 else "❌"
             print(f"  {status_icon} Congress {bill['congress_number']}: {bill['total_bills']:,} bills - {bill['status']}")
@@ -295,7 +296,7 @@ class IngestionVerifier:
             members = completeness['members_completeness'][0]
             total = members['total_members']
             complete_pct = (members['has_bioguide_id'] / total * 100) if total > 0 else 0
-            print(f"\\n🔍 DATA QUALITY:")
+            print("\\n🔍 DATA QUALITY:")
             print(f"  Members: {complete_pct:.1f}% have bioguide_id")
 
         if completeness.get('bills_completeness'):

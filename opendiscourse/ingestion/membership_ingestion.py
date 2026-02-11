@@ -1,7 +1,7 @@
 import logging
-import requests
 from typing import Optional
 
+import requests
 
 from vector_store.weaviate_manager import WeaviateManager
 

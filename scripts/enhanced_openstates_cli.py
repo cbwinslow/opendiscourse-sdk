@@ -4,21 +4,19 @@ Enhanced OpenStates CLI
 Professional command-line interface for comprehensive OpenStates data ingestion
 """
 
+import json
+import logging
 import os
 import sys
-import click
-import json
-import time
-import logging
 from datetime import datetime
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict
+
+import click
 
 # Add project root to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from openstates_orchestrator import OpenStatesOrchestrator
-from enhanced_openstates_ingestion import EnhancedOpenStatesIngestor
-
 
 # ============================================================================
 # CLI CONFIGURATION
@@ -76,7 +74,7 @@ def ingest(jurisdiction, parallel, include_details, data_types, session, batch_s
         data_type_list = data_types.split(',') if data_types else ['people', 'bills', 'committees', 'events']
         data_type_list = [dt.strip() for dt in data_type_list]
 
-        click.echo(f"📋 Configuration:")
+        click.echo("📋 Configuration:")
         click.echo(f"   Jurisdiction: {jurisdiction or 'All'}")
         click.echo(f"   Data types: {', '.join(data_type_list)}")
         click.echo(f"   Session: {session or 'All'}")
@@ -128,7 +126,7 @@ def ingest(jurisdiction, parallel, include_details, data_types, session, batch_s
 
         else:
             # Comprehensive ingestion
-            click.echo(f"\n📍 Starting comprehensive ingestion")
+            click.echo("\n📍 Starting comprehensive ingestion")
 
             # Build regions list
             regions = ['northeast_states', 'southeast_states', 'midwest_states', 'west_states', 'southwest_states']
@@ -164,7 +162,7 @@ def resume(data_type, jurisdiction, plan, from_checkpoint, force):
     try:
         orchestrator = OpenStatesOrchestrator()
 
-        click.echo(f"📋 Resume configuration:")
+        click.echo("📋 Resume configuration:")
         click.echo(f"   Data type: {data_type or 'All'}")
         click.echo(f"   Jurisdiction: {jurisdiction or 'All'}")
         click.echo(f"   Plan: {plan or 'Auto-detect'}")
@@ -186,7 +184,7 @@ def resume(data_type, jurisdiction, plan, from_checkpoint, force):
             else:
                 # Show all plan statuses
                 plans = orchestrator.get_available_plans()
-                click.echo(f"\n📋 Plan statuses:")
+                click.echo("\n📋 Plan statuses:")
                 for plan_name in sorted(plans.keys()):
                     status = orchestrator.get_plan_status(plan_name)
                     status_icon = "✅" if status['status'] == 'completed' else "🔄" if status['status'] == 'pending' else "❌"
@@ -206,7 +204,7 @@ def resume(data_type, jurisdiction, plan, from_checkpoint, force):
             display_ingestion_result(result)
 
         else:
-            click.echo(f"\n📍 Resuming comprehensive ingestion")
+            click.echo("\n📍 Resuming comprehensive ingestion")
             result = orchestrator.execute_comprehensive_ingestion(parallel=True)
             display_comprehensive_result(result)
 
@@ -256,7 +254,7 @@ def status(plan, jurisdiction, data_type, detailed):
         else:
             # Show overall statistics
             stats = orchestrator.get_orchestration_statistics()
-            click.echo(f"\n📊 Overall Statistics:")
+            click.echo("\n📊 Overall Statistics:")
             click.echo(f"   Start time: {stats['start_time']}")
             click.echo(f"   Duration: {stats['duration_seconds']:.1f}s")
             click.echo(f"   Plans executed: {stats['total_plans_executed']}")
@@ -266,7 +264,7 @@ def status(plan, jurisdiction, data_type, detailed):
             click.echo(f"   Records/second: {stats['records_per_second']:.1f}")
 
             if detailed:
-                click.echo(f"\n📋 Detailed Plan Status:")
+                click.echo("\n📋 Detailed Plan Status:")
                 plans = orchestrator.get_available_plans()
                 for plan_name in sorted(plans.keys(), key=lambda x: plans[x].priority):
                     status = orchestrator.get_plan_status(plan_name)
@@ -374,14 +372,14 @@ def validate(jurisdiction, data_type, sample_size, fix_errors):
     try:
         orchestrator = OpenStatesOrchestrator()
 
-        click.echo(f"📋 Validation configuration:")
+        click.echo("📋 Validation configuration:")
         click.echo(f"   Jurisdiction: {jurisdiction or 'All'}")
         click.echo(f"   Data type: {data_type or 'All'}")
         click.echo(f"   Sample size: {sample_size}")
         click.echo(f"   Fix errors: {fix_errors}")
 
         # This would implement data validation logic
-        click.echo(f"\n🔍 Validation not yet implemented")
+        click.echo("\n🔍 Validation not yet implemented")
         click.echo(f"   Would validate {sample_size} records")
 
         if jurisdiction:
@@ -433,7 +431,7 @@ def report(output, format, include_details):
 def display_ingestion_result(result: Dict[str, Any]):
     """Display ingestion result in a formatted way"""
 
-    click.echo(f"\n📊 Ingestion Results:")
+    click.echo("\n📊 Ingestion Results:")
     click.echo(f"   Total processed: {result.get('total_processed', 0):,}")
     click.echo(f"   Total errors: {result.get('total_errors', 0):,}")
     click.echo(f"   Success rate: {result.get('success_rate', 0):.1f}%")
@@ -442,7 +440,7 @@ def display_ingestion_result(result: Dict[str, Any]):
     if 'results' in result:
         sub_results = result['results']
         if isinstance(sub_results, dict):
-            click.echo(f"\n📋 Detailed Results:")
+            click.echo("\n📋 Detailed Results:")
             for key, value in sub_results.items():
                 if isinstance(value, dict) and 'total_processed' in value:
                     click.echo(f"   {key}: {value.get('total_processed', 0):,} records")
@@ -453,7 +451,7 @@ def display_ingestion_result(result: Dict[str, Any]):
 def display_comprehensive_result(result: Dict[str, Any]):
     """Display comprehensive ingestion result"""
 
-    click.echo(f"\n📊 Comprehensive Ingestion Results:")
+    click.echo("\n📊 Comprehensive Ingestion Results:")
     click.echo(f"   Regions: {', '.join(result.get('regions', []))}")
     click.echo(f"   Parallel execution: {result.get('parallel_execution', False)}")
     click.echo(f"   Total processed: {result.get('total_processed', 0):,}")
@@ -465,7 +463,7 @@ def display_comprehensive_result(result: Dict[str, Any]):
 
     if 'results' in result:
         results = result['results']
-        click.echo(f"\n📋 Phase Results:")
+        click.echo("\n📋 Phase Results:")
         for phase_name, phase_results in results.items():
             if isinstance(phase_results, dict):
                 phase_processed = sum(r.get('records_processed', 0) for r in phase_results.values() if hasattr(r, 'records_processed'))
@@ -529,12 +527,12 @@ Overall Statistics:
 """
 
         if include_details:
-            report += f"\nExecuted Plans:\n"
+            report += "\nExecuted Plans:\n"
             for plan_name in stats.get('executed_plans', []):
                 report += f"  ✅ {plan_name}\n"
 
             if stats.get('failed_plans'):
-                report += f"\nFailed Plans:\n"
+                report += "\nFailed Plans:\n"
                 for plan_name in stats.get('failed_plans', []):
                     report += f"  ❌ {plan_name}\n"
 

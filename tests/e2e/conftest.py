@@ -1,9 +1,10 @@
 # tests/e2e/conftest.py
 
-import pytest
-import os
-import psycopg2
 import json
+import os
+
+import psycopg2
+import pytest
 from psycopg2.extras import DictCursor
 
 # --- Database Fixtures ---
@@ -28,17 +29,17 @@ def setup_test_database(db_connection_params):
     conn = psycopg2.connect(**{**db_connection_params, 'database': 'postgres'})
     conn.autocommit = True
     cursor = conn.cursor()
-    
+
     db_name = db_connection_params['database']
     cursor.execute(f"DROP DATABASE IF EXISTS {db_name};")
     cursor.execute(f"CREATE DATABASE {db_name};")
-    
+
     conn.close()
 
     # Connect to the new database to create schema
     conn = psycopg2.connect(**db_connection_params)
     cursor = conn.cursor()
-    
+
     # Minimal schema required for ingestion script
     cursor.execute("""
         CREATE SCHEMA IF NOT EXISTS congress;
@@ -98,19 +99,19 @@ def db_cursor(setup_test_database, db_connection_params):
 def mock_api_response():
     """Loads sample API response from a file."""
     path = os.path.join(os.path.dirname(__file__), 'sample_member_api_response.json')
-    with open(path, 'r') as f:
+    with open(path) as f:
         return json.load(f)
 
 @pytest.fixture
 def mock_successful_api(mocker, mock_api_response):
     """Mocks requests.get to return a successful response."""
     mock_get = mocker.patch('requests.get')
-    
+
     # Mock the response object
     mock_response = mocker.Mock()
     mock_response.status_code = 200
     mock_response.json.return_value = mock_api_response
-    
+
     mock_get.return_value = mock_response
     return mock_get
 
@@ -123,7 +124,7 @@ def mock_failed_api(mocker):
     mock_response.status_code = 500
     mock_response.json.return_value = {"message": "Internal Server Error"}
     mock_response.raise_for_status.side_effect = psycopg2.HTTPError("500 Server Error")
-    
+
     mock_get.return_value = mock_response
     return mock_get
 
@@ -136,6 +137,6 @@ def mock_rate_limit_api(mocker):
     mock_response.status_code = 429
     mock_response.json.return_value = {"message": "Rate limit exceeded"}
     mock_response.raise_for_status.side_effect = psycopg2.HTTPError("429 Rate Limit")
-    
+
     mock_get.return_value = mock_response
     return mock_get

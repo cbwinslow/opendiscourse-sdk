@@ -1,7 +1,6 @@
 """Ollama client for LLM interactions."""
 
 import asyncio
-import json
 import logging
 from typing import Any, Dict, List, Optional
 
@@ -62,13 +61,13 @@ class OllamaClient:
     ) -> OllamaResponse:
         """Generate a response using Ollama."""
         model = model or self.config.model
-        
+
         payload = {
             "model": model,
             "prompt": prompt,
             "stream": False
         }
-        
+
         if system:
             payload["system"] = system
         if context:
@@ -79,10 +78,10 @@ class OllamaClient:
         try:
             response = await self.client.post("/api/generate", json=payload)
             response.raise_for_status()
-            
+
             data = response.json()
             return OllamaResponse(**data)
-            
+
         except httpx.RequestError as e:
             logger.error(f"Failed to connect to Ollama: {e}")
             raise ConnectionError(f"Ollama connection failed: {e}")
@@ -98,20 +97,20 @@ class OllamaClient:
     ) -> OllamaResponse:
         """Have a conversation using Ollama chat API."""
         model = model or self.config.model
-        
+
         payload = {
             "model": model,
             "messages": messages,
             "stream": False
         }
-        
+
         if options:
             payload["options"] = options
 
         try:
             response = await self.client.post("/api/chat", json=payload)
             response.raise_for_status()
-            
+
             data = response.json()
             # Convert chat response format to generate response format
             return OllamaResponse(
@@ -125,7 +124,7 @@ class OllamaClient:
                 eval_count=data.get("eval_count"),
                 eval_duration=data.get("eval_duration")
             )
-            
+
         except httpx.RequestError as e:
             logger.error(f"Failed to connect to Ollama: {e}")
             raise ConnectionError(f"Ollama connection failed: {e}")
@@ -147,7 +146,7 @@ class OllamaClient:
     async def pull_model(self, model: str) -> bool:
         """Pull a model from Ollama registry."""
         payload = {"name": model}
-        
+
         try:
             response = await self.client.post("/api/pull", json=payload)
             response.raise_for_status()
@@ -198,7 +197,7 @@ async def generate_embeddings(
 ) -> List[List[float]]:
     """Generate embeddings for text using Ollama."""
     config = OllamaConfig(model=model)
-    
+
     async with OllamaClient(config) as client:
         embeddings = []
         for text in texts:
@@ -214,7 +213,7 @@ async def generate_embeddings(
                 logger.error(f"Failed to generate embedding for text: {e}")
                 # Return zero vector as fallback
                 embeddings.append([0.0] * 384)  # Default dimension
-        
+
         return embeddings
 
 

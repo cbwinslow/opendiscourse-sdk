@@ -3,12 +3,12 @@ Logging utilities for Congress CLI.
 """
 
 import logging
-import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
-from datetime import datetime
-from rich.logging import RichHandler
+
 from rich.console import Console
+from rich.logging import RichHandler
 
 
 def setup_logging(verbose: bool = False, log_file: Optional[str] = None):

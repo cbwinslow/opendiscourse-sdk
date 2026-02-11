@@ -64,8 +64,11 @@ include = '\.pyi?$'
 [tool.ruff]
 line-length = 88
 target-version = "py38"
-select = ["E", "F", "I"]  # Basic error checking
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP"]  # Basic error checking, warnings, and pyupgrade
+ignore = ["E501"]  # Ignore line too long (handled by formatter)
 unfixable = []
 
-[tool.ruff.isort]
+[tool.ruff.lint.isort]
 known-first-party = ["opendiscourse"]

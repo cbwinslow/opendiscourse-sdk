@@ -12,10 +12,11 @@ This script scans the repository for:
 
 import os
 import re
-from pathlib import Path
-from typing import List, Dict, Any
-from github import Github
 from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Any, Dict, List
+
+from github import Github
 
 
 class RepositoryErrorScanner:
@@ -183,7 +184,7 @@ class RepositoryErrorScanner:
         if failing_prs:
             self._create_failing_pr_summary(failing_prs)
 
-        print(f"\n✅ Scan complete!")
+        print("\n✅ Scan complete!")
         print(f"   - TODO/FIXME comments: {len(todos)}")
         print(f"   - Production issues: {len(production_issues)}")
         print(f"   - Failed workflows: {len(failed_workflows)}")

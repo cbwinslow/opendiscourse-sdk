@@ -3,22 +3,22 @@ Congress.gov API client with sophisticated error handling and retry logic.
 """
 
 import time
-import requests
-from typing import Dict, Any, Optional, List, Callable
-from functools import wraps
 from datetime import datetime, timedelta
-import logging
+from functools import wraps
+from typing import Any, Callable, Dict, List, Optional
+
+import requests
 
 from ..models.api_models import (
+    APIConfig,
     APIResponse,
-    CongressMember,
-    CongressBill,
-    MemberResponse,
     BillResponse,
-    APIConfig
+    CongressBill,
+    CongressMember,
+    MemberResponse,
 )
-from ..utils.logger import get_logger
 from ..utils.config import get_config
+from ..utils.logger import get_logger
 
 
 class RateLimiter:
@@ -161,7 +161,7 @@ class CongressAPIClient:
         self.session.headers.update({
             'X-API-Key': self.config.api_key,
             'Accept': 'application/json',
-            'User-Agent': f'congress-cli/1.0.0'
+            'User-Agent': 'congress-cli/1.0.0'
         })
 
         # Initialize components

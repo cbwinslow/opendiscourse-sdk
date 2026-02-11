@@ -26,16 +26,16 @@ Version: 1.0.0
 
 try:
     from opendiscourse_sdk.congress.client import CongressClient
-    from opendiscourse_sdk.govinfo.client import GovInfoClient
-    from opendiscourse_sdk.openstates.client import OpenStatesClient
     from opendiscourse_sdk.exceptions import (
-        OpenDiscourseSDKError,
         APIError,
         AuthenticationError,
-        RateLimitError,
         NotFoundError,
+        OpenDiscourseSDKError,
+        RateLimitError,
         ValidationError,
     )
+    from opendiscourse_sdk.govinfo.client import GovInfoClient
+    from opendiscourse_sdk.openstates.client import OpenStatesClient
 except ImportError as e:
     # Fallback if dependencies aren't installed
     import warnings

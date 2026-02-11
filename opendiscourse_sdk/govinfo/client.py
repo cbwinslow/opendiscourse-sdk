@@ -23,17 +23,15 @@ License: MIT
 """
 
 import os
-from datetime import date
 from typing import Optional
 
 from opendiscourse_sdk.base import BaseClient
-from opendiscourse_sdk.enums import GovInfoCollection, DocumentFormat
+from opendiscourse_sdk.enums import DocumentFormat, GovInfoCollection
 from opendiscourse_sdk.models.govinfo import (
     Collection,
     CollectionListResponse,
     Package,
     PackageListResponse,
-    PackageSummary,
 )
 
 
@@ -46,7 +44,7 @@ class PackagesResource:
     Attributes:
         client: Parent GovInfoClient instance
     """
-    
+
     def __init__(self, client: "GovInfoClient") -> None:
         """
         Initialize the packages resource.
@@ -55,7 +53,7 @@ class PackagesResource:
             client: Parent GovInfoClient instance
         """
         self.client = client
-    
+
     def list(
         self,
         collection: GovInfoCollection,
@@ -92,17 +90,17 @@ class PackagesResource:
                 endpoint = f"{endpoint}/{end_date}"
         else:
             endpoint = f"/collections/{collection}"
-        
+
         # Build parameters
         params = {
             "offsetMark": offset_mark,
             "pageSize": min(page_size, 1000),  # API max is 1000
         }
-        
+
         # Make request
         response_data = self.client.get(endpoint, params=params)
         return self.client.validate_response(response_data, PackageListResponse)
-    
+
     def get(self, package_id: str) -> Package:
         """
         Get detailed information about a specific package.
@@ -121,7 +119,7 @@ class PackagesResource:
         endpoint = f"/packages/{package_id}/summary"
         response_data = self.client.get(endpoint)
         return self.client.validate_response(response_data, Package)
-    
+
     def get_content(
         self,
         package_id: str,
@@ -145,7 +143,7 @@ class PackagesResource:
             ... )
         """
         endpoint = f"/packages/{package_id}/{content_type.value}"
-        
+
         # Get response as text instead of JSON
         response = self.client.session.get(
             self.client._build_url(endpoint),
@@ -153,7 +151,7 @@ class PackagesResource:
             headers=self.client._prepare_headers(),
             timeout=self.client.timeout,
         )
-        
+
         if response.status_code == 200:
             return response.text
         else:
@@ -170,7 +168,7 @@ class CollectionsResource:
     Attributes:
         client: Parent GovInfoClient instance
     """
-    
+
     def __init__(self, client: "GovInfoClient") -> None:
         """
         Initialize the collections resource.
@@ -179,7 +177,7 @@ class CollectionsResource:
             client: Parent GovInfoClient instance
         """
         self.client = client
-    
+
     def list(self) -> CollectionListResponse:
         """
         List all available GovInfo collections.
@@ -195,7 +193,7 @@ class CollectionsResource:
         endpoint = "/collections"
         response_data = self.client.get(endpoint)
         return self.client.validate_response(response_data, CollectionListResponse)
-    
+
     def get(self, collection_code: GovInfoCollection) -> Collection:
         """
         Get information about a specific collection.
@@ -246,7 +244,7 @@ class GovInfoClient(BaseClient):
         >>> # Get packages from a collection
         >>> packages = client.packages.list("BILLS", start_date="2024-01-01")
     """
-    
+
     def __init__(
         self,
         api_key: Optional[str] = None,
@@ -265,7 +263,7 @@ class GovInfoClient(BaseClient):
         """
         # Get API key from parameter or environment
         api_key = api_key or os.getenv("GOVINFO_API_KEY")
-        
+
         # Initialize base client
         super().__init__(
             base_url="https://api.govinfo.gov",
@@ -274,11 +272,11 @@ class GovInfoClient(BaseClient):
             rate_limit_delay=rate_limit_delay,
             max_retries=max_retries,
         )
-        
+
         # Initialize resources
         self.packages = PackagesResource(self)
         self.collections = CollectionsResource(self)
-    
+
     def _prepare_headers(self, headers: Optional[dict] = None) -> dict:
         """
         Prepare request headers for GovInfo API.
@@ -289,7 +287,7 @@ class GovInfoClient(BaseClient):
         if self.api_key:
             headers["X-Api-Key"] = self.api_key
         return headers
-    
+
     def _prepare_params(self, params: Optional[dict] = None) -> dict:
         """
         Prepare request parameters for GovInfo API.

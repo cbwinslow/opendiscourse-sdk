@@ -2,14 +2,15 @@
 Configuration management for Congress CLI.
 """
 
-import os
 import json
-from pathlib import Path
-from typing import Optional, Dict, Any
+import os
 from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Dict, Optional
+
 from dotenv import load_dotenv
 
-from ..models.api_models import DatabaseConfig, APIConfig, IngestionConfig
+from ..models.api_models import APIConfig, DatabaseConfig
 
 # Load environment variables
 load_dotenv()
@@ -59,7 +60,7 @@ class Config:
         if not config_path.exists():
             raise FileNotFoundError(f"Configuration file not found: {config_file}")
 
-        with open(config_path, 'r') as f:
+        with open(config_path) as f:
             config_data = json.load(f)
 
         # Parse configuration

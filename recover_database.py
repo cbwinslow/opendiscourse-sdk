@@ -9,6 +9,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+
 def run_sql_file(sql_file: Path, database: str = "opendiscourse") -> bool:
     """Run an SQL file against the database using Unix socket connection."""
     try:

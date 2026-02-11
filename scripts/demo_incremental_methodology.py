@@ -6,8 +6,8 @@ Shows how the system remembers where it left off and resumes efficiently
 
 import os
 import sys
+
 import psycopg2
-from datetime import datetime
 
 # Add project root to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -173,11 +173,11 @@ def show_api_call_patterns():
         print(f"  Incremental approach: {scenario['incremental']}")
         print(f"  🚀 Savings: {scenario['savings']}")
 
-    print(f"\n💡 OVERALL BENEFITS:")
-    print(f"  📈 70-95% reduction in API calls for subsequent runs")
-    print(f"  ⚡ 80-90% faster processing times")
-    print(f"  🌐 90-95% reduction in bandwidth usage")
-    print(f"  🎯 100% elimination of duplicate processing")
+    print("\n💡 OVERALL BENEFITS:")
+    print("  📈 70-95% reduction in API calls for subsequent runs")
+    print("  ⚡ 80-90% faster processing times")
+    print("  🌐 90-95% reduction in bandwidth usage")
+    print("  🎯 100% elimination of duplicate processing")
 
 if __name__ == "__main__":
     demonstrate_incremental_methodology()

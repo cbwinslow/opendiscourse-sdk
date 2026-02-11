@@ -2,8 +2,7 @@
 
 import sys
 import unittest
-from unittest.mock import MagicMock, patch, Mock
-from datetime import datetime
+from unittest.mock import MagicMock, patch
 
 # Mock the dependencies before importing
 sys.modules['vector_store'] = MagicMock()

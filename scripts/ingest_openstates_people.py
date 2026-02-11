@@ -4,18 +4,18 @@ OpenStates People Ingestion - Simple Version (without monitoring dependencies)
 Ingests people data from OpenStates.org API
 """
 
-import os
-import sys
-import requests
-import time
-import json
-from datetime import datetime
-from typing import Dict, List, Any, Optional
-import psycopg2
-from psycopg2.extras import execute_values, DictCursor, Json
-from dotenv import load_dotenv
 import argparse
 import logging
+import os
+import sys
+import time
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+import psycopg2
+import requests
+from dotenv import load_dotenv
+from psycopg2.extras import Json, execute_values
 
 load_dotenv()
 
@@ -332,7 +332,7 @@ def main():
 
     try:
         stats = ingestor.ingest_people(args.jurisdiction)
-        print(f"\n🎉 Ingestion completed!")
+        print("\n🎉 Ingestion completed!")
         print(f"   ✅ Processed: {stats['total_processed']} people")
         print(f"   ❌ Failed: {stats['total_failed']} people")
         print(f"   📊 Success rate: {stats['success_rate']:.1f}%")

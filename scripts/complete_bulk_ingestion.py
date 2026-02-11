@@ -6,22 +6,22 @@ This script orchestrates the complete ingestion of all remaining data
 with proper offset handling, API key enforcement, and comprehensive monitoring.
 """
 
-import os
-import sys
-import logging
 import argparse
-import subprocess
 import json
-from typing import Dict, List, Any, Optional
-from datetime import datetime
+import logging
+import os
+import subprocess
+import sys
 from dataclasses import dataclass
+from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 # Import configuration components
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from ingestion_config import validate_all_api_keys, get_ingestion_mode_from_env, IngestionMode
-
 # Load environment variables
 from dotenv import load_dotenv
+from ingestion_config import get_ingestion_mode_from_env, validate_all_api_keys
+
 load_dotenv()
 
 # Configure logging
@@ -295,7 +295,7 @@ class BulkIngestionOrchestrator:
 
         # Log final summary
         logger.info(f"\\n{'='*60}")
-        logger.info(f"🏁 COMPLETE INGESTION SUMMARY")
+        logger.info("🏁 COMPLETE INGESTION SUMMARY")
         logger.info(f"{'='*60}")
         logger.info(f"📅 Session: {self.session_id}")
         logger.info(f"⏰ Duration: {total_duration:.1f} seconds ({total_duration/60:.1f} minutes)")
@@ -305,7 +305,7 @@ class BulkIngestionOrchestrator:
         if failed_phases:
             logger.error(f"❌ Failed Phases: {[p['phase'] for p in failed_phases]}")
         else:
-            logger.info(f"🎉 ALL PHASES COMPLETED SUCCESSFULLY!")
+            logger.info("🎉 ALL PHASES COMPLETED SUCCESSFULLY!")
 
         logger.info(f"{'='*60}")
 

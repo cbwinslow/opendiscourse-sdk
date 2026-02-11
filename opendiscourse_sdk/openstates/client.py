@@ -24,9 +24,7 @@ from opendiscourse_sdk.base import BaseClient
 from opendiscourse_sdk.enums import StateCode
 from opendiscourse_sdk.models.openstates import (
     BillListResponse,
-    Legislator,
     LegislatorListResponse,
-    StateBill,
 )
 
 
@@ -39,7 +37,7 @@ class LegislatorsResource:
     Attributes:
         client: Parent OpenStatesClient instance
     """
-    
+
     def __init__(self, client: "OpenStatesClient") -> None:
         """
         Initialize the legislators resource.
@@ -48,7 +46,7 @@ class LegislatorsResource:
             client: Parent OpenStatesClient instance
         """
         self.client = client
-    
+
     def list(
         self,
         jurisdiction: StateCode,
@@ -76,10 +74,10 @@ class LegislatorsResource:
             "jurisdiction": jurisdiction.value if isinstance(jurisdiction, StateCode) else jurisdiction,
             "per_page": min(per_page, 100),
         }
-        
+
         if session:
             params["session"] = session
-        
+
         endpoint = "/legislators"
         response_data = self.client.get(endpoint, params=params)
         return self.client.validate_response(response_data, LegislatorListResponse)
@@ -94,7 +92,7 @@ class BillsResource:
     Attributes:
         client: Parent OpenStatesClient instance
     """
-    
+
     def __init__(self, client: "OpenStatesClient") -> None:
         """
         Initialize the bills resource.
@@ -103,7 +101,7 @@ class BillsResource:
             client: Parent OpenStatesClient instance
         """
         self.client = client
-    
+
     def list(
         self,
         jurisdiction: StateCode,
@@ -131,10 +129,10 @@ class BillsResource:
             "jurisdiction": jurisdiction.value if isinstance(jurisdiction, StateCode) else jurisdiction,
             "per_page": min(per_page, 100),
         }
-        
+
         if session:
             params["session"] = session
-        
+
         endpoint = "/bills"
         response_data = self.client.get(endpoint, params=params)
         return self.client.validate_response(response_data, BillListResponse)
@@ -167,7 +165,7 @@ class OpenStatesClient(BaseClient):
         >>> # Get recent bills from California
         >>> bills = client.bills.list(jurisdiction="ca", session="2023-2024")
     """
-    
+
     def __init__(
         self,
         api_key: Optional[str] = None,
@@ -186,7 +184,7 @@ class OpenStatesClient(BaseClient):
         """
         # Get API key from parameter or environment
         api_key = api_key or os.getenv("OPENSTATES_API_KEY")
-        
+
         # Initialize base client
         super().__init__(
             base_url="https://v3.openstates.org",
@@ -195,11 +193,11 @@ class OpenStatesClient(BaseClient):
             rate_limit_delay=rate_limit_delay,
             max_retries=max_retries,
         )
-        
+
         # Initialize resources
         self.legislators = LegislatorsResource(self)
         self.bills = BillsResource(self)
-    
+
     def _prepare_params(self, params: Optional[dict] = None) -> dict:
         """
         Prepare request parameters for OpenStates API.
@@ -207,12 +205,12 @@ class OpenStatesClient(BaseClient):
         OpenStates uses 'apikey' parameter (not 'api_key').
         """
         prepared_params = params.copy() if params else {}
-        
+
         # Add API key if configured
         if self.api_key:
             prepared_params["apikey"] = self.api_key
-        
+
         # Remove None values
         prepared_params = {k: v for k, v in prepared_params.items() if v is not None}
-        
+
         return prepared_params

@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Debug script to check Congress.gov API response format"""
 
-import os
 import json
+import os
+
 import requests
 from dotenv import load_dotenv
 

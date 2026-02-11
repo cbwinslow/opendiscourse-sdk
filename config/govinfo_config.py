@@ -6,6 +6,7 @@ hardcoded in the govinfo_document_processor.py file.
 
 from typing import Dict, List
 
+
 # Collection Types Configuration
 class CollectionType:
     """Supported document collection types."""

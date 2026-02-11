@@ -3,24 +3,29 @@
 Incremental Congress Members Ingestion Script
 """
 
+import hashlib
+import json
+import logging
 import os
 import sys
-import json
-import hashlib
-import logging
 import time
-from typing import Dict, Any, Optional, List
 from datetime import datetime
+from typing import Any, Dict, List
 
 import psycopg2
 import requests
 
 # Add project root to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from ingestion_config import validate_and_start_ingestion, get_api_key_from_env, get_ingestion_mode_from_env, IngestionMode, validate_all_api_keys
-
 # Load environment variables
 from dotenv import load_dotenv
+from ingestion_config import (
+    get_api_key_from_env,
+    get_ingestion_mode_from_env,
+    validate_all_api_keys,
+    validate_and_start_ingestion,
+)
+
 load_dotenv()
 
 # Add project root to path
@@ -366,7 +371,7 @@ class IncrementalCongressIngestor:
                 members = data.get('members', [])
 
                 if not members:
-                    print(f"✅ No more members found")
+                    print("✅ No more members found")
                     break
 
                 print(f"📦 Processing offset {offset} - {len(members)} members...")
@@ -412,14 +417,14 @@ class IncrementalCongressIngestor:
                 pagination = data.get('pagination', {})
                 next_url = pagination.get('next')
                 if not next_url or offset >= pagination.get('count', 0):
-                    print(f"✅ Reached end of pagination")
+                    print("✅ Reached end of pagination")
                     break
 
                 offset += len(members)
 
                 # Safety limit
                 if offset > 10000:
-                    print(f"⚠️ Safety limit reached, stopping")
+                    print("⚠️ Safety limit reached, stopping")
                     break
 
             # Mark checkpoint as completed with proper total
@@ -471,8 +476,8 @@ class IncrementalCongressIngestor:
         total_processed = sum(r.get('records_processed', 0) for r in results)
         total_skipped = sum(r.get('records_skipped', 0) for r in results)
 
-        print(f"\n🎉 All congresses ingestion completed!")
-        print(f"📊 Summary:")
+        print("\n🎉 All congresses ingestion completed!")
+        print("📊 Summary:")
         print(f"   Congresses completed: {completed}/{len(results)}")
         print(f"   Total records processed: {total_processed}")
         print(f"   Total records skipped: {total_skipped}")

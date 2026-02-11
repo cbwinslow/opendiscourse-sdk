@@ -7,13 +7,15 @@ vector databases.
 """
 
 import sys
-import os
+
 sys.path.append(".")
+
+
+import numpy as np
 
 from api.vector_stores.pgvector_client import create_pgvector_client
 from api.vector_stores.qdrant_client import create_qdrant_client
-import numpy as np
-import json
+
 
 def test_pgvector():
     """Test pgvector functionality."""

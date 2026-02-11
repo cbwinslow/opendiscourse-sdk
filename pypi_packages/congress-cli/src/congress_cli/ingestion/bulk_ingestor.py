@@ -2,19 +2,18 @@
 Bulk data ingestion functions for Congress CLI with API endpoint mapping.
 """
 
-import time
-import json
 import hashlib
-from typing import Dict, Any, List, Optional, Callable, Tuple
-from datetime import datetime, timedelta
+import json
+import time
 from dataclasses import dataclass
-import logging
+from datetime import datetime, timedelta
+from typing import Any, Callable, Dict, List, Optional
 
-from ..api.client import CongressAPIClient, CongressAPIBatchProcessor
+from ..api.client import CongressAPIBatchProcessor, CongressAPIClient
 from ..database.operations import DatabaseOperations
-from ..models.api_models import CongressMember, CongressBill
-from ..utils.logger import get_logger
+from ..models.api_models import CongressBill, CongressMember
 from ..utils.config import get_config
+from ..utils.logger import get_logger
 
 
 @dataclass

@@ -30,7 +30,7 @@ class OpenDiscourseSDKError(Exception):
         message: Human-readable error message
         details: Additional error details (optional)
     """
-    
+
     def __init__(self, message: str, details: Optional[Dict[str, Any]] = None) -> None:
         """
         Initialize the base exception.
@@ -42,7 +42,7 @@ class OpenDiscourseSDKError(Exception):
         self.message = message
         self.details = details or {}
         super().__init__(self.message)
-    
+
     def __str__(self) -> str:
         """Return a string representation of the error."""
         if self.details:
@@ -63,7 +63,7 @@ class APIError(OpenDiscourseSDKError):
         response: The full response object (optional)
         details: Additional error details
     """
-    
+
     def __init__(
         self,
         message: str,
@@ -83,7 +83,7 @@ class APIError(OpenDiscourseSDKError):
         self.status_code = status_code
         self.response = response
         super().__init__(message, details)
-    
+
     def __str__(self) -> str:
         """Return a string representation including the status code."""
         return f"[HTTP {self.status_code}] {self.message}"
@@ -104,7 +104,7 @@ class AuthenticationError(APIError):
         ... except AuthenticationError as e:
         ...     print(f"Authentication failed: {e}")
     """
-    
+
     def __init__(
         self,
         message: str = "Authentication failed. Please check your API key.",
@@ -142,7 +142,7 @@ class RateLimitError(APIError):
         ...     print(f"Rate limit exceeded. Retry after {e.retry_after} seconds")
         ...     time.sleep(e.retry_after)
     """
-    
+
     def __init__(
         self,
         message: str = "API rate limit exceeded.",
@@ -161,7 +161,7 @@ class RateLimitError(APIError):
         """
         self.retry_after = retry_after
         super().__init__(message, 429, response, details)
-    
+
     def __str__(self) -> str:
         """Return a string representation including retry time."""
         base_msg = super().__str__()
@@ -183,7 +183,7 @@ class NotFoundError(APIError):
         ... except NotFoundError:
         ...     print("Bill not found")
     """
-    
+
     def __init__(
         self,
         message: str = "Requested resource not found.",
@@ -216,7 +216,7 @@ class ValidationError(OpenDiscourseSDKError):
         ... except ValidationError as e:
         ...     print(f"Validation error: {e}")
     """
-    
+
     def __init__(
         self,
         message: str,

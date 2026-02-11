@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Check official API structure"""
 
-import os
 import json
+import os
+
 import requests
 from dotenv import load_dotenv
 

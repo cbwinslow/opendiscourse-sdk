@@ -7,8 +7,8 @@ from typing import Any, Dict, List
 
 import pinecone
 import weaviate
-from pdfminer.high_level import extract_text
 from dotenv import load_dotenv
+from pdfminer.high_level import extract_text
 from sentence_transformers import SentenceTransformer
 
 from opendiscourse.services.vector_store import VectorDatabase

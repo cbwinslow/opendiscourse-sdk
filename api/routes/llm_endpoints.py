@@ -3,8 +3,6 @@
 import os
 from typing import Dict, List, Optional
 
-import psycopg2
-import psycopg2.extras
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
@@ -89,10 +87,10 @@ def search_documents(query: str, limit: int = 10, min_score: float = 0.0) -> Lis
             metadata={"type": "economic_policy", "year": 2021}
         )
     ]
-    
+
     # Filter by minimum score
     filtered_results = [r for r in mock_results if r.score >= min_score]
-    
+
     # Limit results
     return filtered_results[:limit]
 
@@ -107,23 +105,23 @@ async def semantic_search(
     """Perform semantic search across document corpus."""
     if not q.strip():
         raise HTTPException(status_code=400, detail="Query cannot be empty")
-    
+
     try:
         import time
         start_time = time.time()
-        
+
         # Perform search
         results = search_documents(q, limit, min_score)
-        
+
         took_ms = int((time.time() - start_time) * 1000)
-        
+
         return SearchResponse(
             results=results,
             total=len(results),
             query=q,
             took_ms=took_ms
         )
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
 
@@ -133,17 +131,17 @@ async def chat_with_documents(request: ChatRequest):
     """Chat with documents using RAG."""
     if not request.message.strip():
         raise HTTPException(status_code=400, detail="Message cannot be empty")
-    
+
     try:
         import time
         start_time = time.time()
-        
+
         # First, search for relevant documents
         search_results = search_documents(request.message, request.context_limit)
-        
+
         # Extract content for context
         context_docs = [f"Title: {r.title}\nContent: {r.content}" for r in search_results]
-        
+
         # Check if Ollama is available
         config = OllamaConfig(model=request.model)
         async with OllamaClient(config) as client:
@@ -160,16 +158,16 @@ async def chat_with_documents(request: ChatRequest):
                     context_documents=context_docs,
                     model=request.model
                 )
-        
+
         took_ms = int((time.time() - start_time) * 1000)
-        
+
         return ChatResponse(
             response=response_text,
             sources=search_results,
             model=request.model,
             took_ms=took_ms
         )
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Chat failed: {str(e)}")
 
@@ -188,7 +186,7 @@ async def list_available_models():
                     ],
                     "status": "demo_mode"
                 }
-            
+
             models = await client.list_models()
             return {
                 "models": models,
@@ -213,13 +211,13 @@ async def pull_model(model_name: str):
             is_healthy = await client.health_check()
             if not is_healthy:
                 raise HTTPException(status_code=503, detail="Ollama service not available")
-            
+
             success = await client.pull_model(model_name)
             if success:
                 return {"status": "success", "message": f"Model {model_name} pulled successfully"}
             else:
                 raise HTTPException(status_code=400, detail=f"Failed to pull model {model_name}")
-                
+
     except HTTPException:
         raise
     except Exception as e:
@@ -233,7 +231,7 @@ async def llm_health_check():
         config = OllamaConfig()
         async with OllamaClient(config) as client:
             is_healthy = await client.health_check()
-            
+
             if is_healthy:
                 models = await client.list_models()
                 return {
@@ -276,7 +274,7 @@ async def generate_response(
                     "model": "demo",
                     "status": "demo_mode"
                 }
-            
+
             response = await client.generate(
                 prompt=prompt,
                 system=system,
@@ -286,7 +284,7 @@ async def generate_response(
                     "repeat_penalty": 1.1
                 }
             )
-            
+
             return {
                 "response": response.response,
                 "model": response.model,
@@ -297,6 +295,6 @@ async def generate_response(
                     "eval_duration": response.eval_duration
                 }
             }
-            
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Generation failed: {str(e)}")

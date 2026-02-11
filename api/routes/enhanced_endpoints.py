@@ -1,19 +1,18 @@
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Query, Depends
-from typing import List, Optional, Dict, Any
 from datetime import datetime
-import asyncio
+from typing import Dict, List, Optional
 
+from fastapi import APIRouter, BackgroundTasks, HTTPException
 from models.enhanced_models import (
-    BulkSearchRequest,
-    SemanticSearchRequest,
-    IndexStatsRequest,
-    ReindexRequest,
-    OptimizeRequest,
+    AnalyticsRequest,
     BackupRequest,
-    TrainingRequest,
-    EmbeddingRequest,
+    BulkSearchRequest,
     ClusteringRequest,
-    AnalyticsRequest
+    EmbeddingRequest,
+    IndexStatsRequest,
+    OptimizeRequest,
+    ReindexRequest,
+    SemanticSearchRequest,
+    TrainingRequest,
 )
 
 router = APIRouter(prefix="/v1", tags=["Enhanced Operations"])
@@ -89,12 +88,12 @@ async def reindex(
             store_names=request.store_names,
             settings=request.settings
         )
-        
+
         background_tasks.add_task(
             index_service.monitor_reindex_task,
             task_id=task_id
         )
-        
+
         return {
             "success": True,
             "task_id": task_id,
@@ -150,12 +149,12 @@ async def restore_backup(
     """Restore from a backup."""
     try:
         task_id = await backup_service.start_restore(backup_id)
-        
+
         background_tasks.add_task(
             backup_service.monitor_restore_task,
             task_id=task_id
         )
-        
+
         return {
             "success": True,
             "task_id": task_id,
@@ -177,12 +176,12 @@ async def train_model(
             training_data=request.training_data,
             parameters=request.parameters
         )
-        
+
         background_tasks.add_task(
             model_service.monitor_training_task,
             task_id=task_id
         )
-        
+
         return {
             "success": True,
             "task_id": task_id,

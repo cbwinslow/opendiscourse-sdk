@@ -1,7 +1,8 @@
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import download_committee_data
+
 import opendiscourse.services.scraping.govinfo_scraper as gov_scraper
 
 

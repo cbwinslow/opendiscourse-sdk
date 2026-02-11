@@ -2,7 +2,8 @@
 Delegate functions for different data sources and table combinations.
 """
 
-from typing import Dict, Any
+from typing import Any, Dict
+
 from monitoring.progress_monitor import IngestionContext
 
 

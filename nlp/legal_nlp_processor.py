@@ -1,4 +1,5 @@
 import spacy
+
 # import lexnlp.extract.en.entities.organization  # Example import for LexNLP
 
 # Load a spaCy model (you might need to download one, e.g., 'en_core_web_sm')
@@ -64,6 +65,7 @@ def extract_declarations(text: str, entities: list) -> list[dict]:
         })
     return declarations
 import spacy
+
 # import lexnlp.extract.en.entities.organization  # Example import for LexNLP
 
 # Load a spaCy model (you might need to download one, e.g., 'en_core_web_sm')

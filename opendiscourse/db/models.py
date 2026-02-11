@@ -5,14 +5,14 @@ This module defines the database models using SQLAlchemy ORM.
 
 from __future__ import annotations
 
+from datetime import datetime
 from enum import Enum as PyEnum
 from typing import TYPE_CHECKING, Any, TypeVar, final
-from datetime import datetime
-from uuid import UUID
 
 from sqlalchemy import DateTime, Float, Integer, String, text
 from sqlalchemy import Enum as SQLEnum
-from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID as SQLAlchemyUUID
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
+from sqlalchemy.dialects.postgresql import UUID as SQLAlchemyUUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from typing_extensions import Self, override
 

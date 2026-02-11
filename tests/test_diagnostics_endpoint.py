@@ -1,16 +1,19 @@
 from datetime import datetime
-from fastapi.testclient import TestClient
 from unittest.mock import patch
 
-from opendiscourse.main import app
+from fastapi.testclient import TestClient
+
+from diagnostic_tools.linux_system_diagnostics.python.collector import (
+    LinuxDiagnosticCollector,
+)
 from diagnostic_tools.linux_system_diagnostics.python.models import (
     CPUInfo,
-    MemoryInfo,
     DiskDevice,
     HardwareInfo,
+    MemoryInfo,
     SystemReport,
 )
-from diagnostic_tools.linux_system_diagnostics.python.collector import LinuxDiagnosticCollector
+from opendiscourse.main import app
 
 client = TestClient(app)
 

@@ -12,19 +12,20 @@ ASSIGNED TO: AI Agent responsible for validation and setup
 DEPENDENCIES: None (this must run first)
 """
 
+import json
 import os
 import sys
-import json
-import psycopg2
 from datetime import datetime
-from typing import Dict, Any, List
+from typing import Any, Dict
+
+import psycopg2
 
 # Add project path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from ingestion_config import validate_all_api_keys, get_ingestion_mode_from_env
-
 # Load environment variables
 from dotenv import load_dotenv
+from ingestion_config import get_ingestion_mode_from_env, validate_all_api_keys
+
 load_dotenv()
 
 class Phase1Validator:

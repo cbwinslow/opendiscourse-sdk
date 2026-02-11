@@ -3,17 +3,17 @@
 Test script to verify the transform_* mapping functions for Congress, OpenStates, and GovInfo CLIs.
 It creates sample API response data and prints the transformed tuples.
 """
-import json
-from datetime import datetime
 
 # Import CLIs (adjust path if needed)
 import sys
 from pathlib import Path
+
 sys.path.append(str(Path(__file__).parent.parent.parent))  # Add project root
 
 from scripts.ingestion.congress_cli import CongressCLI
-from scripts.ingestion.openstates_cli import OpenStatesCLI
 from scripts.ingestion.govinfo_cli import GovInfoCLI
+from scripts.ingestion.openstates_cli import OpenStatesCLI
+
 
 def test_congress_transform():
     cli = CongressCLI(api_key="dummy", db_config={})

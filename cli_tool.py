@@ -5,16 +5,17 @@ Simplified data ingestion with complete abstraction
 """
 
 import argparse
-import sys
-import os
 import json
+import os
+import sys
 import time
-import requests
-import psycopg2
-from datetime import datetime
-from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
+from typing import Dict, List, Optional
+
+import psycopg2
+import requests
 
 # Add project root to path
 sys.path.append(str(Path(__file__).parent.parent))
@@ -124,7 +125,7 @@ class CongressAPI(APILayer):
 
     def get_bills(self, congress: int, offset: int = 0) -> Optional[Dict]:
         """Get bills for a congress"""
-        return self.get(f"/bill", {'congress': congress, 'limit': self.config.batch_size, 'offset': offset})
+        return self.get("/bill", {'congress': congress, 'limit': self.config.batch_size, 'offset': offset})
 
 class OpenStatesAPI(APILayer):
     """OpenStates API wrapper"""
@@ -135,7 +136,7 @@ class OpenStatesAPI(APILayer):
 
     def get_people(self, jurisdiction: str, page: int = 1) -> Optional[Dict]:
         """Get people for a jurisdiction"""
-        return self.get(f"/people", {'jurisdiction': jurisdiction, 'page': page})
+        return self.get("/people", {'jurisdiction': jurisdiction, 'page': page})
 
     def get_jurisdictions(self) -> Optional[Dict]:
         """Get all jurisdictions"""

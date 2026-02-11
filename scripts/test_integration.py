@@ -10,21 +10,20 @@ This script tests the integration between all components:
 - Monitoring infrastructure
 """
 
+import importlib
+import json
 import os
 import sys
-import json
-import time
-import importlib
 from datetime import datetime
-from typing import Dict, Any, List, Optional
 from pathlib import Path
+from typing import Any, Dict
 
 # Add project path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from ingestion_config import validate_all_api_keys, get_ingestion_mode_from_env
-
 # Load environment variables
 from dotenv import load_dotenv
+from ingestion_config import get_ingestion_mode_from_env, validate_all_api_keys
+
 load_dotenv()
 
 class IntegrationTester:

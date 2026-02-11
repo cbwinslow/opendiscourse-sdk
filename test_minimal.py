@@ -4,11 +4,12 @@ Minimal OpenDiscourse Tests
 Test core functionality without complex dependencies
 """
 
-import pytest
 import os
-import psycopg2
 from datetime import datetime
-from typing import Dict, Any
+
+import psycopg2
+import pytest
+
 
 class TestDatabaseConnection:
     """Test database connectivity"""

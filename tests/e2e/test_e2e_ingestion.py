@@ -1,7 +1,8 @@
 # tests/e2e/test_e2e_ingestion.py
 
-import subprocess
 import os
+import subprocess
+
 import pytest
 
 # Path to the ingestion script
@@ -108,7 +109,7 @@ def test_ingestion_idempotency(db_cursor, mock_successful_api, db_connection_par
     # Act: Run ingestion twice
     first_run = subprocess.run(args, capture_output=True, text=True, check=False)
     assert first_run.returncode == 0, f"First run failed: {first_run.stderr}"
-    
+
     second_run = subprocess.run(args, capture_output=True, text=True, check=False)
     assert second_run.returncode == 0, f"Second run failed: {second_run.stderr}"
 

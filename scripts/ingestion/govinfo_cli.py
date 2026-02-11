@@ -5,15 +5,15 @@ Focused CLI for ingesting GovInfo collections, packages, granules, and committee
 """
 
 import argparse
-import sys
 import os
+import sys
 import time
-import json
-import psycopg2
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional
-import requests
+from datetime import datetime
 from pathlib import Path
+from typing import Dict, Optional
+
+import psycopg2
+import requests
 
 # Add project root to path
 sys.path.append(str(Path(__file__).parent.parent.parent))

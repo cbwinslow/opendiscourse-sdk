@@ -9,7 +9,7 @@ import json
 import logging
 import os
 import sys
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import requests
 from dotenv import load_dotenv
@@ -66,7 +66,7 @@ def make_api_request(endpoint: str, params: Optional[Dict[str, Any]] = None) -> 
     """
     if params is None:
         params = {}
-        
+
     try:
         api_key = get_api_key()
         params["apiKey"] = api_key
@@ -75,11 +75,11 @@ def make_api_request(endpoint: str, params: Optional[Dict[str, Any]] = None) -> 
         logger.debug("Making API request to: %s", url)
         response = requests.get(url, params=params, timeout=REQUEST_TIMEOUT)
         response.raise_for_status()  # Raises an HTTPError for bad responses (4XX or 5XX)
-        
+
         result = response.json()
         logger.info("API request successful. Status: %s", result.get("status", "unknown"))
         return result
-        
+
     except requests.exceptions.HTTPError as http_err:
         logger.error("HTTP error occurred: %s", http_err)
         if hasattr(http_err, 'response') and http_err.response is not None:
@@ -125,12 +125,12 @@ def get_top_headlines(
     # Validate parameter combinations
     if sources and (country or category):
         raise ValueError("Cannot mix 'sources' parameter with 'country' or 'category'")
-    
+
     if page_size > 100:
         raise ValueError("page_size cannot exceed 100")
-    
+
     params = {"pageSize": page_size}
-    
+
     if country:
         params["country"] = country
     if category:
@@ -139,7 +139,7 @@ def get_top_headlines(
         params["sources"] = sources
     if query:
         params["q"] = query
-    
+
     return make_api_request("top-headlines", params)
 
 
@@ -179,13 +179,13 @@ def search_everything(
     """
     if not query:
         raise ValueError("Query parameter is required for everything endpoint")
-    
+
     if page_size > 100:
         raise ValueError("page_size cannot exceed 100")
-    
+
     if sort_by not in ["relevancy", "popularity", "publishedAt"]:
         raise ValueError("sort_by must be one of: relevancy, popularity, publishedAt")
-    
+
     params = {
         "q": query,
         "language": language,
@@ -193,7 +193,7 @@ def search_everything(
         "pageSize": page_size,
         "page": page
     }
-    
+
     if sources:
         params["sources"] = sources
     if domains:
@@ -204,7 +204,7 @@ def search_everything(
         params["from"] = from_date
     if to_date:
         params["to"] = to_date
-    
+
     return make_api_request("everything", params)
 
 
@@ -212,7 +212,7 @@ def main() -> None:
     """Command-line interface for NewsAPI."""
     parser = argparse.ArgumentParser(description="Fetch news articles using NewsAPI")
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
-    
+
     # Top headlines command
     headlines_parser = subparsers.add_parser("headlines", help="Get top headlines")
     headlines_parser.add_argument("--country", default="us", help="Country code (default: us)")
@@ -221,7 +221,7 @@ def main() -> None:
     headlines_parser.add_argument("--query", help="Search query")
     headlines_parser.add_argument("--page-size", type=int, default=DEFAULT_PAGE_SIZE, 
                                 help=f"Number of results (default: {DEFAULT_PAGE_SIZE})")
-    
+
     # Search everything command
     search_parser = subparsers.add_parser("search", help="Search all articles")
     search_parser.add_argument("query", help="Search query")
@@ -237,20 +237,20 @@ def main() -> None:
     search_parser.add_argument("--page-size", type=int, default=DEFAULT_PAGE_SIZE,
                               help=f"Number of results (default: {DEFAULT_PAGE_SIZE})")
     search_parser.add_argument("--page", type=int, default=1, help="Page number (default: 1)")
-    
+
     # Global options
     parser.add_argument("--output", "-o", help="Output file (JSON format)")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
-    
+
     args = parser.parse_args()
-    
+
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
-    
+
     if not args.command:
         parser.print_help()
         return
-    
+
     try:
         # Execute command
         if args.command == "headlines":
@@ -277,11 +277,11 @@ def main() -> None:
         else:
             parser.print_help()
             return
-        
+
         if not result:
             logger.error("No results returned from API")
             sys.exit(1)
-        
+
         # Output results
         if args.output:
             with open(args.output, "w", encoding="utf-8") as f:
@@ -289,7 +289,7 @@ def main() -> None:
             logger.info("Results saved to %s", args.output)
         else:
             print(json.dumps(result, indent=2, ensure_ascii=False))
-            
+
     except Exception as e:
         logger.error("Error executing command: %s", str(e))
         sys.exit(1)

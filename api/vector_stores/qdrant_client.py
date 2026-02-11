@@ -7,14 +7,20 @@ using Qdrant vector database.
 
 import json
 import logging
-import os
-from typing import List, Dict, Any, Optional, Union
 from datetime import datetime
-import numpy as np
+from typing import Any, Dict, List, Optional
+
 try:
     from qdrant_client import QdrantClient
     from qdrant_client.http import models
-    from qdrant_client.http.models import Distance, VectorParams, PointStruct, Filter, FieldCondition, MatchValue
+    from qdrant_client.http.models import (
+        Distance,
+        FieldCondition,
+        Filter,
+        MatchValue,
+        PointStruct,
+        VectorParams,
+    )
     QDRANT_AVAILABLE = True
 except ImportError:
     QDRANT_AVAILABLE = False
@@ -358,7 +364,7 @@ def create_qdrant_client(config_path: str) -> QdrantVectorClient:
     Returns:
         QdrantVectorClient: Configured client instance
     """
-    with open(config_path, 'r') as f:
+    with open(config_path) as f:
         config = json.load(f)
 
     return QdrantVectorClient(config)

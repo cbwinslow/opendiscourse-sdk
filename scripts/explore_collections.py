@@ -1,4 +1,5 @@
 import requests
+
 from config.api_config import COLLECTIONS_URL, HEADERS
 
 

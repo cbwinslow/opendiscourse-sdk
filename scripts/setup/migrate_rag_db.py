@@ -26,7 +26,7 @@ def main():
         print("Error: Provide --db-url or set DATABASE_URL environment variable.")
         sys.exit(1)
 
-    with open(SCHEMA_PATH, "r") as f:
+    with open(SCHEMA_PATH) as f:
         schema_sql = f.read()
 
     try:

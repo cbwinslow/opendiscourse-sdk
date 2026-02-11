@@ -1,7 +1,9 @@
-import os
 import json
-import pandas as pd
+import os
 from datetime import datetime
+
+import pandas as pd
+
 from config.committee_api_config import COMMITTEE_DATA_DIR
 
 
@@ -30,7 +32,7 @@ class CommitteeDataProcessor:
 
     def process_committee_file(self, file_path):
         """Process a single committee JSON file"""
-        with open(file_path, "r") as f:
+        with open(file_path) as f:
             data = json.load(f)
 
         # Extract basic committee information
@@ -104,7 +106,7 @@ class CommitteeDataProcessor:
         )
         df.to_parquet(parquet_file, index=False)
 
-        print(f"Saved processed committee data in multiple formats")
+        print("Saved processed committee data in multiple formats")
 
 
 if __name__ == "__main__":

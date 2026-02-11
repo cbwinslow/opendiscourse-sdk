@@ -3,17 +3,16 @@ Universal progress monitoring system for bulk data ingestion.
 """
 
 import time
-from datetime import datetime, timedelta
-from typing import Dict, Any, Optional, Callable
 from dataclasses import dataclass
+from datetime import datetime, timedelta
+from typing import Any, Callable, Dict, Optional
+
+import psycopg2
+from psycopg2.extras import RealDictCursor
 from rich.console import Console
 from rich.live import Live
 from rich.panel import Panel
 from rich.table import Table
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
-
-import psycopg2
-from psycopg2.extras import RealDictCursor
 
 
 @dataclass

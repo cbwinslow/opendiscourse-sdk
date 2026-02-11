@@ -2,19 +2,18 @@
 Bulk data ingestion functions for GovInfo CLI with API endpoint mapping.
 """
 
-import time
-import json
 import hashlib
+import json
 import re
-from typing import Dict, Any, List, Optional, Callable, Tuple
-from datetime import datetime, timedelta
+import time
 from dataclasses import dataclass
-import logging
+from datetime import datetime
+from typing import Any, Callable, Dict, List, Optional
 
-from ..api.client import GovInfoAPIClient, GovInfoAPIBatchProcessor
+from ..api.client import GovInfoAPIClient
 from ..database.operations import DatabaseOperations
-from ..utils.logger import get_logger
 from ..utils.config import get_config
+from ..utils.logger import get_logger
 
 
 @dataclass

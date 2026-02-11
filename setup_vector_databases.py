@@ -6,11 +6,11 @@ This script helps you choose and configure your preferred method for
 installing and running pgvector and Qdrant vector databases.
 """
 
-import os
 import json
+import os
 import subprocess
 import sys
-from pathlib import Path
+
 
 def print_header():
     """Print setup assistant header."""
@@ -220,7 +220,7 @@ def update_credentials_cloud(cloud_type):
             "connection_pool_size": 10,
             "connection_timeout": 30,
             "ssl_mode": "require",
-            "options": f"-c search_path=public"
+            "options": "-c search_path=public"
         }
 
         with open("config/vector_store/credentials/postgres.json", "w") as f:

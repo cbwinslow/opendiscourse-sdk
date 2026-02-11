@@ -1,9 +1,11 @@
-from typing import Optional, Dict, Any
-from dataclasses import dataclass
 import logging
-from transformers import AutoTokenizer, AutoModel
-import torch
+from dataclasses import dataclass
+from typing import Any, Dict, Optional
+
 import spacy
+import torch
+from transformers import AutoModel, AutoTokenizer
+
 
 @dataclass
 class ProcessedDocument:
@@ -18,7 +20,7 @@ class ProcessedDocument:
 
 class DocumentIngestor:
     """Handles document ingestion pipeline including preprocessing, entity extraction, and embedding generation"""
-    
+
     def __init__(self):
         # Initialize NLP components
         self.nlp = spacy.load("en_core_web_sm")
@@ -31,15 +33,15 @@ class DocumentIngestor:
         try:
             # Basic cleaning
             content = content.strip()
-            
+
             # Use spaCy for basic text preprocessing
             doc = self.nlp(content)
-            
+
             # Normalize whitespace and join sentences
             processed_text = " ".join([sent.text.strip() for sent in doc.sents])
-            
+
             return processed_text
-            
+
         except Exception as e:
             self.logger.error(f"Error in document preprocessing: {str(e)}")
             raise
@@ -48,7 +50,7 @@ class DocumentIngestor:
         """Extract named entities and key information from document"""
         try:
             doc = self.nlp(content)
-            
+
             entities = {
                 "organizations": [],
                 "persons": [],
@@ -56,7 +58,7 @@ class DocumentIngestor:
                 "dates": [],
                 "misc": []
             }
-            
+
             # Extract entities by type
             for ent in doc.ents:
                 if ent.label_ in ["ORG"]:
@@ -69,13 +71,13 @@ class DocumentIngestor:
                     entities["dates"].append(ent.text)
                 else:
                     entities["misc"].append((ent.text, ent.label_))
-            
+
             # Deduplicate lists
             for key in entities:
                 entities[key] = list(set(entities[key]))
-                
+
             return entities
-            
+
         except Exception as e:
             self.logger.error(f"Error in entity extraction: {str(e)}")
             raise
@@ -87,14 +89,14 @@ class DocumentIngestor:
             inputs = self.tokenizer(content, return_tensors="pt", 
                                   truncation=True, max_length=512,
                                   padding=True)
-            
+
             with torch.no_grad():
                 outputs = self.model(**inputs)
                 # Use mean pooling of last hidden state
                 embeddings = torch.mean(outputs.last_hidden_state, dim=1)
-            
+
             return embeddings
-            
+
         except Exception as e:
             self.logger.error(f"Error generating embeddings: {str(e)}")
             raise
@@ -120,22 +122,22 @@ class DocumentIngestor:
                 metadata={},
                 language=""
             )
-            
+
             # Step 1: Preprocess document
             self.logger.info(f"Preprocessing document {document.id}")
             processed.content = self.preprocess_document(document.content)
-            
+
             # Step 2: Detect language
             processed.language = self.detect_language(processed.content)
-            
+
             # Step 3: Extract entities
             self.logger.info(f"Extracting entities from document {document.id}")
             processed.entities = self.extract_entities(processed.content)
-            
+
             # Step 4: Generate embeddings
             self.logger.info(f"Generating embeddings for document {document.id}")
             processed.embeddings = self.generate_embeddings(processed.content)
-            
+
             # Step 5: Add metadata
             processed.metadata = {
                 "original_length": len(document.content),
@@ -143,9 +145,9 @@ class DocumentIngestor:
                 "num_entities": sum(len(v) for v in processed.entities.values()),
                 "embedding_dim": processed.embeddings.shape[-1]
             }
-            
+
             return processed
-            
+
         except Exception as e:
             self.logger.error(f"Error processing document {document.id}: {str(e)}")
             # Return partial results with error

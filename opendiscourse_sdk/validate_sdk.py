@@ -8,8 +8,8 @@ Author: OpenDiscourse Team
 License: MIT
 """
 
-import sys
 import os
+import sys
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 def validate_structure():
     """Validate that all required files and directories exist."""
     print("Validating SDK structure...")
-    
+
     base_dir = os.path.dirname(os.path.abspath(__file__))
     required_files = [
         "__init__.py",
@@ -30,7 +30,7 @@ def validate_structure():
         "pyproject.toml",
         "MANIFEST.in",
     ]
-    
+
     required_dirs = [
         "models",
         "congress",
@@ -38,9 +38,9 @@ def validate_structure():
         "openstates",
         "tests",
     ]
-    
+
     all_good = True
-    
+
     # Check files
     for filename in required_files:
         filepath = os.path.join(base_dir, filename)
@@ -49,7 +49,7 @@ def validate_structure():
         else:
             print(f"  ✗ {filename} - MISSING")
             all_good = False
-    
+
     # Check directories
     for dirname in required_dirs:
         dirpath = os.path.join(base_dir, dirname)
@@ -58,25 +58,25 @@ def validate_structure():
         else:
             print(f"  ✗ {dirname}/ - MISSING")
             all_good = False
-    
+
     return all_good
 
 
 def validate_imports():
     """Validate that key components can be imported."""
     print("\nValidating imports...")
-    
+
     all_good = True
-    
+
     # Test enum imports (doesn't require pydantic)
     try:
         from opendiscourse_sdk.enums import (
-            BillType, Chamber, BillStatus, Party,
-            GovInfoCollection, DocumentFormat,
-            StateCode, StateChamber
+            BillType,
+            Chamber,
+            StateCode,
         )
         print("  ✓ Enumerations")
-        
+
         # Verify enum values
         assert BillType.HOUSE_BILL.value == "hr"
         assert Chamber.HOUSE.value == "house"
@@ -85,19 +85,16 @@ def validate_imports():
     except Exception as e:
         print(f"  ✗ Enumerations - {e}")
         all_good = False
-    
+
     # Test exception imports
     try:
         from opendiscourse_sdk.exceptions import (
-            OpenDiscourseSDKError,
             APIError,
             AuthenticationError,
-            RateLimitError,
-            NotFoundError,
-            ValidationError,
+            OpenDiscourseSDKError,
         )
         print("  ✓ Exceptions")
-        
+
         # Test exception hierarchy
         assert issubclass(APIError, OpenDiscourseSDKError)
         assert issubclass(AuthenticationError, APIError)
@@ -105,7 +102,7 @@ def validate_imports():
     except Exception as e:
         print(f"  ✗ Exceptions - {e}")
         all_good = False
-    
+
     # Test base client (requires requests, so may fail)
     try:
         from opendiscourse_sdk.base import BaseClient
@@ -115,7 +112,7 @@ def validate_imports():
     except Exception as e:
         print(f"  ✗ Base client - {e}")
         all_good = False
-    
+
     # Test main package imports
     try:
         import opendiscourse_sdk
@@ -124,23 +121,23 @@ def validate_imports():
     except Exception as e:
         print(f"  ✗ Main package - {e}")
         all_good = False
-    
+
     return all_good
 
 
 def validate_documentation():
     """Validate that documentation exists and is reasonable."""
     print("\nValidating documentation...")
-    
+
     base_dir = os.path.dirname(os.path.abspath(__file__))
     readme_path = os.path.join(base_dir, "README.md")
-    
+
     all_good = True
-    
+
     if os.path.exists(readme_path):
-        with open(readme_path, 'r') as f:
+        with open(readme_path) as f:
             content = f.read()
-            
+
         # Check for key sections
         required_sections = [
             "# OpenDiscourse SDK",
@@ -149,14 +146,14 @@ def validate_documentation():
             "## Authentication",
             "## Error Handling",
         ]
-        
+
         for section in required_sections:
             if section in content:
                 print(f"  ✓ {section}")
             else:
                 print(f"  ✗ {section} - NOT FOUND")
                 all_good = False
-        
+
         # Check word count
         word_count = len(content.split())
         print(f"  ✓ README word count: {word_count}")
@@ -165,36 +162,36 @@ def validate_documentation():
     else:
         print("  ✗ README.md not found")
         all_good = False
-    
+
     return all_good
 
 
 def count_lines():
     """Count lines of code in the SDK."""
     print("\nCounting lines of code...")
-    
+
     base_dir = os.path.dirname(os.path.abspath(__file__))
     total_lines = 0
     file_count = 0
-    
+
     for root, dirs, files in os.walk(base_dir):
         # Skip __pycache__ and tests
         dirs[:] = [d for d in dirs if d not in ['__pycache__', '.git']]
-        
+
         for file in files:
             if file.endswith('.py'):
                 filepath = os.path.join(root, file)
                 try:
-                    with open(filepath, 'r') as f:
+                    with open(filepath) as f:
                         lines = len(f.readlines())
                         total_lines += lines
                         file_count += 1
                 except Exception:
                     pass
-    
+
     print(f"  Total Python files: {file_count}")
     print(f"  Total lines of code: {total_lines:,}")
-    
+
     return True
 
 
@@ -203,24 +200,24 @@ def main():
     print("="*60)
     print("OpenDiscourse SDK Validation")
     print("="*60)
-    
+
     results = []
-    
+
     results.append(("Structure", validate_structure()))
     results.append(("Imports", validate_imports()))
     results.append(("Documentation", validate_documentation()))
     results.append(("Metrics", count_lines()))
-    
+
     print("\n" + "="*60)
     print("Validation Summary")
     print("="*60)
-    
+
     for name, passed in results:
         status = "✓ PASSED" if passed else "✗ FAILED"
         print(f"  {name}: {status}")
-    
+
     all_passed = all(passed for _, passed in results)
-    
+
     print("\n" + "="*60)
     if all_passed:
         print("✓ All validations passed!")
@@ -229,7 +226,7 @@ def main():
         print("✗ Some validations failed.")
         print("Please review the output above.")
     print("="*60 + "\n")
-    
+
     return 0 if all_passed else 1
 
 

@@ -35,9 +35,9 @@ class AuthBase(DeclarativeBase):
 
 class User(AuthBase):
     """User model for authentication."""
-    
+
     __tablename__ = "users"
-    
+
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     username: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, index=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
@@ -79,9 +79,9 @@ class User(AuthBase):
 
 class APIKey(AuthBase):
     """API key model for programmatic access."""
-    
+
     __tablename__ = "api_keys"
-    
+
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)

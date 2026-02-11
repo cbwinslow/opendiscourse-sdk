@@ -22,9 +22,8 @@ if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
 # Import after modifying path
-from models.entity import Entity, EntityType  # noqa: E402
-
 from database import SessionLocal, init_db  # noqa: E402
+from models.entity import Entity, EntityType  # noqa: E402
 
 
 def create_entity(session: Session, data: dict[str, Any]) -> Entity:

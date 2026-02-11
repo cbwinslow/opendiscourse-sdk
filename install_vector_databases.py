@@ -6,13 +6,11 @@ This script installs and configures vector databases including pgvector and Qdra
 for the Open Discourse project.
 """
 
-import subprocess
-import sys
-import os
 import json
 import logging
-from pathlib import Path
-from typing import Dict, Any
+import os
+import subprocess
+import sys
 
 # Configure logging
 logging.basicConfig(
@@ -133,7 +131,7 @@ def verify_installation() -> bool:
         import psycopg2
 
         # Read PostgreSQL config
-        with open("config/vector_store/credentials/postgres.json", "r") as f:
+        with open("config/vector_store/credentials/postgres.json") as f:
             pg_config = json.load(f)
 
         connection = psycopg2.connect(
@@ -165,7 +163,7 @@ def verify_installation() -> bool:
     try:
         from qdrant_client import QdrantClient
 
-        with open("config/vector_store/credentials/qdrant.json", "r") as f:
+        with open("config/vector_store/credentials/qdrant.json") as f:
             qdrant_config = json.load(f)
 
         client = QdrantClient(

@@ -7,19 +7,19 @@ allowing users to query government documents and legislative data through HTTP r
 Based on LangChain RAG webapp example and adapted for OpenDiscourse.
 """
 
-import os
 import logging
-from typing import Dict, List, Optional, Any
+import os
 from datetime import datetime
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException, Depends, Header, status, UploadFile, File
+import uvicorn
+from fastapi import Depends, FastAPI, File, Header, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-import uvicorn
 
-from .rag_service import OpenDiscourseRAGService, RAGResult, DocumentMetadata
 from ..core.config import settings
+from .rag_service import DocumentMetadata, OpenDiscourseRAGService
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -165,7 +165,7 @@ async def query_documents(
     """
     try:
         result = service.query(request.question, request.filters)
-        
+
         sources = None
         if request.include_sources and result.source_documents:
             sources = [
@@ -176,7 +176,7 @@ async def query_documents(
                 }
                 for doc in result.source_documents
             ]
-        
+
         return QueryResponse(
             answer=result.answer,
             query=result.query,
@@ -184,7 +184,7 @@ async def query_documents(
             sources=sources,
             total_sources=len(result.source_documents)
         )
-        
+
     except Exception as e:
         logger.error(f"Error processing query: {e}")
         raise HTTPException(
@@ -210,7 +210,7 @@ async def search_documents(
             request.k,
             request.filters
         )
-        
+
         formatted_docs = [
             {
                 "content": doc.page_content,
@@ -219,13 +219,13 @@ async def search_documents(
             }
             for doc in documents
         ]
-        
+
         return SearchResponse(
             documents=formatted_docs,
             total_results=len(formatted_docs),
             query=request.query
         )
-        
+
     except Exception as e:
         logger.error(f"Error searching documents: {e}")
         raise HTTPException(
@@ -253,23 +253,23 @@ async def ingest_documents(
                 status_code=400,
                 detail=f"Directory not found: {request.directory_path}"
             )
-        
+
         # Perform ingestion
         results = service.ingest_directory(
             request.directory_path,
             request.file_pattern,
             request.document_type
         )
-        
+
         total_chunks = sum(results.values())
-        
+
         return IngestionResponse(
             files_processed=results,
             total_files=len(results),
             total_chunks=total_chunks,
             message=f"Successfully ingested {len(results)} files ({total_chunks} chunks)"
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -300,14 +300,14 @@ async def ingest_single_file(
         # Create temporary file
         temp_dir = Path("./temp")
         temp_dir.mkdir(exist_ok=True)
-        
+
         temp_file_path = temp_dir / file.filename
-        
+
         # Save uploaded file
         with open(temp_file_path, "wb") as buffer:
             content = await file.read()
             buffer.write(content)
-        
+
         # Create metadata if provided
         metadata = None
         if bill_number and congress_session:
@@ -319,19 +319,19 @@ async def ingest_single_file(
                 congress_session=congress_session,
                 committee=committee
             )
-        
+
         # Ingest the file
         chunks = service.ingest_document(str(temp_file_path), metadata)
-        
+
         # Clean up temporary file
         temp_file_path.unlink()
-        
+
         return {
             "filename": file.filename,
             "chunks_created": chunks,
             "message": f"Successfully ingested {file.filename} ({chunks} chunks)"
         }
-        
+
     except Exception as e:
         logger.error(f"Error ingesting file: {e}")
         raise HTTPException(
@@ -352,7 +352,7 @@ async def get_collection_info(
     """
     try:
         info = service.get_collection_info()
-        
+
         return CollectionInfoResponse(
             total_documents=info.get("total_documents", 0),
             document_types=info.get("document_types", []),
@@ -361,7 +361,7 @@ async def get_collection_info(
             llm_provider=info.get("llm_provider", ""),
             vector_store_path=info.get("vector_store_path", "")
         )
-        
+
     except Exception as e:
         logger.error(f"Error getting collection info: {e}")
         raise HTTPException(
@@ -387,7 +387,7 @@ async def clear_collection(
             "message": "Collection cleared successfully",
             "timestamp": datetime.now()
         }
-        
+
     except Exception as e:
         logger.error(f"Error clearing collection: {e}")
         raise HTTPException(
@@ -413,11 +413,11 @@ async def query_bills(
     filters = {"document_type": "bill"}
     if congress_session:
         filters["congress_session"] = congress_session
-    
+
     # Merge with any existing filters
     if request.filters:
         filters.update(request.filters)
-    
+
     request.filters = filters
     return await query_documents(request, service)
 
@@ -437,11 +437,11 @@ async def query_committees(
     filters = {"document_type": "committee_document"}
     if committee_name:
         filters["committee"] = committee_name
-    
+
     # Merge with any existing filters
     if request.filters:
         filters.update(request.filters)
-    
+
     request.filters = filters
     return await query_documents(request, service)
 
@@ -455,7 +455,7 @@ async def get_stats(
     """Get basic statistics about the RAG system."""
     try:
         info = service.get_collection_info()
-        
+
         return {
             "status": "operational",
             "total_documents": info.get("total_documents", 0),
@@ -465,7 +465,7 @@ async def get_stats(
             "llm_provider": info.get("llm_provider", ""),
             "timestamp": datetime.now()
         }
-        
+
     except Exception as e:
         logger.error(f"Error getting stats: {e}")
         return {

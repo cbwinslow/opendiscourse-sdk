@@ -1,9 +1,11 @@
 """Unit tests for the Linux diagnostics collector."""
 
-import pytest
-from unittest.mock import patch, MagicMock
-from diagnostic_tools.linux_system_diagnostics.python.collector import LinuxDiagnosticCollector
-from diagnostic_tools.linux_system_diagnostics.python.models import CPUInfo, MemoryInfo
+from unittest.mock import MagicMock, patch
+
+from diagnostic_tools.linux_system_diagnostics.python.collector import (
+    LinuxDiagnosticCollector,
+)
+from diagnostic_tools.linux_system_diagnostics.python.models import CPUInfo
 
 
 class TestLinuxDiagnosticCollector:
@@ -22,9 +24,9 @@ class TestLinuxDiagnosticCollector:
         with patch('subprocess.run') as mock_run:
             mock_run.return_value.stdout = "test output"
             mock_run.return_value.stderr = ""
-            
+
             stdout, stderr = self.collector.execute_shell_command(['echo', 'test'])
-            
+
             assert stdout == "test output"
             assert stderr is None
             assert len(self.collector.errors) == 0
@@ -34,9 +36,9 @@ class TestLinuxDiagnosticCollector:
         with patch('subprocess.run') as mock_run:
             from subprocess import CalledProcessError
             mock_run.side_effect = CalledProcessError(1, 'cmd', stderr="error message")
-            
+
             stdout, stderr = self.collector.execute_shell_command(['false'])
-            
+
             assert stdout is None
             assert stderr == "error message"
             assert len(self.collector.errors) == 1
@@ -46,9 +48,9 @@ class TestLinuxDiagnosticCollector:
         """Test shell command not found."""
         with patch('subprocess.run') as mock_run:
             mock_run.side_effect = FileNotFoundError()
-            
+
             stdout, stderr = self.collector.execute_shell_command(['nonexistent_command'])
-            
+
             assert stdout is None
             assert "Command not found" in stderr
             assert len(self.collector.errors) == 1
@@ -74,7 +76,7 @@ CPU max MHz:         4600.0000
 CPU min MHz:         400.0000"""
 
         cpu_info = self.collector.parse_lscpu(lscpu_output)
-        
+
         assert isinstance(cpu_info, CPUInfo)
         assert cpu_info.model == "Intel(R) Core(TM) i7-8565U CPU @ 1.80GHz"
         assert cpu_info.architecture == "x86_64"
@@ -94,7 +96,7 @@ Core 2:        +42.0°C  (high = +100.0°C, crit = +100.0°C)
 Core 3:        +39.0°C  (high = +100.0°C, crit = +100.0°C)"""
 
         temperatures = self.collector.parse_sensors(sensors_output)
-        
+
         assert len(temperatures) >= 5
         assert 45.0 in temperatures
         assert 43.0 in temperatures
@@ -111,9 +113,9 @@ Socket(s):           1
 Thread(s) per core:  1
 Model name:          Test CPU
 CPU max MHz:         2000.0000""", None)
-            
+
             hardware_info = self.collector.collect_hardware_info()
-            
+
             assert hardware_info is not None
             assert hardware_info.cpu.model == "Test CPU"
             assert hardware_info.cpu.cores == 4
@@ -129,9 +131,9 @@ CPU max MHz:         2000.0000""", None)
                 "3: wlan0   inet 10.0.0.50/24 brd 10.0.0.255 scope global UP,LOWER_UP wlan0", 
                 None
             )
-            
+
             network_info = self.collector.collect_network_info()
-            
+
             assert len(network_info) == 2
             assert network_info[0].name == "eth0"
             assert network_info[0].state == "up"
@@ -147,9 +149,9 @@ CPU max MHz:         2000.0000""", None)
                 mock_net_info = [MagicMock()]
                 mock_hw.return_value = mock_hw_info
                 mock_net.return_value = mock_net_info
-                
+
                 report = self.collector.collect_full_report()
-                
+
                 assert report is not None
                 assert report.hardware == mock_hw_info
                 assert report.network == mock_net_info
@@ -162,16 +164,16 @@ CPU max MHz:         2000.0000""", None)
         with patch('subprocess.run') as mock_run:
             from subprocess import CalledProcessError
             mock_run.side_effect = CalledProcessError(1, 'cmd1', stderr="error1")
-            
+
             # First command fails
             self.collector.execute_shell_command(['cmd1'])
             assert len(self.collector.errors) == 1
-            
+
             # Second command fails
             mock_run.side_effect = CalledProcessError(1, 'cmd2', stderr="error2")
             self.collector.execute_shell_command(['cmd2'])
             assert len(self.collector.errors) == 2
-            
+
             # Verify both errors are captured
             assert "error1" in str(self.collector.errors)
             assert "error2" in str(self.collector.errors)
@@ -183,7 +185,7 @@ CPU max MHz:         2000.0000""", None)
             free_output = """              total        used        free      shared  buff/cache   available
 Mem:           15Gi       8.1Gi       1.2Gi       419Mi       6.0Gi       6.7Gi
 Swap:         2.0Gi          0B       2.0Gi"""
-            
+
             mock_cmd.side_effect = [
                 ("test lscpu", None),  # lscpu
                 (None, None),          # sensors (not available)
@@ -191,9 +193,9 @@ Swap:         2.0Gi          0B       2.0Gi"""
                 (None, None),          # swapon
                 (None, None),          # lsblk
             ]
-            
+
             hardware_info = self.collector.collect_hardware_info()
-            
+
             assert hardware_info.memory.total == "15Gi"
             assert hardware_info.memory.available == "6.7Gi"
             assert hardware_info.memory.swap_total == "2.0Gi"
@@ -210,7 +212,7 @@ sda    500G disk
 └─sda3 384G part /
 nvme0n1 1T disk
 └─nvme0n1p1 1T part /home"""
-            
+
             mock_cmd.side_effect = [
                 ("test lscpu", None),     # lscpu
                 (None, None),             # sensors
@@ -218,9 +220,9 @@ nvme0n1 1T disk
                 (None, None),             # swapon
                 (lsblk_output, None),     # lsblk
             ]
-            
+
             hardware_info = self.collector.collect_hardware_info()
-            
+
             assert len(hardware_info.disks) >= 5  # At least 5 disk entries
             disk_names = [disk.name for disk in hardware_info.disks]
             assert "sda" in disk_names

@@ -2,10 +2,11 @@
 """DB health diagnostic for OpenDiscourse
 Reads common connection patterns and environment-provided credentials."""
 
+import json
 import os
 import sys
-import json
 import urllib.parse as up
+
 import psycopg2
 
 

@@ -1,18 +1,18 @@
 """Research crawler endpoints for generating AI-powered research reports."""
+import asyncio
+import logging
 import os
 import uuid
-import asyncio
-import aiohttp
-from datetime import datetime
-from typing import Dict, List, Optional, Any
-from urllib.parse import urljoin, urlparse
 from dataclasses import dataclass
-import logging
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+from urllib.parse import urlparse
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Depends
-from pydantic import BaseModel, Field
+import aiohttp
 import psycopg2
 import psycopg2.extras
+from fastapi import APIRouter, BackgroundTasks, HTTPException
+from pydantic import BaseModel, Field
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -80,18 +80,18 @@ class CrawledPage:
 
 class WebCrawler:
     """Simple web crawler for research purposes."""
-    
+
     def __init__(self, max_pages: int = 10, search_depth: int = 3):
         self.max_pages = max_pages
         self.search_depth = search_depth
         self.crawled_pages: List[CrawledPage] = []
         self.visited_urls = set()
-        
+
     async def search_urls(self, query: str, domains: Optional[str] = None) -> List[str]:
         """Search for URLs related to the query."""
         # This is a simplified implementation
         # In production, you'd integrate with search APIs like Google Custom Search
-        
+
         base_urls = [
             "https://www.congress.gov",
             "https://www.govinfo.gov",
@@ -100,7 +100,7 @@ class WebCrawler:
             "https://www.cbo.gov",
             "https://www.gao.gov"
         ]
-        
+
         # Filter by domains if specified
         if domains:
             domain_list = [d.strip() for d in domains.split(',')]
@@ -110,20 +110,20 @@ class WebCrawler:
                 if any(domain.endswith(d.strip('.')) for d in domain_list):
                     filtered_urls.append(url)
             base_urls = filtered_urls
-        
+
         return base_urls[:self.max_pages]
-    
+
     async def crawl_page(self, session: aiohttp.ClientSession, url: str) -> Optional[CrawledPage]:
         """Crawl a single page and extract content."""
         try:
             async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as response:
                 if response.status == 200:
                     content = await response.text()
-                    
+
                     # Simple content extraction (in production, use BeautifulSoup or similar)
                     title = "Sample Document Title"
                     text_content = f"Sample content from {url}\n\nThis is extracted text content that would normally be parsed from HTML."
-                    
+
                     return CrawledPage(
                         url=url,
                         title=title,
@@ -138,38 +138,38 @@ class WebCrawler:
         except Exception as e:
             logger.error(f"Error crawling {url}: {str(e)}")
             return None
-    
+
     async def crawl(self, query: str, domains: Optional[str] = None) -> List[CrawledPage]:
         """Perform the web crawling."""
         urls = await self.search_urls(query, domains)
-        
+
         async with aiohttp.ClientSession() as session:
             tasks = []
             for url in urls:
                 if url not in self.visited_urls:
                     self.visited_urls.add(url)
                     tasks.append(self.crawl_page(session, url))
-            
+
             results = await asyncio.gather(*tasks, return_exceptions=True)
-            
+
             for result in results:
                 if isinstance(result, CrawledPage):
                     self.crawled_pages.append(result)
-        
+
         return self.crawled_pages
 
 
 class ReportGenerator:
     """Generate research reports from crawled data."""
-    
+
     @staticmethod
     def generate_report(query: str, crawled_pages: List[CrawledPage], 
                        report_type: str = "comprehensive") -> str:
         """Generate a research report from crawled pages."""
-        
+
         total_pages = len(crawled_pages)
         total_words = sum(page.metadata.get("word_count", 0) for page in crawled_pages)
-        
+
         # Generate report content based on crawled data
         report_content = f"""# {query} - Research Report
 
@@ -187,11 +187,11 @@ This research report was generated from an analysis of {total_pages} web pages c
 ### Primary Sources
 The research incorporated data from the following key sources:
 """
-        
+
         # Add source information
         for i, page in enumerate(crawled_pages[:10], 1):
             report_content += f"{i}. {page.title} - {page.url}\n"
-        
+
         report_content += f"""
 
 ### Content Analysis
@@ -244,13 +244,13 @@ ongoing evolution in this policy area with significant implications for various 
 
 ### Source URLs
 """
-        
+
         # Add all source URLs
         for page in crawled_pages:
             report_content += f"- {page.url}\n"
-        
+
         report_content += f"\n*Report generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*"
-        
+
         return report_content
 
 
@@ -265,45 +265,45 @@ async def perform_research_task(task_id: str, request: ResearchRequest):
         research_tasks[task_id]["status"] = "processing"
         research_tasks[task_id]["current_step"] = "Initializing crawler..."
         research_tasks[task_id]["progress"] = 10
-        
+
         # Initialize crawler
         crawler = WebCrawler(
             max_pages=request.max_pages,
             search_depth=request.search_depth
         )
-        
+
         # Update progress
         research_tasks[task_id]["current_step"] = "Searching for relevant sources..."
         research_tasks[task_id]["progress"] = 25
         await asyncio.sleep(1)  # Simulate work
-        
+
         # Perform crawling
         research_tasks[task_id]["current_step"] = "Crawling web pages..."
         research_tasks[task_id]["progress"] = 50
-        
+
         crawled_pages = await crawler.crawl(request.query, request.domains)
-        
+
         # Update progress
         research_tasks[task_id]["current_step"] = "Analyzing content with AI..."
         research_tasks[task_id]["progress"] = 75
         research_tasks[task_id]["pages_crawled"] = len(crawled_pages)
         await asyncio.sleep(2)  # Simulate AI analysis
-        
+
         # Generate report
         research_tasks[task_id]["current_step"] = "Generating research report..."
         research_tasks[task_id]["progress"] = 90
-        
+
         report_content = ReportGenerator.generate_report(
             request.query, 
             crawled_pages, 
             request.report_type
         )
-        
+
         # Store report in database
         report_id = str(uuid.uuid4())
         conn = psycopg2.connect(DB_URL)
         cur = conn.cursor()
-        
+
         try:
             cur.execute("""
                 INSERT INTO research_reports 
@@ -333,13 +333,13 @@ async def perform_research_task(task_id: str, request: ResearchRequest):
         finally:
             cur.close()
             conn.close()
-        
+
         # Update final status
         research_tasks[task_id]["status"] = "completed"
         research_tasks[task_id]["current_step"] = "Research completed"
         research_tasks[task_id]["progress"] = 100
         research_tasks[task_id]["report_id"] = report_id
-        
+
     except Exception as e:
         logger.error(f"Research task {task_id} failed: {str(e)}")
         research_tasks[task_id]["status"] = "failed"
@@ -353,7 +353,7 @@ async def start_research(
 ) -> ResearchResponse:
     """Start a new research task."""
     task_id = str(uuid.uuid4())
-    
+
     # Initialize task status
     research_tasks[task_id] = {
         "status": "pending",
@@ -363,10 +363,10 @@ async def start_research(
         "created_at": datetime.now().isoformat(),
         "query": request.query
     }
-    
+
     # Start background task
     background_tasks.add_task(perform_research_task, task_id, request)
-    
+
     return ResearchResponse(
         task_id=task_id,
         status="pending",
@@ -379,9 +379,9 @@ async def get_research_status(task_id: str) -> ResearchStatus:
     """Get the status of a research task."""
     if task_id not in research_tasks:
         raise HTTPException(status_code=404, detail="Task not found")
-    
+
     task = research_tasks[task_id]
-    
+
     return ResearchStatus(
         task_id=task_id,
         status=task["status"],
@@ -397,7 +397,7 @@ async def get_research_reports(limit: int = 20) -> List[ResearchReport]:
     """Get all research reports."""
     conn = psycopg2.connect(DB_URL)
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    
+
     try:
         cur.execute("""
             SELECT id, title, query, content, metadata, created_at, status, 
@@ -406,15 +406,15 @@ async def get_research_reports(limit: int = 20) -> List[ResearchReport]:
             ORDER BY created_at DESC 
             LIMIT %s
         """, (limit,))
-        
+
         reports = cur.fetchall()
-        
+
         result = []
         for report in reports:
             # Generate summary from content (first 200 chars)
             content = report["content"] or ""
             summary = content[:200] + "..." if len(content) > 200 else content
-            
+
             result.append(ResearchReport(
                 id=report["id"],
                 title=report["title"],
@@ -427,9 +427,9 @@ async def get_research_reports(limit: int = 20) -> List[ResearchReport]:
                 content=content,
                 metadata=report["metadata"] or {}
             ))
-        
+
         return result
-        
+
     finally:
         cur.close()
         conn.close()
@@ -440,7 +440,7 @@ async def get_research_report(report_id: str) -> ResearchReport:
     """Get a specific research report."""
     conn = psycopg2.connect(DB_URL)
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    
+
     try:
         cur.execute("""
             SELECT id, title, query, content, metadata, created_at, status,
@@ -448,15 +448,15 @@ async def get_research_report(report_id: str) -> ResearchReport:
             FROM research_reports 
             WHERE id = %s
         """, (report_id,))
-        
+
         report = cur.fetchone()
-        
+
         if not report:
             raise HTTPException(status_code=404, detail="Report not found")
-        
+
         content = report["content"] or ""
         summary = content[:200] + "..." if len(content) > 200 else content
-        
+
         return ResearchReport(
             id=report["id"],
             title=report["title"],
@@ -469,7 +469,7 @@ async def get_research_report(report_id: str) -> ResearchReport:
             content=content,
             metadata=report["metadata"] or {}
         )
-        
+
     finally:
         cur.close()
         conn.close()
@@ -480,16 +480,16 @@ async def delete_research_report(report_id: str):
     """Delete a research report."""
     conn = psycopg2.connect(DB_URL)
     cur = conn.cursor()
-    
+
     try:
         cur.execute("DELETE FROM research_reports WHERE id = %s", (report_id,))
-        
+
         if cur.rowcount == 0:
             raise HTTPException(status_code=404, detail="Report not found")
-        
+
         conn.commit()
         return {"message": "Report deleted successfully"}
-        
+
     finally:
         cur.close()
         conn.close()

@@ -37,13 +37,13 @@ def validate_password_strength(password: str) -> bool:
     """Validate password meets minimum requirements."""
     if len(password) < SecurityConfig.PASSWORD_MIN_LENGTH:
         return False
-    
+
     # Check for at least one uppercase, lowercase, digit, and special character
     has_upper = any(c.isupper() for c in password)
     has_lower = any(c.islower() for c in password)
     has_digit = any(c.isdigit() for c in password)
     has_special = any(c in "!@#$%^&*(),.?\":{}|<>" for c in password)
-    
+
     return has_upper and has_lower and has_digit and has_special
 
 
@@ -54,7 +54,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
         expire = datetime.utcnow() + expires_delta
     else:
         expire = datetime.utcnow() + timedelta(minutes=SecurityConfig.ACCESS_TOKEN_EXPIRE_MINUTES)
-    
+
     to_encode.update({"exp": expire, "type": "access"})
     encoded_jwt = jwt.encode(to_encode, SecurityConfig.SECRET_KEY, algorithm=SecurityConfig.ALGORITHM)
     return encoded_jwt
@@ -99,10 +99,10 @@ def generate_api_key() -> tuple[str, str]:
     """Generate an API key and its hash."""
     # Generate random API key
     api_key = f"od_{secrets.token_urlsafe(32)}"
-    
+
     # Create hash for storage
     key_hash = hashlib.sha256(api_key.encode()).hexdigest()
-    
+
     return api_key, key_hash
 
 
@@ -127,7 +127,7 @@ def calculate_lockout_time() -> datetime:
 
 class PermissionChecker:
     """Check user permissions for various operations."""
-    
+
     # Define permission mappings
     ROLE_PERMISSIONS = {
         "admin": [
@@ -148,13 +148,13 @@ class PermissionChecker:
             "read_documents", "search_documents"
         ]
     }
-    
+
     @classmethod
     def has_permission(cls, user_role: str, required_permission: str) -> bool:
         """Check if a user role has a specific permission."""
         permissions = cls.ROLE_PERMISSIONS.get(user_role, [])
         return required_permission in permissions
-    
+
     @classmethod
     def check_permission(cls, user_role: str, required_permission: str) -> None:
         """Check permission and raise exception if not authorized."""
@@ -163,7 +163,7 @@ class PermissionChecker:
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Insufficient permissions. Required: {required_permission}"
             )
-    
+
     @classmethod
     def get_user_permissions(cls, user_role: str) -> list[str]:
         """Get all permissions for a user role."""
