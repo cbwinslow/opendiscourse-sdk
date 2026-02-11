@@ -452,9 +452,6 @@ dist/
 build/
 *.tsbuildinfo
 
-# Pre-commit
-.pre-commit-config.yaml
-
 # Ruff
 .ruff_cache/
 
