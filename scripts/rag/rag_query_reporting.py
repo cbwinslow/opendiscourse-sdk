@@ -59,6 +59,24 @@ class RAGQueryReporter:
         self._connect_to_database()
         logger.info("RAG Query Reporter initialized successfully")
     
+    @staticmethod
+    def _sanitize_log_value(value: str, max_length: int = 50) -> str:
+        """
+        Sanitize a value for safe logging by removing control characters and limiting length.
+        
+        Args:
+            value: The value to sanitize
+            max_length: Maximum length of the sanitized value
+            
+        Returns:
+            Sanitized string safe for logging
+        """
+        if not value:
+            return ""
+        # Keep only alphanumeric characters and underscores
+        sanitized = ''.join(c for c in value if c.isalnum() or c == '_')
+        return sanitized[:max_length]
+    
     def _connect_to_database(self):
         """Establish database connection."""
         try:
@@ -86,7 +104,8 @@ class RAGQueryReporter:
         Returns:
             List of matching documents with similarity scores
         """
-        logger.info(f"Performing semantic search for: '{query}'")
+        # Log search without exposing query content or metadata
+        logger.info("Performing semantic search")
         
         # For this implementation, we'll use a placeholder query embedding
         # In a real implementation, this would use the same embedding model as the documents
@@ -134,7 +153,11 @@ class RAGQueryReporter:
         Returns:
             List of entities with related document information
         """
-        logger.info(f"Searching entities: text='{entity_text}', type='{entity_type}'")
+        # Log search without exposing potentially sensitive data
+        # Only log if entity_type is provided and sanitize it
+        has_type = bool(entity_type)
+        has_text = bool(entity_text)
+        logger.info(f"Searching entities: has_type={has_type}, has_text={has_text}, text_length={len(entity_text) if entity_text else 0}")
         
         cursor = self.db_connection.cursor(cursor_factory=RealDictCursor)
         
@@ -435,7 +458,9 @@ class RAGQueryReporter:
                 LIMIT 10
             """)
             query_stats = cursor.fetchall()
-        except:
+        except psycopg2.Error:
+            # pg_stat_statements extension may not be available
+            logger.debug("Failed to fetch query statistics - pg_stat_statements extension may not be enabled")
             query_stats = []
         
         report = {
@@ -451,30 +476,33 @@ class RAGQueryReporter:
         return report
     
     def export_data(self, export_format: str = 'json', output_file: str = None, 
-                   query: str = None) -> str:
+                   export_type: str = 'documents') -> str:
         """
         Export data from the database.
         
         Args:
             export_format: Format for export ('json', 'csv')
             output_file: Output file path (optional)
-            query: Custom SQL query (optional)
+            export_type: Type of data to export ('documents', 'entities', 'analytics') - restricted for security
             
         Returns:
             Path to the exported file
         """
+        # Validate export_type to prevent SQL injection
+        allowed_types = ['documents', 'entities', 'analytics']
+        if export_type not in allowed_types:
+            raise ValueError(f"Invalid export_type. Must be one of: {allowed_types}")
+        
         if not output_file:
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            output_file = f"rag_export_{timestamp}.{export_format}"
+            output_file = f"rag_export_{export_type}_{timestamp}.{export_format}"
         
-        logger.info(f"Exporting data to {output_file} in {export_format} format")
+        logger.info(f"Exporting {export_type} data to {output_file} in {export_format} format")
         
         cursor = self.db_connection.cursor(cursor_factory=RealDictCursor)
         
-        if query:
-            cursor.execute(query)
-        else:
-            # Default export query
+        # Use predefined safe queries based on export_type
+        if export_type == 'documents':
             cursor.execute("""
                 SELECT d.id, d.title, d.content, d.source_type, d.source_url, d.created_at,
                        STRING_AGG(e.text, '; ') as entities,
@@ -485,6 +513,25 @@ class RAGQueryReporter:
                 WHERE NOT d.is_deleted
                 GROUP BY d.id, d.title, d.content, d.source_type, d.source_url, d.created_at
                 ORDER BY d.created_at DESC
+            """)
+        elif export_type == 'entities':
+            cursor.execute("""
+                SELECT e.id, e.text, e.label, COUNT(dem.document_id) as document_count,
+                       e.created_at
+                FROM entities e
+                LEFT JOIN document_entity_map dem ON e.id = dem.entity_id
+                GROUP BY e.id, e.text, e.label, e.created_at
+                ORDER BY document_count DESC
+            """)
+        elif export_type == 'analytics':
+            cursor.execute("""
+                SELECT 
+                    COUNT(*) as total_documents,
+                    COUNT(DISTINCT source_type) as unique_sources,
+                    MAX(created_at) as latest_document,
+                    MIN(created_at) as earliest_document
+                FROM documents
+                WHERE NOT is_deleted
             """)
         
         data = cursor.fetchall()
@@ -510,7 +557,8 @@ class RAGQueryReporter:
         Create a custom report based on configuration.
         
         Args:
-            report_config: Configuration dictionary specifying report parameters
+            report_config: Configuration dictionary specifying report parameters.
+                          For security, only supports predefined report types, not arbitrary SQL.
             
         Returns:
             Generated report data
@@ -528,11 +576,8 @@ class RAGQueryReporter:
         
         # Process each section in the report config
         for section_name, section_config in report_config.get('sections', {}).items():
-            if section_config['type'] == 'query':
-                cursor.execute(section_config['sql'], section_config.get('params', []))
-                report['sections'][section_name] = [dict(row) for row in cursor.fetchall()]
-            
-            elif section_config['type'] == 'analytics':
+            # Only allow predefined safe report types, not arbitrary SQL queries
+            if section_config['type'] == 'analytics':
                 if section_config['analytics_type'] == 'document_stats':
                     report['sections'][section_name] = self.get_document_analytics()
                 elif section_config['analytics_type'] == 'content_insights':
@@ -545,6 +590,11 @@ class RAGQueryReporter:
                     limit=section_config.get('limit', 10)
                 )
                 report['sections'][section_name] = search_results
+            
+            else:
+                # Log unsupported section without exposing raw user input
+                safe_section_name = self._sanitize_log_value(section_name)
+                logger.warning(f"Unsupported section type in custom report for section '{safe_section_name}'. Skipping section.")
         
         cursor.close()
         return report
