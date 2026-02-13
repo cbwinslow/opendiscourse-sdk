@@ -5,6 +5,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm import tqdm
 import time
 from datetime import datetime
+from threading import Lock
 
 from .document_ingestor import DocumentIngestor, ProcessedDocument
 
@@ -57,40 +58,51 @@ class PipelineExecutor:
         self.max_workers = max_workers
         self.logger = logging.getLogger(__name__)
         
-    def _process_single_document(self, document: 'Document', 
-                               progress: ProcessingProgress) -> tuple[ProcessedDocument, Optional[ProcessingError]]:
+    def _process_single_document(
+        self,
+        document: 'Document',
+        progress: ProcessingProgress,
+        progress_lock: Lock,
+    ) -> tuple[ProcessedDocument, Optional[ProcessingError]]:
         """Process a single document and track errors"""
         error = None
         processed_doc = None
         
         try:
-            # Update progress
-            progress.current_step = f"Processing document {document.id}"
+            with progress_lock:
+                progress.current_step = f"Processing document {document.id}"
             
             # Process document
             processed_doc = self.ingestor.ingest(document)
             
             if processed_doc.error:  # Check for processing error
+                with progress_lock:
+                    progress.failed += 1
+                    step = progress.current_step
+                
                 error = ProcessingError(
                     document_id=document.id,
                     error_type="ProcessingError",
                     error_message=processed_doc.error,
                     timestamp=datetime.now().isoformat(),
-                    step=progress.current_step
+                    step=step
                 )
-                progress.failed += 1
             else:
-                progress.completed += 1
+                with progress_lock:
+                    progress.completed += 1
                 
         except Exception as e:
+            with progress_lock:
+                progress.failed += 1
+                step = progress.current_step
+            
             error = ProcessingError(
                 document_id=document.id,
                 error_type=type(e).__name__,
                 error_message=str(e),
                 timestamp=datetime.now().isoformat(),
-                step=progress.current_step
+                step=step
             )
-            progress.failed += 1
             self.logger.error(f"Error processing document {document.id}: {str(e)}")
             
         return processed_doc, error
@@ -106,6 +118,7 @@ class PipelineExecutor:
             start_time=datetime.now()
         )
         
+        progress_lock = Lock()
         processed_documents = []
         errors = []
         
@@ -117,7 +130,7 @@ class PipelineExecutor:
             with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
                 # Submit all documents for processing
                 future_to_doc = {
-                    executor.submit(self._process_single_document, doc, progress): doc 
+                    executor.submit(self._process_single_document, doc, progress, progress_lock): doc 
                     for doc in documents
                 }
                 

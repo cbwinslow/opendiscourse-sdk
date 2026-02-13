@@ -206,6 +206,7 @@ class MetricsAggregator:
     def __init__(self):
         self.metrics_collector = EnhancedMetricsCollector()
         self.performance_analyzer = PerformanceAnalyzer()
+        self._unimplemented_warnings_logged = False
         
     async def collect_metrics(self, store_names: List[str]) -> Dict:
         """Collect metrics from all stores."""
@@ -234,16 +235,12 @@ class MetricsAggregator:
         # Update resource metrics
         self.metrics_collector.update_resource_metrics(store)
         
+        avg = self._calculate_average_latency(store)
+        
         # Collect various metrics
         metrics = {
             "latency": {
-                "avg": self.metrics_collector.search_latency.labels(
-                    store=store,
-                    query_type="search"
-                )._sum.get() / max(1, self.metrics_collector.search_latency.labels(
-                    store=store,
-                    query_type="search"
-                )._count.get()),
+                "avg": avg,
                 "p95": self._calculate_percentile(store, 95),
                 "p99": self._calculate_percentile(store, 99)
             },
@@ -283,18 +280,36 @@ class MetricsAggregator:
         
     def _calculate_percentile(self, store: str, percentile: float) -> float:
         """Calculate latency percentile."""
-        # Implementation depends on histogram implementation
-        pass
+        # TODO: compute from Prometheus histogram buckets when available
+        if not self._unimplemented_warnings_logged:
+            self.metrics_collector.logger.warning(
+                "Latency percentile calculation not implemented; returning 0.0"
+            )
+        return 0.0
+    
+    def _calculate_average_latency(self, store: str) -> float:
+        """Calculate average latency."""
+        # TODO: compute avg from histogram sum/count when available
+        return 0.0
         
     def _calculate_query_rate(self, store: str) -> float:
         """Calculate current query rate."""
-        # Implementation depends on counter implementation
-        pass
+        # TODO: compute delta over time when available
+        if not self._unimplemented_warnings_logged:
+            self.metrics_collector.logger.warning(
+                "Query rate calculation not implemented; returning 0.0"
+            )
+        return 0.0
         
     def _calculate_error_rate(self, store: str) -> float:
         """Calculate current error rate."""
-        # Implementation depends on counter implementation
-        pass
+        # TODO: compute from success/failure counters when available
+        if not self._unimplemented_warnings_logged:
+            self.metrics_collector.logger.warning(
+                "Error rate calculation not implemented; returning 0.0"
+            )
+            self._unimplemented_warnings_logged = True
+        return 0.0
         
     def _calculate_cache_hit_rate(self, store: str) -> float:
         """Calculate cache hit rate."""

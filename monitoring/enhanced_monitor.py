@@ -45,14 +45,25 @@ class EnhancedMonitor:
         self.alert_history: List[Dict] = []
         
         # Initialize system monitoring
-        self.cpu_tracker = psutil.cpu_percentages
+        self.cpu_tracker = psutil.cpu_percent
         self.memory_tracker = psutil.virtual_memory
-        self.disk_tracker = psutil.disk_usage('/')
-        self.network_tracker = psutil.net_io_counters()
+        self.disk_tracker = psutil.disk_usage
+        self.network_tracker = psutil.net_io_counters
         
         # Initialize performance baselines
         self.latency_baseline = None
         self.error_rate_baseline = None
+        
+        # Cache webhook URL on initialization
+        self.slack_webhook_url = None
+        try:
+            webhook_config = self.config.get("monitoring", {}).get("alert_channels", {}).get("slack", {})
+            webhook_url_path = webhook_config.get("webhook_url")
+            if webhook_url_path:
+                with open(webhook_url_path, 'r') as f:
+                    self.slack_webhook_url = json.load(f)["url"]
+        except Exception as e:
+            self.logger.warning(f"Failed to load Slack webhook URL: {e}")
         
     def _load_config(self, config_path: str) -> Dict:
         """Load monitoring configuration."""
@@ -191,10 +202,10 @@ class EnhancedMonitor:
         
     def _send_slack_alert(self, alert: Dict) -> None:
         """Send alert to Slack."""
-        webhook_config = self.config["monitoring"]["alert_channels"]["slack"]
-        
-        with open(webhook_config["webhook_url"], 'r') as f:
-            webhook_url = json.load(f)["url"]
+        # The webhook URL should be loaded during __init__ and stored in self.slack_webhook_url
+        if not self.slack_webhook_url:
+            self.logger.error("Slack webhook URL not configured.")
+            return
             
         message = {
             "text": f"Vector Store Alert: {alert['type']}\n"
@@ -205,7 +216,7 @@ class EnhancedMonitor:
         }
         
         try:
-            requests.post(webhook_url, json=message)
+            requests.post(self.slack_webhook_url, json=message)
         except Exception as e:
             self.logger.error(f"Failed to send Slack alert: {e}")
             

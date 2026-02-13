@@ -42,7 +42,13 @@ class GovInfoDirectoryIngestor:
     
     def fetch_congressional_directories(self, congress: int) -> List[Dict[str, Any]]:
         """Fetch Congressional Directory packages for a congress"""
-        url = f"{self.base_url}/collections/CDIR/2023-01-01T00:00:00Z"
+        # Approximate start date for the requested congress (Congress 118 began 2023-01-03).
+        # Using January 1st to ensure we capture all data for the congress year,
+        # as the API may index content before the official start date.
+        congress_start_year = 1789 + (congress - 1) * 2
+        start_date = f"{congress_start_year}-01-01T00:00:00Z"
+        
+        url = f"{self.base_url}/collections/CDIR/{start_date}"
         params = {
             'api_key': self.api_key,
             'congress': congress,
@@ -137,7 +143,7 @@ class GovInfoDirectoryIngestor:
             name_parts = name.split()
             
             members.append({
-                'member_id': f"rep_{state.lower()}_{district}_{name.lower().replace(' ', '_')}" if district else f"rep_{state.lower()}_{name.lower().replace(' ', '_')}",
+                'member_id': f"rep_{state.lower()}_{district or 'at-large'}_{name.lower().replace(' ', '_')}",
                 'bioguide_id': None,  # Would need cross-reference
                 'first_name': name_parts[0] if len(name_parts) > 0 else '',
                 'middle_name': ' '.join(name_parts[1:-1]) if len(name_parts) > 2 else '',
