@@ -87,7 +87,18 @@ class RAGOrchestrator:
         Returns:
             Dictionary containing execution results
         """
-        script_path = self.scripts_dir / script_name
+        # Validate script_name to prevent path traversal
+        if '..' in script_name or script_name.startswith('/') or script_name.startswith('\\'):
+            raise ValueError(f"Invalid script name: {script_name}")
+        
+        script_path = (self.scripts_dir / script_name).resolve()
+        
+        # Ensure the resolved path is within scripts_dir
+        try:
+            script_path.relative_to(self.scripts_dir.resolve())
+        except ValueError:
+            raise ValueError(f"Script path outside allowed directory: {script_name}")
+        
         if not script_path.exists():
             raise FileNotFoundError(f"Script not found: {script_path}")
         

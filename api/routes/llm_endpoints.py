@@ -1,5 +1,6 @@
 """LLM-powered search and chat endpoints."""
 
+import logging
 import os
 from typing import Dict, List, Optional
 
@@ -11,6 +12,7 @@ from pydantic import BaseModel
 from opendiscourse.llm import OllamaClient, OllamaConfig, rag_query
 
 router = APIRouter(prefix="/v1", tags=["LLM"])
+logger = logging.getLogger(__name__)
 
 DB_URL = os.environ.get(
     "RAG_DB_URL", "postgresql://user:password@localhost:5432/opendiscourse"
@@ -125,7 +127,9 @@ async def semantic_search(
         )
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
+        # Log the actual error for debugging but don't expose details to client
+        logger.error(f"Search failed for query: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An error occurred while processing your search request")
 
 
 @router.post("/chat", response_model=ChatResponse) 
