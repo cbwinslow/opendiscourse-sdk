@@ -1,25 +1,39 @@
 # Add labels to PR based on the paths that are modified in the PR
 ingestion:
-  - opendiscourse/ingestion/**
+  - changed-files:
+    - any-glob-to-any-file: 'opendiscourse/ingestion/**'
 
 documentation:
-  - "*.md"
-  - docs/**
+  - changed-files:
+    - any-glob-to-any-file: '**/*.md'
+    - any-glob-to-any-file: 'docs/**'
 
 tests:
-  - tests/**
+  - changed-files:
+    - any-glob-to-any-file: 'tests/**'
 
 database:
-  - "*.sql"
-  - src/database/**
+  - changed-files:
+    - any-glob-to-any-file: '**/*.sql'
+    - any-glob-to-any-file: 'src/database/**'
 
 scripts:
-  - scripts/**
+  - changed-files:
+    - any-glob-to-any-file: 'scripts/**'
 
 dependencies:
-  - requirements/**
-  - pyproject.toml
-  - setup.py
+  - changed-files:
+    - any-glob-to-any-file: 'requirements/**'
+    - any-glob-to-any-file: 'pyproject.toml'
+    - any-glob-to-any-file: 'setup.py'
+    - any-glob-to-any-file: 'package.json'
+    - any-glob-to-any-file: 'pnpm-lock.yaml'
 
 github-actions:
-  - .github/**
+  - changed-files:
+    - any-glob-to-any-file: '.github/**'
+
+frontend:
+  - changed-files:
+    - any-glob-to-any-file: 'web/**'
+    - any-glob-to-any-file: 'webui/**'
