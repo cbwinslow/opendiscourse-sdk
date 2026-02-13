@@ -70,7 +70,7 @@
     "@types/d3": "^7.4.3",
     "eslint": "^8.57.1",
     "eslint-config-next": "^14.2.15",
-    "prettier": "^3.3.3",
+    "prettier": "^3.7.4",
     "prettier-plugin-tailwindcss": "^0.6.8",
     "@next/bundle-analyzer": "^14.2.15",
     "cross-env": "^7.0.3",
