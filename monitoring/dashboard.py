@@ -95,6 +95,7 @@ class MonitoringDashboard:
         st.subheader("Health Status")
         
         # Get current health status
+        # Streamlit runs in its own event loop, so we need to handle that
         loop = None
         try:
             loop = asyncio.get_running_loop()
@@ -102,12 +103,15 @@ class MonitoringDashboard:
             loop = None
         
         if loop and loop.is_running():
+            # We're in a running event loop (Streamlit), so create a new one
+            # This is necessary because asyncio.run() cannot be called from a running loop
             new_loop = asyncio.new_event_loop()
             try:
                 health_status = new_loop.run_until_complete(self.health_checker.run_diagnostics())
             finally:
                 new_loop.close()
         else:
+            # Not in a running loop, safe to use asyncio.run()
             health_status = asyncio.run(self.health_checker.run_diagnostics())
         
         # Create status cards

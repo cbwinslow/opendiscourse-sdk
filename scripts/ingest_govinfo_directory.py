@@ -43,7 +43,8 @@ class GovInfoDirectoryIngestor:
     def fetch_congressional_directories(self, congress: int) -> List[Dict[str, Any]]:
         """Fetch Congressional Directory packages for a congress"""
         # Approximate start date for the requested congress (Congress 118 began 2023-01-03).
-        # Adjust as needed if you have an authoritative mapping elsewhere.
+        # Using January 1st to ensure we capture all data for the congress year,
+        # as the API may index content before the official start date.
         congress_start_year = 1789 + (congress - 1) * 2
         start_date = f"{congress_start_year}-01-01T00:00:00Z"
         

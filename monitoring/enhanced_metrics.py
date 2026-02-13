@@ -206,6 +206,7 @@ class MetricsAggregator:
     def __init__(self):
         self.metrics_collector = EnhancedMetricsCollector()
         self.performance_analyzer = PerformanceAnalyzer()
+        self._unimplemented_warnings_logged = False
         
     async def collect_metrics(self, store_names: List[str]) -> Dict:
         """Collect metrics from all stores."""
@@ -280,9 +281,10 @@ class MetricsAggregator:
     def _calculate_percentile(self, store: str, percentile: float) -> float:
         """Calculate latency percentile."""
         # TODO: compute from Prometheus histogram buckets when available
-        self.metrics_collector.logger.warning(
-            "Latency percentile calculation not implemented; returning 0.0"
-        )
+        if not self._unimplemented_warnings_logged:
+            self.metrics_collector.logger.warning(
+                "Latency percentile calculation not implemented; returning 0.0"
+            )
         return 0.0
     
     def _calculate_average_latency(self, store: str) -> float:
@@ -293,17 +295,20 @@ class MetricsAggregator:
     def _calculate_query_rate(self, store: str) -> float:
         """Calculate current query rate."""
         # TODO: compute delta over time when available
-        self.metrics_collector.logger.warning(
-            "Query rate calculation not implemented; returning 0.0"
-        )
+        if not self._unimplemented_warnings_logged:
+            self.metrics_collector.logger.warning(
+                "Query rate calculation not implemented; returning 0.0"
+            )
         return 0.0
         
     def _calculate_error_rate(self, store: str) -> float:
         """Calculate current error rate."""
         # TODO: compute from success/failure counters when available
-        self.metrics_collector.logger.warning(
-            "Error rate calculation not implemented; returning 0.0"
-        )
+        if not self._unimplemented_warnings_logged:
+            self.metrics_collector.logger.warning(
+                "Error rate calculation not implemented; returning 0.0"
+            )
+            self._unimplemented_warnings_logged = True
         return 0.0
         
     def _calculate_cache_hit_rate(self, store: str) -> float:
