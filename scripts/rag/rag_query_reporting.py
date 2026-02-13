@@ -59,6 +59,24 @@ class RAGQueryReporter:
         self._connect_to_database()
         logger.info("RAG Query Reporter initialized successfully")
     
+    @staticmethod
+    def _sanitize_log_value(value: str, max_length: int = 50) -> str:
+        """
+        Sanitize a value for safe logging by removing control characters and limiting length.
+        
+        Args:
+            value: The value to sanitize
+            max_length: Maximum length of the sanitized value
+            
+        Returns:
+            Sanitized string safe for logging
+        """
+        if not value:
+            return ""
+        # Keep only alphanumeric characters and underscores
+        sanitized = ''.join(c for c in value if c.isalnum() or c == '_')
+        return sanitized[:max_length]
+    
     def _connect_to_database(self):
         """Establish database connection."""
         try:
@@ -86,9 +104,8 @@ class RAGQueryReporter:
         Returns:
             List of matching documents with similarity scores
         """
-        # Sanitize query for logging - truncate to prevent logging sensitive data
-        safe_query = query[:50] + "..." if len(query) > 50 else query
-        logger.info(f"Performing semantic search (query length: {len(query)})")
+        # Log search without exposing query content or metadata
+        logger.info("Performing semantic search")
         
         # For this implementation, we'll use a placeholder query embedding
         # In a real implementation, this would use the same embedding model as the documents
@@ -136,9 +153,11 @@ class RAGQueryReporter:
         Returns:
             List of entities with related document information
         """
-        # Sanitize entity text for logging
-        safe_text = entity_text[:50] + "..." if entity_text and len(entity_text) > 50 else entity_text
-        logger.info(f"Searching entities: type='{entity_type}', text_length={len(entity_text) if entity_text else 0}")
+        # Log search without exposing potentially sensitive data
+        # Only log if entity_type is provided and sanitize it
+        has_type = bool(entity_type)
+        has_text = bool(entity_text)
+        logger.info(f"Searching entities: has_type={has_type}, has_text={has_text}, text_length={len(entity_text) if entity_text else 0}")
         
         cursor = self.db_connection.cursor(cursor_factory=RealDictCursor)
         
@@ -439,9 +458,9 @@ class RAGQueryReporter:
                 LIMIT 10
             """)
             query_stats = cursor.fetchall()
-        except psycopg2.Error as e:
+        except psycopg2.Error:
             # pg_stat_statements extension may not be available
-            logger.debug(f"Could not fetch query statistics: {e}")
+            logger.debug("Failed to fetch query statistics - pg_stat_statements extension may not be enabled")
             query_stats = []
         
         report = {
@@ -573,8 +592,9 @@ class RAGQueryReporter:
                 report['sections'][section_name] = search_results
             
             else:
-                # Log unsupported section type
-                logger.warning(f"Unsupported section type '{section_config['type']}' in custom report. Skipping.")
+                # Log unsupported section without exposing raw user input
+                safe_section_name = self._sanitize_log_value(section_name)
+                logger.warning(f"Unsupported section type in custom report for section '{safe_section_name}'. Skipping section.")
         
         cursor.close()
         return report

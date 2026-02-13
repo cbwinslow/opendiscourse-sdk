@@ -128,7 +128,7 @@ async def semantic_search(
         
     except Exception as e:
         # Log the actual error for debugging but don't expose details to client
-        logger.error(f"Search failed for query: {e}", exc_info=True)
+        logger.error("Search operation failed", exc_info=True)
         raise HTTPException(status_code=500, detail="An error occurred while processing your search request")
 
 

@@ -87,9 +87,13 @@ class RAGOrchestrator:
         Returns:
             Dictionary containing execution results
         """
-        # Validate script_name to prevent path traversal
-        if '..' in script_name or script_name.startswith('/') or script_name.startswith('\\'):
-            raise ValueError(f"Invalid script name: {script_name}")
+        # Validate script_name to prevent path traversal - reject any path separators
+        if '/' in script_name or '\\' in script_name or '../' in script_name or '..\\' in script_name:
+            raise ValueError("Invalid script name: must not contain path separators or directory traversal sequences")
+        
+        # Additional check for URL-encoded or other variants
+        if '%' in script_name or script_name != os.path.basename(script_name):
+            raise ValueError("Invalid script name: contains invalid characters")
         
         script_path = (self.scripts_dir / script_name).resolve()
         
@@ -97,7 +101,7 @@ class RAGOrchestrator:
         try:
             script_path.relative_to(self.scripts_dir.resolve())
         except ValueError:
-            raise ValueError(f"Script path outside allowed directory: {script_name}")
+            raise ValueError("Script path outside allowed directory.")
         
         if not script_path.exists():
             raise FileNotFoundError(f"Script not found: {script_path}")
