@@ -675,7 +675,7 @@ class RAGDataManager:
         
         # Normalize quotes
         text = text.replace('"', '"').replace('"', '"')
-        text = text.replace(''', "'").replace(''', "'")
+        text = text.replace("'", "'").replace("'", "'")
         
         # Strip leading/trailing whitespace
         text = text.strip()

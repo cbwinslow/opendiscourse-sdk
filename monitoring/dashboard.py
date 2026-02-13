@@ -95,7 +95,20 @@ class MonitoringDashboard:
         st.subheader("Health Status")
         
         # Get current health status
-        health_status = asyncio.run(self.health_checker.run_diagnostics())
+        loop = None
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+        
+        if loop and loop.is_running():
+            new_loop = asyncio.new_event_loop()
+            try:
+                health_status = new_loop.run_until_complete(self.health_checker.run_diagnostics())
+            finally:
+                new_loop.close()
+        else:
+            health_status = asyncio.run(self.health_checker.run_diagnostics())
         
         # Create status cards
         cols = st.columns(len(self.config["stores"]))

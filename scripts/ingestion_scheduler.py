@@ -253,8 +253,13 @@ class CongressIngestionScheduler:
         
         for backup_file in backup_dir.glob('congress_backup_*.sql'):
             try:
-                # Extract timestamp from filename
-                timestamp_str = backup_file.stem.split('_')[-1]
+                # Extract timestamp from filename: congress_backup_YYYYMMDD_HHMMSS.sql
+                parts = backup_file.stem.split('_')
+                if len(parts) < 4:
+                    logger.warning(f"Unexpected backup filename format: {backup_file.name}")
+                    continue
+                
+                timestamp_str = f"{parts[-2]}_{parts[-1]}"
                 file_date = datetime.strptime(timestamp_str, '%Y%m%d_%H%M%S')
                 
                 if file_date < cutoff_date:

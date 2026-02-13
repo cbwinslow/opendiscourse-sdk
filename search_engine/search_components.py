@@ -38,10 +38,17 @@ class UnifiedSearcher:
             all_results.extend(store_results)
             
         # Merge results and normalize scores
-        for result in all_results:
-            # Min-max normalization of scores within each source
-            result.score = (result.score - min(r.score for r in all_results)) / \
-                         (max(r.score for r in all_results) - min(r.score for r in all_results))
+        if all_results:
+            min_score = min(r.score for r in all_results)
+            max_score = max(r.score for r in all_results)
+            range_score = max_score - min_score
+            
+            for result in all_results:
+                # Min-max normalization of scores within each source
+                if range_score > 0:
+                    result.score = (result.score - min_score) / range_score
+                else:
+                    result.score = 1.0
                          
         # Remove duplicates by content similarity
         unique_results = self._deduplicate_results(all_results)

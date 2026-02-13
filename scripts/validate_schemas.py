@@ -29,6 +29,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 import psycopg2
 from psycopg2.extras import DictCursor
 import requests
+import aiohttp
 from pydantic import BaseModel, ValidationError
 
 # Load environment variables
@@ -128,40 +129,39 @@ class SchemaValidator:
         try:
             # Test bill endpoint
             headers = {'X-API-Key': self.api_keys['congress']}
-            response = requests.get(
-                "https://api.congress.gov/v3/bill/118/hr/1",
-                headers=headers,
-                timeout=30
-            )
-            
-            if response.status_code == 200:
-                bill_data = response.json().get('bill', {})
-                result.sample_data = bill_data
-                result.success = True
-                
-                # Validate against expected schema fields
-                expected_fields = {
-                    'congress', 'billType', 'billNumber', 'title', 'introducedDate',
-                    'latestAction', 'sponsors', 'cosponsors', 'subjects', 'actions',
-                    'textVersions', 'summaries', 'committees', 'relatedBills'
-                }
-                
-                actual_fields = set(bill_data.keys())
-                result.missing_fields = list(expected_fields - actual_fields)
-                result.extra_fields = list(actual_fields - expected_fields)
-                
-                # Recommendations
-                if result.missing_fields:
-                    result.recommendations.append(
-                        "Consider adding missing fields to congress.bills table"
-                    )
-                
-                result.recommendations.append(
-                    "Congress API response structure matches schema well"
-                )
-                
-            else:
-                result.errors.append(f"API request failed: {response.status_code}")
+            async with aiohttp.ClientSession(headers=headers) as session:
+                async with session.get(
+                    "https://api.congress.gov/v3/bill/118/hr/1",
+                    timeout=aiohttp.ClientTimeout(total=30)
+                ) as response:
+                    if response.status == 200:
+                        bill_data = (await response.json()).get('bill', {})
+                        result.sample_data = bill_data
+                        result.success = True
+                        
+                        # Validate against expected schema fields
+                        expected_fields = {
+                            'congress', 'billType', 'billNumber', 'title', 'introducedDate',
+                            'latestAction', 'sponsors', 'cosponsors', 'subjects', 'actions',
+                            'textVersions', 'summaries', 'committees', 'relatedBills'
+                        }
+                        
+                        actual_fields = set(bill_data.keys())
+                        result.missing_fields = list(expected_fields - actual_fields)
+                        result.extra_fields = list(actual_fields - expected_fields)
+                        
+                        # Recommendations
+                        if result.missing_fields:
+                            result.recommendations.append(
+                                "Consider adding missing fields to congress.bills table"
+                            )
+                        
+                        result.recommendations.append(
+                            "Congress API response structure matches schema well"
+                        )
+                        
+                    else:
+                        result.errors.append(f"API request failed: {response.status}")
                 
         except Exception as e:
             result.errors.append(f"Congress API test failed: {e}")
