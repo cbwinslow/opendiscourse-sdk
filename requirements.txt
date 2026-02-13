@@ -130,7 +130,7 @@ memory-profiler==0.61.0
 
 # Jupyter notebook support
 jupyter==1.0.0
-notebook==7.0.6
+notebook==7.5.0
 
 # ============================================================================
 # ALTERNATIVE VECTOR DATABASES (NOT USED - FOR REFERENCE)
